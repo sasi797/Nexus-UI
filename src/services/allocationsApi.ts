@@ -20,7 +20,7 @@ export const allocationsApi = api.injectEndpoints({
       query: (body) => ({ url: '/allocations/run', method: 'POST', body }),
       invalidatesTags: ['AllocationLog', 'PendingQueue', 'Booking', 'Dashboard'],
     }),
-    getAllocationLog: build.query<AllocationLogEntry[], { skip?: number; limit?: number }>({
+    getAllocationLog: build.query<AllocationLogEntry[], { booking_id?: string; skip?: number; limit?: number }>({
       query: (params) => ({ url: '/allocations/log', params }),
       providesTags: ['AllocationLog'],
     }),

@@ -7,9 +7,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { pageTransition, staggerItem, fadeIn, popIn } from '@/lib/animations';
 import { useGetBookingQuery, usePatchBookingStatusMutation, useUpdateBookingMutation } from '@/services/bookingsApi';
 import { useGetAgentsQuery } from '@/services/agentsApi';
+import { useGetAllocationLogQuery } from '@/services/allocationsApi';
 import EmailThread from '@/components/EmailThread';
 
-type Tab = 'Analysis' | 'Conversation' | 'History';
+type Tab = 'Conversation' | 'History';
 
 interface CargoForm {
   cargo_type: string; pickup_location: string; delivery_location: string;
@@ -42,7 +43,7 @@ const labelCls = 'text-[10px] font-bold text-gray-400 uppercase tracking-wider m
 export default function BookingDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState<Tab>('Conversation');
-  const tabs: Tab[] = ['Conversation', 'Analysis', 'History'];
+  const tabs: Tab[] = ['Conversation', 'History'];
 
   const [selectedAgentId, setSelectedAgentId] = useState('');
   const [agentSaved, setAgentSaved] = useState(false);
@@ -59,6 +60,7 @@ export default function BookingDetailPage() {
   const [patchStatus, { isLoading: patching }] = usePatchBookingStatusMutation();
   const [updateBooking, { isLoading: saving }] = useUpdateBookingMutation();
   const { data: agents = [] } = useGetAgentsQuery();
+  const { data: allocLog = [] } = useGetAllocationLogQuery({ booking_id: id });
 
   useEffect(() => {
     if (!b) return;
@@ -299,26 +301,6 @@ export default function BookingDetailPage() {
               </motion.div>
             )}
 
-            {activeTab === 'Analysis' && (
-              <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-3">
-                {[
-                  { label: 'Cargo Classification', value: b.cargo_type ?? '—', icon: '📦' },
-                  { label: 'Estimated Transit Time', value: '3–5 business days', icon: '🕐' },
-                  { label: 'Risk Level', value: 'Low', icon: '🛡️' },
-                  { label: 'Compliance Status', value: 'Cleared', icon: '✅' },
-                ].map(item => (
-                  <motion.div key={item.label} variants={staggerItem}
-                    className="flex items-center justify-between p-3 bg-gray-50/70 rounded-xl border border-gray-100">
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-base">{item.icon}</span>
-                      <span className="text-xs font-semibold text-gray-600">{item.label}</span>
-                    </div>
-                    <span className="text-xs font-bold text-gray-800">{item.value}</span>
-                  </motion.div>
-                ))}
-              </motion.div>
-            )}
-
             {activeTab === 'Conversation' && (
               <div className="space-y-4">
                 {/* Assigned Agent */}
@@ -356,23 +338,66 @@ export default function BookingDetailPage() {
               </div>
             )}
 
-            {activeTab === 'History' && (
-              <div className="space-y-3">
-                {[
-                  { time: b.received_at, event: 'Booking received', icon: '📩' },
-                  ...(b.assigned_at ? [{ time: b.assigned_at, event: `Assigned to ${b.agent?.name ?? 'agent'}`, icon: '👤' }] : []),
-                  ...(b.completed_at ? [{ time: b.completed_at, event: 'Booking completed', icon: '✅' }] : []),
-                ].map((h, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs shrink-0 mt-0.5">{h.icon}</div>
-                    <div>
-                      <p className="text-xs font-semibold text-gray-700">{h.event}</p>
-                      <p className="text-[10px] text-gray-400">{new Date(h.time).toLocaleString('en-GB')}</p>
+            {activeTab === 'History' && (() => {
+              // If b.assigned_at predates the first allocation log entry, the initial
+              // Celery assignment wasn't tracked — add a synthetic event for it.
+              const firstLogTime = allocLog.length > 0
+                ? new Date(allocLog[0].allocated_at).getTime()
+                : Infinity;
+              const needsSyntheticInitial =
+                !!b.assigned_at && new Date(b.assigned_at).getTime() < firstLogTime;
+
+              const assignmentEvents = [
+                ...(needsSyntheticInitial
+                  ? [{
+                      time: b.assigned_at as string,
+                      // When allocLog already has entries, b.agent is the CURRENT (reassigned)
+                      // agent, not the original — we can't recover the original name
+                      label: allocLog.length === 0
+                        ? `Auto-assigned to ${b.agent?.name ?? 'agent'}`
+                        : 'Auto-assigned (round-robin)',
+                      icon: '🔄',
+                      type: 'assign' as const,
+                    }]
+                  : []),
+                ...allocLog.map((log, i) => ({
+                  time: log.allocated_at,
+                  label: log.pointer_value === -1
+                    ? `Manually assigned to ${log.agent?.name ?? 'agent'}`
+                    : `Auto-assigned to ${log.agent?.name ?? 'agent'} (round-robin #${i + 1})`,
+                  icon: log.pointer_value === -1 ? '✏️' : '🔄',
+                  type: 'assign' as const,
+                })),
+              ];
+
+              const events = [
+                { time: b.received_at, label: 'Booking received', icon: '📩', type: 'system' as const },
+                ...(b.completed_at ? [{ time: b.completed_at, label: 'Booking completed', icon: '✅', type: 'system' as const }] : []),
+                ...assignmentEvents,
+              ].sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+
+              return (
+                <div className="relative space-y-0">
+                  {/* Vertical line */}
+                  <div className="absolute left-[11px] top-3 bottom-3 w-px bg-gray-100" />
+                  {events.map((h, i) => (
+                    <div key={i} className="flex items-start gap-3 relative py-2.5">
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0 z-10 ring-2 ring-white
+                        ${h.type === 'system' ? 'bg-gray-100' : h.icon === '✏️' ? 'bg-indigo-50' : 'bg-sky-50'}`}>
+                        {h.icon}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-700">{h.label}</p>
+                        <p className="text-[10px] text-gray-400 mt-0.5">
+                          {new Date(h.time).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                  {events.length === 0 && <p className="text-xs text-gray-400 py-4 text-center">No history yet</p>}
+                </div>
+              );
+            })()}
           </motion.div>
         </AnimatePresence>
       </motion.div>
