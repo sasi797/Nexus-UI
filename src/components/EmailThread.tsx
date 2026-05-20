@@ -163,6 +163,7 @@ export default function EmailThread({ bookingId, senderEmail }: Props) {
   const [replyText, setReplyText] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [sent, setSent] = useState(false);
+  const [showAllRecipients, setShowAllRecipients] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Build reply-all recipient list from the first inbound message
@@ -245,11 +246,29 @@ export default function EmailThread({ bookingId, senderEmail }: Props) {
 
       {/* Reply composer */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="space-y-2">
           <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">Reply</p>
-          <span className="text-[10px] text-gray-400 max-w-[60%] truncate text-right" title={replyToEmails.join(', ')}>
-            To: {replyToEmails.join(', ')}
-          </span>
+          <div className="flex items-start gap-2 flex-wrap">
+            <span className="text-[10px] font-bold text-gray-500 mt-0.5 shrink-0">To:</span>
+            <div className="flex items-center gap-1.5 flex-wrap flex-1">
+              {(showAllRecipients ? replyToEmails : replyToEmails.slice(0, 2)).map((email, i) => (
+                <span key={i} className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100 font-medium">
+                  <svg className="w-2.5 h-2.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  {email}
+                </span>
+              ))}
+              {replyToEmails.length > 2 && (
+                <button
+                  onClick={() => setShowAllRecipients(v => !v)}
+                  className="text-[10px] font-bold text-indigo-500 hover:text-indigo-700 px-2 py-0.5 rounded-full hover:bg-indigo-50 transition-colors"
+                >
+                  {showAllRecipients ? '▲ less' : `+${replyToEmails.length - 2} more`}
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
         <textarea
