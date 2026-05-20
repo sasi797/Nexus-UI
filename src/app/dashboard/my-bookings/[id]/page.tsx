@@ -4,12 +4,12 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { pageTransition, staggerItem, staggerContainer, fadeIn, popIn } from '@/lib/animations';
+import { pageTransition, staggerItem, fadeIn, popIn } from '@/lib/animations';
 import { useGetBookingQuery, usePatchBookingStatusMutation, useUpdateBookingMutation } from '@/services/bookingsApi';
 import { useGetAgentsQuery } from '@/services/agentsApi';
 import EmailThread from '@/components/EmailThread';
 
-type Tab = 'Details' | 'Analysis' | 'Conversation' | 'History';
+type Tab = 'Analysis' | 'Conversation' | 'History';
 
 interface CargoForm {
   cargo_type: string; pickup_location: string; delivery_location: string;
@@ -41,8 +41,8 @@ const labelCls = 'text-[10px] font-bold text-gray-400 uppercase tracking-wider m
 
 export default function BookingDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const [activeTab, setActiveTab] = useState<Tab>('Details');
-  const tabs: Tab[] = ['Details', 'Analysis', 'Conversation', 'History'];
+  const [activeTab, setActiveTab] = useState<Tab>('Conversation');
+  const tabs: Tab[] = ['Conversation', 'Analysis', 'History'];
 
   const [selectedAgentId, setSelectedAgentId] = useState('');
   const [agentSaved, setAgentSaved] = useState(false);
@@ -169,33 +169,10 @@ export default function BookingDetailPage() {
         <AnimatePresence mode="wait">
           <motion.div key={activeTab} variants={fadeIn} initial="hidden" animate="visible" exit="hidden" className="p-5">
 
-            {activeTab === 'Details' && (
+            {false && (
               <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-4">
 
-                {/* Agent Assignment */}
-                <motion.div variants={staggerItem} className="bg-indigo-50/60 rounded-xl px-4 py-3 border border-indigo-100">
-                  <p className="text-xs font-bold text-indigo-700 uppercase tracking-wider mb-2">Assigned Agent</p>
-                  <div className="flex items-center gap-2">
-                    <select value={selectedAgentId || currentAgentId} onChange={e => setSelectedAgentId(e.target.value)}
-                      className="flex-1 px-2.5 py-1.5 border border-indigo-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white font-medium">
-                      <option value="">— Unassigned —</option>
-                      {agents.map(a => (
-                        <option key={a.id} value={a.id}>{a.name}{a.shift ? ` (${a.shift.name})` : ''}</option>
-                      ))}
-                    </select>
-                    <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
-                      onClick={handleSaveAgent} disabled={saving || !selectedAgentId}
-                      className="text-xs font-bold px-3 py-1.5 bg-indigo-600 text-white rounded-lg disabled:opacity-60 min-w-[64px]">
-                      <AnimatePresence mode="wait">
-                        {agentSaved
-                          ? <motion.span key="ok" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>✓ Saved</motion.span>
-                          : <motion.span key="sv" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>{saving ? 'Saving…' : 'Save'}</motion.span>}
-                      </AnimatePresence>
-                    </motion.button>
-                  </div>
-                </motion.div>
-
-                {/* Cargo Details */}
+                {/* Cargo Details — hidden, Details tab removed */}
                 <motion.div variants={staggerItem}>
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">Cargo Details</p>
@@ -343,7 +320,40 @@ export default function BookingDetailPage() {
             )}
 
             {activeTab === 'Conversation' && (
-              <EmailThread bookingId={b.id} senderEmail={b.sender_email} />
+              <div className="space-y-4">
+                {/* Assigned Agent */}
+                <div className="flex items-center gap-2 p-3 bg-indigo-50/60 rounded-xl border border-indigo-100">
+                  <div className="w-7 h-7 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0">
+                    <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <span className="text-xs font-bold text-indigo-700 shrink-0">Assigned Agent</span>
+                  <select
+                    value={selectedAgentId || currentAgentId}
+                    onChange={e => setSelectedAgentId(e.target.value)}
+                    className="flex-1 px-2.5 py-1.5 border border-indigo-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white font-medium"
+                  >
+                    <option value="">— Unassigned —</option>
+                    {agents.map(a => (
+                      <option key={a.id} value={a.id}>{a.name}{a.shift ? ` · ${a.shift.name}` : ''}</option>
+                    ))}
+                  </select>
+                  <motion.button
+                    whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+                    onClick={handleSaveAgent} disabled={saving || !selectedAgentId}
+                    className="text-xs font-bold px-3 py-1.5 bg-indigo-600 text-white rounded-lg disabled:opacity-60 min-w-[56px] shrink-0"
+                  >
+                    <AnimatePresence mode="wait">
+                      {agentSaved
+                        ? <motion.span key="ok" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>✓ Saved</motion.span>
+                        : <motion.span key="sv" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>{saving ? '…' : 'Assign'}</motion.span>}
+                    </AnimatePresence>
+                  </motion.button>
+                </div>
+
+                <EmailThread bookingId={b.id} senderEmail={b.sender_email} />
+              </div>
             )}
 
             {activeTab === 'History' && (

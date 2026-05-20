@@ -58,6 +58,34 @@ function AttachmentChip({ att, token }: { att: EmailAttachment; token: string | 
   );
 }
 
+function EmailChipList({ label, emails, light = false }: { label: string; emails: string; light?: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  const list = emails.split(',').map(e => e.trim()).filter(Boolean);
+  const visible = expanded ? list : list.slice(0, 2);
+  return (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      <span className={`text-[10px] font-bold shrink-0 ${light ? 'text-gray-400' : 'text-gray-500'}`}>{label}:</span>
+      {visible.map((email, i) => (
+        <span key={i} className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-medium
+          ${light ? 'bg-white/60 text-gray-500 border-gray-200' : 'bg-gray-50 text-gray-600 border-gray-200'}`}>
+          <svg className="w-2.5 h-2.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+          {email}
+        </span>
+      ))}
+      {list.length > 2 && (
+        <button
+          onClick={() => setExpanded(v => !v)}
+          className="text-[10px] font-bold text-indigo-400 hover:text-indigo-600 px-1.5 py-0.5 rounded-full hover:bg-indigo-50 transition-colors"
+        >
+          {expanded ? '▲ less' : `+${list.length - 2} more`}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function MessageBubble({ msg, token }: { msg: EmailMessage; token: string | null }) {
   const isInbound = msg.direction === 'inbound';
   const [expanded, setExpanded] = useState(true);
@@ -99,18 +127,10 @@ function MessageBubble({ msg, token }: { msg: EmailMessage; token: string | null
               </button>
             </div>
             {/* To / CC row for inbound messages */}
-            {isInbound && (
-              <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-                {msg.to_email && (
-                  <span className="text-[10px] text-gray-400">
-                    <span className="font-semibold text-gray-500">To:</span> {msg.to_email}
-                  </span>
-                )}
-                {msg.cc_emails && (
-                  <span className="text-[10px] text-gray-400">
-                    <span className="font-semibold text-gray-500">CC:</span> {msg.cc_emails}
-                  </span>
-                )}
+            {isInbound && (msg.to_email || msg.cc_emails) && (
+              <div className="flex flex-col gap-1 mt-0.5">
+                {msg.to_email && <EmailChipList label="To" emails={msg.to_email} light />}
+                {msg.cc_emails && <EmailChipList label="CC" emails={msg.cc_emails} light />}
               </div>
             )}
           </div>
@@ -221,9 +241,15 @@ export default function EmailThread({ bookingId, senderEmail }: Props) {
         <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
           Email Thread · {messages.length} message{messages.length !== 1 ? 's' : ''}
         </p>
-        <span className="text-[11px] text-gray-400 bg-gray-50 px-2.5 py-1 rounded-full border border-gray-100">
-          {senderEmail}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] font-bold text-gray-400">From:</span>
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-gray-600 bg-gray-50 px-2.5 py-1 rounded-full border border-gray-100 font-medium">
+            <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            {senderEmail}
+          </span>
+        </div>
       </div>
 
       {/* Messages */}
