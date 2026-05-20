@@ -16,9 +16,9 @@ interface AuthState {
 const loadFromStorage = (): AuthState => {
   if (typeof window === 'undefined') return { accessToken: null, refreshToken: null, user: null };
   return {
-    accessToken: localStorage.getItem('bts_access_token'),
-    refreshToken: localStorage.getItem('bts_refresh_token'),
-    user: JSON.parse(localStorage.getItem('bts_user') ?? 'null'),
+    accessToken: sessionStorage.getItem('bts_access_token'),
+    refreshToken: sessionStorage.getItem('bts_refresh_token'),
+    user: JSON.parse(sessionStorage.getItem('bts_user') ?? 'null'),
   };
 };
 
@@ -32,23 +32,23 @@ const authSlice = createSlice({
       state.accessToken = payload.accessToken;
       state.refreshToken = payload.refreshToken;
       state.user = payload.user;
-      localStorage.setItem('bts_access_token', payload.accessToken);
-      localStorage.setItem('bts_refresh_token', payload.refreshToken);
-      localStorage.setItem('bts_user', JSON.stringify(payload.user));
+      sessionStorage.setItem('bts_access_token', payload.accessToken);
+      sessionStorage.setItem('bts_refresh_token', payload.refreshToken);
+      sessionStorage.setItem('bts_user', JSON.stringify(payload.user));
     },
     setTokens(state, { payload }: PayloadAction<{ accessToken: string; refreshToken: string }>) {
       state.accessToken = payload.accessToken;
       state.refreshToken = payload.refreshToken;
-      localStorage.setItem('bts_access_token', payload.accessToken);
-      localStorage.setItem('bts_refresh_token', payload.refreshToken);
+      sessionStorage.setItem('bts_access_token', payload.accessToken);
+      sessionStorage.setItem('bts_refresh_token', payload.refreshToken);
     },
     logout(state) {
       state.accessToken = null;
       state.refreshToken = null;
       state.user = null;
-      localStorage.removeItem('bts_access_token');
-      localStorage.removeItem('bts_refresh_token');
-      localStorage.removeItem('bts_user');
+      sessionStorage.removeItem('bts_access_token');
+      sessionStorage.removeItem('bts_refresh_token');
+      sessionStorage.removeItem('bts_user');
     },
   },
 });

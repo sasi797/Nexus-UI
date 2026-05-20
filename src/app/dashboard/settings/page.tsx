@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Table, { ColumnDef } from '@/components/Table';
-import { pageTransition, staggerItem, staggerContainer } from '@/lib/animations';
+import { pageTransition, staggerItem } from '@/lib/animations';
 import { useGetShiftsQuery, useCreateShiftMutation, useDeleteShiftMutation, Shift } from '@/services/shiftsApi';
-import { useGetAgentsQuery } from '@/services/agentsApi';
+import { useGetAgentsQuery, useCreateAgentMutation, useDeleteAgentMutation, useUpdateAgentMutation } from '@/services/agentsApi';
 
 type SettingsTab = 'General' | 'Shifts' | 'Users' | 'Roles' | 'Transport API' | 'Email Templates';
 const settingsTabs: SettingsTab[] = ['General', 'Shifts', 'Users', 'Roles', 'Transport API', 'Email Templates'];
@@ -21,19 +21,45 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('Shifts');
   const [showAdd, setShowAdd] = useState(false);
   const [newShift, setNewShift] = useState({ name: '', code: '', start_time: '', end_time: '' });
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [newAgent, setNewAgent] = useState({ name: '', email: '', password: '', role: 'agent', shift_id: '' });
   const [apiUrl, setApiUrl] = useState('https://api.transport.example.com/v2');
   const [savedGeneral, setSavedGeneral] = useState(false);
+  const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', email: '', shift_id: '' });
+  const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
 
   const { data: shifts = [], isLoading: shiftsLoading } = useGetShiftsQuery();
-  const { data: agents = [], isLoading: agentsLoading } = useGetAgentsQuery();
+  const { data: agents = [], isLoading: agentsLoading, isFetching: agentsFetching } = useGetAgentsQuery();
   const [createShift, { isLoading: creating }] = useCreateShiftMutation();
   const [deleteShift] = useDeleteShiftMutation();
+  const [createAgent, { isLoading: creatingAgent }] = useCreateAgentMutation();
+  const [deleteAgent] = useDeleteAgentMutation();
+  const [updateAgent, { isLoading: updatingAgent }] = useUpdateAgentMutation();
+
+  const startEdit = (a: { id: string; name: string; email: string; shift_id: string | null }) => {
+    setEditingAgentId(a.id);
+    setEditForm({ name: a.name, email: a.email, shift_id: a.shift_id ?? '' });
+  };
+
+  const handleSaveAgent = async () => {
+    if (!editingAgentId) return;
+    await updateAgent({ id: editingAgentId, body: { name: editForm.name, email: editForm.email, shift_id: editForm.shift_id || undefined } });
+    setEditingAgentId(null);
+  };
 
   const handleAddShift = async () => {
     if (!newShift.name || !newShift.code) return;
     await createShift(newShift);
     setNewShift({ name: '', code: '', start_time: '', end_time: '' });
     setShowAdd(false);
+  };
+
+  const handleAddAgent = async () => {
+    if (!newAgent.name || !newAgent.email || !newAgent.password) return;
+    await createAgent({ name: newAgent.name, email: newAgent.email, password: newAgent.password, role: newAgent.role, shift_id: newAgent.shift_id || undefined });
+    setNewAgent({ name: '', email: '', password: '', role: 'agent', shift_id: '' });
+    setShowAddUser(false);
   };
 
   const shiftColumns: ColumnDef<Shift>[] = [
@@ -54,26 +80,7 @@ export default function SettingsPage() {
     },
   ];
 
-  interface AgentRow { id: string; name: string; email: string; shift: string; status: string; gradIdx: number }
-  const agentRows: AgentRow[] = agents.map((a, i) => ({
-    id: a.id, name: a.name, email: a.email, shift: a.shift?.name ?? '—', status: 'Active', gradIdx: i,
-  }));
-  const userColumns: ColumnDef<AgentRow>[] = [
-    {
-      key: 'name', header: 'Name', sortable: true, filterable: true,
-      render: (v, row) => (
-        <div className="flex items-center gap-2">
-          <motion.div whileHover={{ scale: 1.1 }} className={`w-6 h-6 rounded-lg bg-gradient-to-br ${avatarGrads[(row as AgentRow).gradIdx % avatarGrads.length]} flex items-center justify-center text-white text-[10px] font-black shadow`}>
-            {String(v).charAt(0)}
-          </motion.div>
-          <span className="font-semibold text-gray-800">{String(v)}</span>
-        </div>
-      ),
-    },
-    { key: 'email', header: 'Email',  sortable: true, filterable: true, render: v => <span className="text-gray-400">{String(v)}</span> },
-    { key: 'shift', header: 'Shift',  sortable: true, filterable: true, render: v => <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md text-xs font-bold ring-1 ring-indigo-100">{String(v)}</span> },
-    { key: 'status', header: 'Status', sortable: true, render: v => <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200">{String(v)}</span> },
-  ];
+  const inputSm = 'px-2 py-1 border border-gray-200 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white w-full';
 
   return (
     <motion.div variants={pageTransition} initial="hidden" animate="visible" className="space-y-3">
@@ -138,12 +145,118 @@ export default function SettingsPage() {
 
             {activeTab === 'Users' && (
               <div>
-                <div className="px-4 py-3 border-b border-gray-100">
+                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                   <p className="text-xs font-bold text-gray-700">User Management</p>
+                  <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={() => setShowAddUser(p => !p)}
+                    className="text-xs font-bold text-indigo-600 border border-indigo-200 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-colors">
+                    + Add Employee
+                  </motion.button>
                 </div>
-                {agentsLoading
-                  ? <div className="p-4 space-y-2">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-8 bg-gray-100 rounded animate-pulse" />)}</div>
-                  : <Table columns={userColumns} data={agentRows} rowKey={r => r.id} />}
+                <AnimatePresence>
+                  {showAddUser && (
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                      className="px-4 py-3 border-b border-gray-100 overflow-hidden">
+                      <div className="grid grid-cols-3 gap-2">
+                        <input type="text" placeholder="Full Name" value={newAgent.name}
+                          onChange={e => setNewAgent(p => ({ ...p, name: e.target.value }))}
+                          className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white" />
+                        <input type="email" placeholder="Email Address" value={newAgent.email}
+                          onChange={e => setNewAgent(p => ({ ...p, email: e.target.value }))}
+                          className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white" />
+                        <input type="password" placeholder="Password" value={newAgent.password}
+                          onChange={e => setNewAgent(p => ({ ...p, password: e.target.value }))}
+                          className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        <select value={newAgent.role} onChange={e => setNewAgent(p => ({ ...p, role: e.target.value }))}
+                          className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white">
+                          <option value="agent">Agent</option>
+                          <option value="supervisor">Supervisor</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                        <select value={newAgent.shift_id} onChange={e => setNewAgent(p => ({ ...p, shift_id: e.target.value }))}
+                          className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white">
+                          <option value="">No Shift</option>
+                          {shifts.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                      </div>
+                      <div className="flex gap-2 mt-2">
+                        <motion.button whileHover={{ scale: 1.02 }} onClick={handleAddAgent} disabled={creatingAgent}
+                          className="text-xs font-bold bg-indigo-600 text-white px-3 py-1.5 rounded-lg disabled:opacity-60">
+                          {creatingAgent ? 'Adding...' : 'Add Employee'}
+                        </motion.button>
+                        <button onClick={() => setShowAddUser(false)} className="text-xs text-gray-400 hover:text-gray-600 px-2">Cancel</button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                {(agentsLoading || agentsFetching) ? (
+                  <div className="p-4 space-y-2">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />)}</div>
+                ) : (
+                  <div className="divide-y divide-gray-50">
+                    <div className="grid grid-cols-[2fr_2fr_1.5fr_1fr_auto] gap-3 px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                      <span>Name</span><span>Email</span><span>Shift</span><span>Status</span><span className="w-16" />
+                    </div>
+                    <AnimatePresence>
+                      {agents.map((a, i) => (
+                        <motion.div key={a.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                          className="grid grid-cols-[2fr_2fr_1.5fr_1fr_auto] gap-3 items-center px-4 py-2.5 hover:bg-gray-50/60 transition-colors">
+                          {editingAgentId === a.id ? (
+                            <>
+                              <input value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} className={inputSm} placeholder="Full Name" />
+                              <input value={editForm.email} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} className={inputSm} placeholder="Email" type="email" />
+                              <select value={editForm.shift_id} onChange={e => setEditForm(p => ({ ...p, shift_id: e.target.value }))} className={inputSm}>
+                                <option value="">No Shift</option>
+                                {shifts.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                              </select>
+                              <span />
+                              <div className="flex items-center gap-1 w-16">
+                                <motion.button whileTap={{ scale: 0.93 }} onClick={handleSaveAgent} disabled={updatingAgent}
+                                  className="text-[10px] font-bold px-2 py-1 bg-indigo-600 text-white rounded-md disabled:opacity-60">
+                                  {updatingAgent ? '…' : 'Save'}
+                                </motion.button>
+                                <button onClick={() => setEditingAgentId(null)} className="text-[10px] text-gray-400 hover:text-gray-600 px-1">✕</button>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="flex items-center gap-2">
+                                <div className={`w-6 h-6 rounded-lg bg-gradient-to-br ${avatarGrads[i % avatarGrads.length]} flex items-center justify-center text-white text-[10px] font-black shadow shrink-0`}>
+                                  {a.name.charAt(0)}
+                                </div>
+                                <span className="font-semibold text-gray-800 text-xs truncate">{a.name}</span>
+                              </div>
+                              <span className="text-xs text-gray-400 truncate">{a.email}</span>
+                              <span className="text-xs">
+                                {a.shift ? <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md font-bold ring-1 ring-indigo-100">{a.shift.name}</span> : <span className="text-gray-300">—</span>}
+                              </span>
+                              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 w-fit">Active</span>
+                              <div className="flex items-center gap-1 w-16">
+                                <motion.button whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} onClick={() => startEdit(a)}
+                                  className="p-1 text-gray-300 hover:text-indigo-500 hover:bg-indigo-50 rounded-md transition-colors" title="Edit">
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                  </svg>
+                                </motion.button>
+                                <motion.button
+                                  whileHover={{ scale: deactivatingId === a.id ? 1 : 1.15 }} whileTap={{ scale: 0.9 }}
+                                  disabled={deactivatingId === a.id}
+                                  onClick={async () => { setDeactivatingId(a.id); await deleteAgent(a.id); setDeactivatingId(null); }}
+                                  className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors disabled:opacity-60" title="Deactivate">
+                                  {deactivatingId === a.id
+                                    ? <svg className="w-3.5 h-3.5 animate-spin text-red-400" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                                    : <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                                  }
+                                </motion.button>
+                              </div>
+                            </>
+                          )}
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                    {agents.length === 0 && <p className="text-xs text-gray-400 text-center py-6">No active users</p>}
+                  </div>
+                )}
               </div>
             )}
 

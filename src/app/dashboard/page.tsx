@@ -6,6 +6,7 @@ import { pageTransition, staggerItem, popIn, cardHover, staggerContainer } from 
 import Table, { ColumnDef } from '@/components/Table';
 import { useGetDashboardStatsQuery } from '@/services/dashboardApi';
 import { useGetBookingsQuery, BookingListItem } from '@/services/bookingsApi';
+import ApiErrorState from '@/components/ApiErrorState';
 
 const priorityStyle: Record<string, string> = {
   Urgent:   'bg-red-50 text-red-700 ring-1 ring-red-200',
@@ -47,8 +48,8 @@ function Skeleton({ className = '' }: { className?: string }) {
 }
 
 export default function DashboardPage() {
-  const { data: stats, isLoading: statsLoading } = useGetDashboardStatsQuery();
-  const { data: bookings = [], isLoading: bookingsLoading } = useGetBookingsQuery({ limit: 10 });
+  const { data: stats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = useGetDashboardStatsQuery();
+  const { data: bookings = [], isLoading: bookingsLoading, isError: bookingsError, refetch: refetchBookings } = useGetBookingsQuery({ limit: 10 });
 
   const statCards = stats ? [
     { label: 'Total Bookings', value: stats.total_bookings, icon: '📋', bg: 'from-indigo-50 to-violet-50', text: 'text-indigo-700' },
@@ -60,6 +61,8 @@ export default function DashboardPage() {
   return (
     <motion.div variants={pageTransition} initial="hidden" animate="visible" className="space-y-4">
       <motion.h1 variants={staggerItem} className="text-lg font-bold text-gray-900">Dashboard</motion.h1>
+
+      {statsError && <ApiErrorState title="Failed to load stats" onRetry={refetchStats} />}
 
       <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="grid grid-cols-4 gap-3">
         {statsLoading
@@ -87,7 +90,9 @@ export default function DashboardPage() {
         </div>
         {bookingsLoading
           ? <div className="p-4 space-y-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-8" />)}</div>
-          : <Table columns={bookingColumns} data={bookings} rowKey={r => r.id} />
+          : bookingsError
+            ? <ApiErrorState title="Failed to load bookings" onRetry={refetchBookings} />
+            : <Table columns={bookingColumns} data={bookings} rowKey={r => r.id} />
         }
       </motion.div>
     </motion.div>

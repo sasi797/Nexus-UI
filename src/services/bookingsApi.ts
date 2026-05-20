@@ -27,7 +27,7 @@ export interface BookingUpdate extends Partial<BookingCreate> {
 
 export const bookingsApi = api.injectEndpoints({
   endpoints: (build) => ({
-    getBookings: build.query<BookingListItem[], { status?: string; priority?: string; skip?: number; limit?: number }>({
+    getBookings: build.query<BookingListItem[], { status?: string; priority?: string; agent_id?: string; skip?: number; limit?: number }>({
       query: (params) => ({ url: '/bookings', params }),
       providesTags: ['Booking'],
     }),

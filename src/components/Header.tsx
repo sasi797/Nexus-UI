@@ -1,12 +1,14 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { useAppSelector } from '@/store/hooks';
 
 interface HeaderProps {
   searchPlaceholder?: string;
 }
 
 export default function Header({ searchPlaceholder = 'Search bookings...' }: HeaderProps) {
+  const user = useAppSelector(state => state.auth.user);
   return (
     <motion.header
       initial={{ opacity: 0, y: -16 }}
@@ -53,7 +55,7 @@ export default function Header({ searchPlaceholder = 'Search bookings...' }: Hea
           whileTap={{ scale: 0.93 }}
           className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-sm font-bold shadow-md shadow-indigo-200"
         >
-          J
+          {user?.name?.charAt(0)?.toUpperCase() ?? '?'}
         </motion.button>
       </div>
     </motion.header>

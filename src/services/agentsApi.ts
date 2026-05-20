@@ -4,9 +4,10 @@ export interface ShiftInfo { id: string; name: string; code: string }
 export interface Agent {
   id: string; name: string; email: string;
   shift_id: string | null; shift: ShiftInfo | null;
+  is_active: boolean;
   created_at: string; updated_at: string;
 }
-export interface AgentCreate { name: string; email: string; shift_id?: string; user_id?: string }
+export interface AgentCreate { name: string; email: string; password: string; role?: string; shift_id?: string }
 export interface AgentUpdate { name?: string; email?: string; shift_id?: string }
 
 export const agentsApi = api.injectEndpoints({

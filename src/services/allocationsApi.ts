@@ -24,6 +24,10 @@ export const allocationsApi = api.injectEndpoints({
       query: (params) => ({ url: '/allocations/log', params }),
       providesTags: ['AllocationLog'],
     }),
+    runAllPending: build.mutation<{ allocated: number; message: string }, void>({
+      query: () => ({ url: '/allocations/run-all-pending', method: 'POST' }),
+      invalidatesTags: ['AllocationLog', 'PendingQueue', 'Booking', 'Dashboard'],
+    }),
     resetPointer: build.mutation<void, void>({
       query: () => ({ url: '/allocations/reset-pointer', method: 'POST' }),
       invalidatesTags: ['AllocationLog'],
@@ -32,4 +36,4 @@ export const allocationsApi = api.injectEndpoints({
   overrideExisting: false,
 });
 
-export const { useGetAllocationStatusQuery, useRunAllocationMutation, useGetAllocationLogQuery, useResetPointerMutation } = allocationsApi;
+export const { useGetAllocationStatusQuery, useRunAllocationMutation, useRunAllPendingMutation, useGetAllocationLogQuery, useResetPointerMutation } = allocationsApi;

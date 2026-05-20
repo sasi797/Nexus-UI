@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { pageTransition, staggerItem } from '@/lib/animations';
 import Table, { ColumnDef } from '@/components/Table';
 import { useGetBookingsQuery, BookingListItem } from '@/services/bookingsApi';
+import ApiErrorState from '@/components/ApiErrorState';
 
 type Tab = 'All' | 'Pending' | 'In Progress' | 'Completed';
 const tabs: Tab[] = ['All', 'Pending', 'In Progress', 'Completed'];
@@ -24,7 +25,7 @@ const statusStyle: Record<string, string> = {
 export default function MyBookingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>('All');
   const status = activeTab === 'All' ? undefined : activeTab;
-  const { data: bookings = [], isLoading, isFetching } = useGetBookingsQuery({ status, limit: 100 });
+  const { data: bookings = [], isLoading, isFetching, isError, refetch } = useGetBookingsQuery({ status, limit: 100 });
 
   const columns: ColumnDef<BookingListItem>[] = [
     {
@@ -85,7 +86,9 @@ export default function MyBookingsPage() {
           <motion.div key={activeTab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
             {isLoading
               ? <div className="p-4 space-y-2">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-8 bg-gray-100 rounded animate-pulse" />)}</div>
-              : <Table columns={columns} data={bookings} rowKey={r => r.id} emptyMessage={`No ${activeTab === 'All' ? '' : activeTab} bookings`} />
+              : isError
+                ? <ApiErrorState title="Failed to load bookings" onRetry={refetch} />
+                : <Table columns={columns} data={bookings} rowKey={r => r.id} emptyMessage={`No ${activeTab === 'All' ? '' : activeTab} bookings`} />
             }
           </motion.div>
         </AnimatePresence>
