@@ -18,7 +18,8 @@ interface QueueRow { booking_id: string; subject: string; priority: string; reas
 
 export default function NotificationsPage() {
   const { data: queue = [], isLoading } = useGetPendingQueueQuery();
-  const { data: bookings = [] } = useGetBookingsQuery({ limit: 200 });
+  const { data: bookingsPage } = useGetBookingsQuery({ page_size: 100 });
+  const bookings = bookingsPage?.items ?? [];
   const [runAllocation, { isLoading: assigning }] = useRunAllocationMutation();
   const [autoAssignAll, { isLoading: autoAssigning }] = useAutoAssignAllMutation();
 

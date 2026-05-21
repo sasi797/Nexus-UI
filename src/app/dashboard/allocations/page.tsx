@@ -27,7 +27,8 @@ export default function AllocationsPage() {
 
   const { data: status, isLoading: statusLoading } = useGetAllocationStatusQuery(undefined, { pollingInterval: 5000 });
   const { data: log = [], isLoading: logLoading } = useGetAllocationLogQuery({ limit: 50 });
-  const { data: pendingBookings = [], isFetching: pendingFetching } = useGetBookingsQuery({ status: 'Pending', limit: 200 });
+  const { data: pendingBookingsPage, isFetching: pendingFetching } = useGetBookingsQuery({ status: 'Pending', page_size: 100 });
+  const pendingBookings = pendingBookingsPage?.items ?? [];
 
   const [runAllocation, { isLoading: running }] = useRunAllocationMutation();
   const [runAllPending, { isLoading: runningAll }] = useRunAllPendingMutation();

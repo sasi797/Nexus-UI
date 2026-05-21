@@ -26,10 +26,11 @@ const avatarGrads = [
 
 function AgentBookingsPanel({ agent, idx }: { agent: Agent; idx: number }) {
   const [open, setOpen] = useState(false);
-  const { data: bookings = [], isFetching } = useGetBookingsQuery(
-    { agent_id: agent.id, limit: 100 },
+  const { data: bookingsPage, isFetching } = useGetBookingsQuery(
+    { agent_id: agent.id, page_size: 100 },
     { skip: !open }
   );
+  const bookings = bookingsPage?.items ?? [];
 
   const inProgress = bookings.filter(b => b.status === 'In Progress').length;
   const completed  = bookings.filter(b => b.status === 'Completed').length;
@@ -101,7 +102,8 @@ function AgentBookingsPanel({ agent, idx }: { agent: Agent; idx: number }) {
 
 export default function AgentsPage() {
   const { data: agents = [], isLoading, isError, refetch } = useGetAgentsQuery();
-  const { data: allBookings = [] } = useGetBookingsQuery({ limit: 200 });
+  const { data: allBookingsPage } = useGetBookingsQuery({ page_size: 100 });
+  const allBookings = allBookingsPage?.items ?? [];
 
   const totalAssigned = allBookings.filter(b => b.agent !== null).length;
   const totalUnassigned = allBookings.filter(b => b.agent === null).length;

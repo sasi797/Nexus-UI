@@ -6,9 +6,30 @@ import { useSelector } from 'react-redux';
 import type { RootState } from '@/store';
 import { useGetMessagesQuery, useReplyMessageMutation } from '@/services/emailApi';
 import type { EmailMessage, EmailAttachment } from '@/services/emailApi';
-import { staggerContainer, popIn } from '@/lib/animations';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+
+type ComposeTab = 'Reply' | 'Forward' | 'Note';
+
+const AVATAR_COLORS = [
+  'from-sky-400 to-blue-500',
+  'from-violet-400 to-purple-600',
+  'from-emerald-400 to-teal-500',
+  'from-amber-400 to-orange-500',
+  'from-rose-400 to-pink-600',
+  'from-indigo-400 to-violet-500',
+];
+function avatarColor(str: string) {
+  let h = 0;
+  for (const c of str) h = (h * 31 + c.charCodeAt(0)) & 0xffff;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
+function extractName(email: string) {
+  const local = email.split('@')[0];
+  return local.split(/[._+]/).filter(Boolean)
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+}
 
 function formatBytes(n: number | null) {
   if (!n) return '';
@@ -44,9 +65,9 @@ function AttachmentChip({ att, token }: { att: EmailAttachment; token: string | 
     <button
       onClick={handleDownload}
       disabled={loading}
-      className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50/40 transition-all disabled:opacity-60 group"
+      className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50/40 transition-all disabled:opacity-60 group"
     >
-      <span className="text-base leading-none">
+      <span className="text-sm leading-none">
         {loading ? '⏳' : isImage ? '🖼️' : isPdf ? '📄' : '📎'}
       </span>
       <span className="truncate max-w-[140px]">{att.filename}</span>
@@ -58,135 +79,134 @@ function AttachmentChip({ att, token }: { att: EmailAttachment; token: string | 
   );
 }
 
-function EmailChipList({ label, emails, light = false }: { label: string; emails: string; light?: boolean }) {
-  const [expanded, setExpanded] = useState(false);
-  const list = emails.split(',').map(e => e.trim()).filter(Boolean);
-  const visible = expanded ? list : list.slice(0, 2);
-  return (
-    <div className="flex items-center gap-1.5 flex-wrap">
-      <span className={`text-[10px] font-bold shrink-0 ${light ? 'text-gray-400' : 'text-gray-500'}`}>{label}:</span>
-      {visible.map((email, i) => (
-        <span key={i} className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border font-medium
-          ${light ? 'bg-white/60 text-gray-500 border-gray-200' : 'bg-gray-50 text-gray-600 border-gray-200'}`}>
-          <svg className="w-2.5 h-2.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-          </svg>
-          {email}
-        </span>
-      ))}
-      {list.length > 2 && (
-        <button
-          onClick={() => setExpanded(v => !v)}
-          className="text-[10px] font-bold text-indigo-400 hover:text-indigo-600 px-1.5 py-0.5 rounded-full hover:bg-indigo-50 transition-colors"
-        >
-          {expanded ? '▲ less' : `+${list.length - 2} more`}
-        </button>
-      )}
-    </div>
-  );
-}
-
-function MessageBubble({ msg, token }: { msg: EmailMessage; token: string | null }) {
+function MessageCard({ msg, token, defaultOpen }: { msg: EmailMessage; token: string | null; defaultOpen: boolean }) {
   const isInbound = msg.direction === 'inbound';
-  const [expanded, setExpanded] = useState(true);
+  const [collapsed, setCollapsed] = useState(!defaultOpen);
+
+  const senderName = isInbound ? extractName(msg.from_email) : 'BTS Support';
+  const senderEmail = isInbound ? msg.from_email : '';
+  const initials = isInbound ? msg.from_email.charAt(0).toUpperCase() : 'B';
+  const gradientClass = isInbound
+    ? avatarColor(msg.from_email)
+    : 'from-indigo-500 to-violet-600';
+
+  const formattedTime = new Date(msg.sent_at).toLocaleString('en-GB', {
+    day: 'numeric', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
 
   return (
-    <motion.div
-      variants={popIn}
-      initial="hidden"
-      animate="visible"
-      className={`flex gap-3 ${isInbound ? '' : 'flex-row-reverse'}`}
-    >
-      {/* Avatar */}
-      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 shadow-sm ${
-        isInbound
-          ? 'bg-gradient-to-br from-sky-500 to-blue-600 text-white'
-          : 'bg-gradient-to-br from-indigo-500 to-violet-600 text-white'
-      }`}>
-        {isInbound
-          ? msg.from_email.charAt(0).toUpperCase()
-          : 'BTS'}
-      </div>
-
-      <div className={`flex-1 max-w-[85%] ${isInbound ? '' : 'items-end flex flex-col'}`}>
-        {/* Header */}
-        <div className={`flex items-start gap-2 mb-1 ${isInbound ? '' : 'flex-row-reverse'}`}>
-          <div className={`flex flex-col gap-0.5 ${isInbound ? '' : 'items-end'}`}>
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-bold text-gray-700">
-                {isInbound ? msg.from_email : 'BTS Support'}
-              </span>
-              <span className="text-[10px] text-gray-400">
-                {new Date(msg.sent_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-              </span>
-              <button
-                onClick={() => setExpanded(v => !v)}
-                className="text-[10px] text-gray-300 hover:text-gray-500 transition-colors"
-              >
-                {expanded ? '▲' : '▼'}
-              </button>
-            </div>
-            {/* To / CC row for inbound messages */}
-            {isInbound && (msg.to_email || msg.cc_emails) && (
-              <div className="flex flex-col gap-1 mt-0.5">
-                {msg.to_email && <EmailChipList label="To" emails={msg.to_email} light />}
-                {msg.cc_emails && <EmailChipList label="CC" emails={msg.cc_emails} light />}
-              </div>
-            )}
-          </div>
+    <div className="border border-gray-100 rounded-xl overflow-hidden bg-white shadow-sm">
+      {/* Header — always visible, click to collapse */}
+      <div
+        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50/70 transition-colors select-none"
+        onClick={() => setCollapsed(v => !v)}
+      >
+        <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${gradientClass} flex items-center justify-center text-white text-[11px] font-bold shrink-0 shadow-sm`}>
+          {initials}
         </div>
 
-        {/* Bubble */}
-        <AnimatePresence>
-          {expanded && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className={`rounded-2xl px-4 py-3 text-sm leading-relaxed border shadow-sm ${
-                isInbound
-                  ? 'bg-white border-gray-100 text-gray-700 rounded-tl-sm'
-                  : 'bg-gradient-to-br from-indigo-600 to-violet-600 border-indigo-500/30 text-white rounded-tr-sm'
-              }`}
-            >
-              {msg.body_text
-                ? <pre className="whitespace-pre-wrap font-sans text-[13px]">{msg.body_text.trim()}</pre>
-                : <span className={`text-[12px] italic ${isInbound ? 'text-gray-400' : 'text-white/60'}`}>(No text content)</span>
-              }
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[13px] font-semibold text-gray-900">{senderName}</span>
+            {senderEmail && (
+              <span className="text-[11px] text-gray-400 truncate">&lt;{senderEmail}&gt;</span>
+            )}
+            {!isInbound && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-600 leading-none">replied</span>
+            )}
+          </div>
+          {collapsed && msg.body_text && (
+            <p className="text-[11px] text-gray-400 truncate mt-0.5">{msg.body_text.trim().slice(0, 80)}</p>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-[11px] text-gray-400">{formattedTime}</span>
+          <svg
+            className={`w-3.5 h-3.5 text-gray-300 transition-transform ${collapsed ? '' : 'rotate-180'}`}
+            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
+      </div>
+
+      {/* Collapsible body */}
+      <AnimatePresence initial={false}>
+        {!collapsed && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18, ease: 'easeInOut' }}
+            className="overflow-hidden"
+          >
+            <div className="px-5 pb-4 border-t border-gray-50">
+              {/* To / CC rows */}
+              {(msg.to_email || msg.cc_emails) && (
+                <div className="pt-3 pb-2 space-y-1">
+                  {msg.to_email && (
+                    <div className="flex items-center gap-2 text-[11px] text-gray-500">
+                      <span className="font-semibold text-gray-400 w-5 shrink-0">To</span>
+                      <span>{msg.to_email}</span>
+                    </div>
+                  )}
+                  {msg.cc_emails && (
+                    <div className="flex items-center gap-2 text-[11px] text-gray-500">
+                      <span className="font-semibold text-gray-400 w-5 shrink-0">CC</span>
+                      <span>{msg.cc_emails}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Body */}
+              <div className="pt-3 text-[13px] text-gray-700 leading-relaxed">
+                {msg.body_text
+                  ? <pre className="whitespace-pre-wrap font-sans">{msg.body_text.trim()}</pre>
+                  : <span className="text-[12px] italic text-gray-400">(No text content)</span>
+                }
+              </div>
 
               {/* Attachments */}
               {msg.attachments.length > 0 && (
-                <div className={`mt-3 pt-3 border-t ${isInbound ? 'border-gray-100' : 'border-white/20'} flex flex-wrap gap-2`}>
+                <div className="mt-4 pt-3 border-t border-gray-50 flex flex-wrap gap-2">
                   {msg.attachments.map(att => (
                     <AttachmentChip key={att.id} att={att} token={token} />
                   ))}
                 </div>
               )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
 interface Props {
   bookingId: string;
   senderEmail: string;
+  replyRef?: React.RefObject<HTMLTextAreaElement | null>;
+  composeTab?: ComposeTab;
+  onComposeTabChange?: (tab: ComposeTab) => void;
 }
 
-export default function EmailThread({ bookingId, senderEmail }: Props) {
+export default function EmailThread({ bookingId, senderEmail, replyRef, composeTab: controlledTab, onComposeTabChange }: Props) {
   const accessToken = useSelector((s: RootState) => s.auth.accessToken);
   const { data: messages = [], isLoading } = useGetMessagesQuery(bookingId);
   const [replyMessage, { isLoading: sending }] = useReplyMessageMutation();
 
+  const [internalTab, setInternalTab] = useState<ComposeTab>('Reply');
+  const composeTab = controlledTab ?? internalTab;
+  const setComposeTab = (t: ComposeTab) => { setInternalTab(t); onComposeTabChange?.(t); };
   const [replyText, setReplyText] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [sent, setSent] = useState(false);
   const [showAllRecipients, setShowAllRecipients] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Build reply-all recipient list from the first inbound message
   const replyToEmails = (() => {
     const firstInbound = messages.find(m => m.direction === 'inbound');
     if (!firstInbound) return [senderEmail];
@@ -207,9 +227,9 @@ export default function EmailThread({ bookingId, senderEmail }: Props) {
   const removeFile = (idx: number) => setSelectedFiles(prev => prev.filter((_, i) => i !== idx));
 
   const handleSend = async () => {
-    if (!replyText.trim()) return;
+    if (!replyText.trim() && selectedFiles.length === 0) return;
     const fd = new FormData();
-    fd.append('body_text', replyText.trim());
+    fd.append('body_text', replyText.trim() || ' ');
     selectedFiles.forEach(f => fd.append('files', f));
     await replyMessage({ bookingId, formData: fd });
     setReplyText('');
@@ -218,164 +238,226 @@ export default function EmailThread({ bookingId, senderEmail }: Props) {
     setTimeout(() => setSent(false), 2000);
   };
 
-  if (isLoading) {
-    return (
-      <div className="space-y-3 py-2">
-        {[1, 2].map(i => (
-          <div key={i} className="flex gap-3">
-            <div className="w-8 h-8 bg-gray-100 rounded-full animate-pulse shrink-0" />
-            <div className="flex-1 space-y-1.5">
-              <div className="h-3 w-32 bg-gray-100 rounded animate-pulse" />
-              <div className="h-20 bg-gray-100 rounded-xl animate-pulse" />
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
+  const composeTabs: { id: ComposeTab; icon: React.ReactNode; label: string }[] = [
+    {
+      id: 'Reply',
+      label: 'Reply',
+      icon: (
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+        </svg>
+      ),
+    },
+    {
+      id: 'Forward',
+      label: 'Forward',
+      icon: (
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10H11a8 8 0 00-8 8v2m18-10l-6-6m6 6l-6 6" />
+        </svg>
+      ),
+    },
+    {
+      id: 'Note',
+      label: 'Add note',
+      icon: (
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+      ),
+    },
+  ];
+
+  const composePlaceholder =
+    composeTab === 'Note' ? 'Add an internal note…' :
+    composeTab === 'Forward' ? 'Forward this email…' :
+    'Write your reply…';
 
   return (
-    <div className="space-y-5">
-      {/* Thread header */}
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-          Email Thread · {messages.length} message{messages.length !== 1 ? 's' : ''}
-        </p>
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] font-bold text-gray-400">From:</span>
-          <span className="inline-flex items-center gap-1.5 text-[11px] text-gray-600 bg-gray-50 px-2.5 py-1 rounded-full border border-gray-100 font-medium">
-            <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-            {senderEmail}
-          </span>
+    <div className="space-y-3">
+      {/* Message cards */}
+      {isLoading ? (
+        <div className="space-y-3">
+          {[1, 2].map(i => (
+            <div key={i} className="border border-gray-100 rounded-xl p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gray-100 rounded-full animate-pulse shrink-0" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3 w-32 bg-gray-100 rounded animate-pulse" />
+                  <div className="h-2.5 w-48 bg-gray-100 rounded animate-pulse" />
+                </div>
+                <div className="h-2.5 w-20 bg-gray-100 rounded animate-pulse" />
+              </div>
+            </div>
+          ))}
         </div>
-      </div>
-
-      {/* Messages */}
-      {messages.length === 0 ? (
-        <div className="py-10 text-center">
+      ) : messages.length === 0 ? (
+        <div className="py-10 text-center border border-dashed border-gray-200 rounded-xl">
           <div className="text-3xl mb-2">✉️</div>
           <p className="text-sm font-semibold text-gray-400">No messages yet</p>
           <p className="text-xs text-gray-300 mt-1">The original email will appear here once polling picks it up</p>
         </div>
       ) : (
-        <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-4">
-          {messages.map(msg => (
-            <MessageBubble key={msg.id} msg={msg} token={accessToken} />
+        <div className="space-y-2">
+          {messages.map((msg, i) => (
+            <MessageCard
+              key={msg.id}
+              msg={msg}
+              token={accessToken}
+              defaultOpen={i === messages.length - 1}
+            />
           ))}
-        </motion.div>
+        </div>
       )}
 
-      {/* Divider */}
-      <div className="border-t border-gray-100" />
+      {/* Compose area */}
+      <div className="border border-gray-200 rounded-xl overflow-hidden mt-2 bg-white shadow-sm">
+        {/* Tab bar */}
+        <div className="flex border-b border-gray-100 bg-gray-50/60">
+          {composeTabs.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setComposeTab(tab.id)}
+              className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold border-b-2 transition-all ${
+                composeTab === tab.id
+                  ? 'border-indigo-500 text-indigo-600 bg-white'
+                  : 'border-transparent text-gray-400 hover:text-gray-600 hover:bg-white/60'
+              }`}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-      {/* Reply composer */}
-      <div className="space-y-3">
-        <div className="space-y-2">
-          <p className="text-xs font-bold text-gray-700 uppercase tracking-wider">Reply</p>
-          <div className="flex items-start gap-2 flex-wrap">
-            <span className="text-[10px] font-bold text-gray-500 mt-0.5 shrink-0">To:</span>
-            <div className="flex items-center gap-1.5 flex-wrap flex-1">
-              {(showAllRecipients ? replyToEmails : replyToEmails.slice(0, 2)).map((email, i) => (
-                <span key={i} className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100 font-medium">
-                  <svg className="w-2.5 h-2.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="p-4 space-y-3">
+          {/* To: chips — shown for Reply and Forward */}
+          {composeTab !== 'Note' && (
+            <div className="flex items-center gap-1.5 flex-wrap border-b border-gray-50 pb-2">
+              <span className="text-[11px] font-semibold text-gray-400 shrink-0">To:</span>
+              {(showAllRecipients ? replyToEmails : replyToEmails.slice(0, 3)).map((email, i) => (
+                <span key={i} className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100 font-medium">
+                  <svg className="w-2.5 h-2.5 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
                   {email}
                 </span>
               ))}
-              {replyToEmails.length > 2 && (
+              {replyToEmails.length > 3 && (
                 <button
                   onClick={() => setShowAllRecipients(v => !v)}
-                  className="text-[10px] font-bold text-indigo-500 hover:text-indigo-700 px-2 py-0.5 rounded-full hover:bg-indigo-50 transition-colors"
+                  className="text-[11px] font-bold text-indigo-500 hover:text-indigo-700 px-2 py-0.5 rounded-full hover:bg-indigo-50 transition-colors"
                 >
-                  {showAllRecipients ? '▲ less' : `+${replyToEmails.length - 2} more`}
+                  {showAllRecipients ? '▲ less' : `+${replyToEmails.length - 3} more`}
                 </button>
               )}
             </div>
-          </div>
-        </div>
+          )}
 
-        <textarea
-          value={replyText}
-          onChange={e => setReplyText(e.target.value)}
-          placeholder="Type your reply…"
-          rows={4}
-          className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white resize-none transition-all placeholder:text-gray-300"
-        />
+          {/* Note banner */}
+          {composeTab === 'Note' && (
+            <div className="flex items-center gap-2 text-[11px] text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+              <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Internal note — not visible to the customer
+            </div>
+          )}
 
-        {/* Selected files */}
-        {selectedFiles.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {selectedFiles.map((f, i) => (
-              <div key={i} className="flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50 border border-indigo-100 rounded-lg text-xs text-indigo-700 font-medium">
-                <span>📎</span>
-                <span className="truncate max-w-[120px]">{f.name}</span>
-                <button onClick={() => removeFile(i)} className="text-indigo-400 hover:text-indigo-600 transition-colors leading-none">✕</button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="flex items-center gap-2">
-          {/* Attach files */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            className="hidden"
-            onChange={handleFileChange}
+          {/* Textarea — transparent, no border */}
+          <textarea
+            ref={replyRef}
+            value={replyText}
+            onChange={e => setReplyText(e.target.value)}
+            placeholder={composePlaceholder}
+            rows={4}
+            className="w-full px-0 py-1 text-sm text-gray-700 bg-transparent focus:outline-none resize-none placeholder:text-gray-300 leading-relaxed"
           />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 border border-gray-200 rounded-lg text-gray-500 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50/40 transition-all"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-            </svg>
-            Attach
-          </button>
 
-          <div className="flex-1" />
+          {/* Selected files preview */}
+          {selectedFiles.length > 0 && (
+            <div className="flex flex-wrap gap-2 pt-1">
+              {selectedFiles.map((f, i) => (
+                <div key={i} className="flex items-center gap-1.5 px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600 font-medium">
+                  <span>📎</span>
+                  <span className="truncate max-w-[120px]">{f.name}</span>
+                  <button onClick={() => removeFile(i)} className="text-gray-400 hover:text-gray-600 transition-colors leading-none ml-0.5">✕</button>
+                </div>
+              ))}
+            </div>
+          )}
 
-          <AnimatePresence>
-            {sent && (
-              <motion.span
-                initial={{ opacity: 0, x: 6 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0 }}
-                className="text-xs font-semibold text-emerald-600"
-              >
-                ✓ Sent
-              </motion.span>
-            )}
-          </AnimatePresence>
+          {/* Bottom toolbar */}
+          <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
+            {/* hidden file input — always in DOM, fixes first-load attach issue */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 border border-gray-200 rounded-lg text-gray-500 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50/40 transition-all"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+              </svg>
+              Attach
+            </button>
 
-          <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={handleSend}
-            disabled={(!replyText.trim() && selectedFiles.length === 0) || sending}
-            className="flex items-center gap-2 text-xs font-bold px-4 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-lg shadow-sm disabled:opacity-50 transition-all"
-          >
-            {sending ? (
-              <>
-                <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                </svg>
-                Sending…
-              </>
-            ) : (
-              <>
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-                Send Reply
-              </>
-            )}
-          </motion.button>
+            <div className="flex-1" />
+
+            <AnimatePresence>
+              {sent && (
+                <motion.span
+                  initial={{ opacity: 0, x: 6 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="text-xs font-semibold text-emerald-600"
+                >
+                  ✓ Sent
+                </motion.span>
+              )}
+            </AnimatePresence>
+
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={handleSend}
+              disabled={(!replyText.trim() && selectedFiles.length === 0) || sending}
+              className={`flex items-center gap-2 text-xs font-bold px-4 py-1.5 rounded-lg shadow-sm disabled:opacity-50 transition-all text-white ${
+                composeTab === 'Note'
+                  ? 'bg-amber-500 hover:bg-amber-600'
+                  : 'bg-indigo-600 hover:bg-indigo-700'
+              }`}
+            >
+              {sending ? (
+                <>
+                  <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                  Sending…
+                </>
+              ) : composeTab === 'Note' ? (
+                <>
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Save Note
+                </>
+              ) : (
+                <>
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                  {composeTab === 'Forward' ? 'Forward' : 'Send Reply'}
+                </>
+              )}
+            </motion.button>
+          </div>
         </div>
       </div>
     </div>

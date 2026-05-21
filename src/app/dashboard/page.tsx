@@ -49,7 +49,8 @@ function Skeleton({ className = '' }: { className?: string }) {
 
 export default function DashboardPage() {
   const { data: stats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = useGetDashboardStatsQuery();
-  const { data: bookings = [], isLoading: bookingsLoading, isError: bookingsError, refetch: refetchBookings } = useGetBookingsQuery({ limit: 10 });
+  const { data: bookingsPage, isLoading: bookingsLoading, isError: bookingsError, refetch: refetchBookings } = useGetBookingsQuery({ page_size: 10 });
+  const bookings = bookingsPage?.items ?? [];
 
   const statCards = stats ? [
     { label: 'Total Bookings', value: stats.total_bookings, icon: '📋', bg: 'from-indigo-50 to-violet-50', text: 'text-indigo-700' },
