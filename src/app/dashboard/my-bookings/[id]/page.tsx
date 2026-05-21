@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { pageTransition, staggerItem, fadeIn } from '@/lib/animations';
 import {
@@ -64,6 +64,7 @@ const labelCls = 'text-[10px] font-bold text-gray-400 uppercase tracking-wider m
 
 export default function BookingDetailPage() {
   const { id }   = useParams<{ id: string }>();
+  const router   = useRouter();
   const replyRef = useRef<HTMLTextAreaElement>(null);
 
   const [activeTab, setActiveTab]         = useState<Tab>('Conversation');
@@ -75,6 +76,13 @@ export default function BookingDetailPage() {
   const [updateBooking, { isLoading: saving }]   = useUpdateBookingMutation();
   const { data: agents = [] }                    = useGetAgentsQuery();
   const { data: allocLog = [] }                  = useGetAllocationLogQuery({ booking_id: id });
+
+  const bookingIds  = typeof window !== 'undefined'
+    ? JSON.parse(sessionStorage.getItem('bts:booking-nav') ?? '[]') as string[]
+    : [];
+  const currentIdx  = bookingIds.indexOf(id);
+  const prevId      = currentIdx > 0 ? bookingIds[currentIdx - 1] : null;
+  const nextId      = currentIdx >= 0 && currentIdx < bookingIds.length - 1 ? bookingIds[currentIdx + 1] : null;
 
   /* flash a "✓ Saved" badge on the changed field */
   const flashSaved = (field: string) => {
@@ -134,13 +142,44 @@ export default function BookingDetailPage() {
 
           {/* Subject header */}
           <div className="px-6 py-4 border-b border-gray-100">
-            <Link href="/dashboard/my-bookings"
-              className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-400 hover:text-indigo-600 transition-colors mb-3">
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-              </svg>
-              My Bookings
-            </Link>
+            <div className="flex items-center justify-between mb-3">
+              <Link href="/dashboard/my-bookings"
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-400 hover:text-indigo-600 transition-colors">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                </svg>
+                My Bookings
+              </Link>
+
+              {/* Prev / Next navigation */}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => prevId && router.push(`/dashboard/my-bookings/${prevId}`)}
+                  disabled={!prevId}
+                  title="Previous booking"
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  Prev
+                </button>
+                {currentIdx >= 0 && bookingIds.length > 0 && (
+                  <span className="text-[10px] text-gray-300 font-medium tabular-nums px-1">
+                    {currentIdx + 1} / {bookingIds.length}
+                  </span>
+                )}
+                <button
+                  onClick={() => nextId && router.push(`/dashboard/my-bookings/${nextId}`)}
+                  disabled={!nextId}
+                  title="Next booking"
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+                  Next
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            </div>
             <div className="flex items-start gap-4">
               {/* Sender avatar */}
               <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${avatarColor(b.sender_email)} flex items-center justify-center text-white text-[14px] font-bold shrink-0 shadow-sm mt-0.5`}>

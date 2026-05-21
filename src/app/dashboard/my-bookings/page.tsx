@@ -385,6 +385,13 @@ export default function MyBookingsPage() {
     return new Date(b.received_at).getTime() - new Date(a.received_at).getTime();
   });
 
+  /* Persist the current visible list so the detail page can navigate prev/next */
+  useEffect(() => {
+    if (sorted.length > 0) {
+      sessionStorage.setItem('bts:booking-nav', JSON.stringify(sorted.map(b => b.id)));
+    }
+  }, [sorted]);
+
   const totalCount = data?.total      ?? 0;
   const totalPages = data?.total_pages ?? 1;
   const startIdx   = totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1;
