@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAppSelector } from '@/store/hooks';
+import { useBookingEvents } from '@/hooks/useBookingEvents';
 
 const ADMIN_ONLY_PATHS = [
   '/dashboard/attendance',
@@ -23,6 +24,7 @@ export default function DashboardGuard({ children }: { children: React.ReactNode
   const router = useRouter();
   const pathname = usePathname();
   const { accessToken, user } = useAppSelector(state => state.auth);
+  useBookingEvents(accessToken);
 
   // Prevent hydration mismatch: localStorage is unavailable on the server,
   // so auth state is always null there. Wait for client mount before deciding.
