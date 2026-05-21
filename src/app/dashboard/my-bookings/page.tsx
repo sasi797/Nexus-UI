@@ -14,23 +14,6 @@ import ApiErrorState from '@/components/ApiErrorState';
 type Tab = 'All' | 'Pending' | 'In Progress' | 'Completed';
 const TABS: Tab[] = ['All', 'Pending', 'In Progress', 'Completed'];
 
-/* ── Mock data (shown when backend is unreachable) ── */
-const MOCK: BookingListItem[] = [
-  { id: 'BKG-2026-00001', subject: 'Need account statement urgently', priority: 'Urgent',   status: 'Pending',     agent: { id: '1', name: 'Sarah Oliver',  email: 'sarah@bts.com'  }, sender_email: 'sarah.oliver@gmail.com',    received_at: new Date(Date.now() - 1*3600000).toISOString(),  assigned_at: null },
-  { id: 'BKG-2026-00002', subject: 'Amount withdrawn from credit card without approval',    priority: 'Standard',  status: 'In Progress', agent: { id: '2', name: 'Arjun Patel',   email: 'arjun@bts.com'  }, sender_email: 'mary.jane@gmail.com',       received_at: new Date(Date.now() - 2*3600000).toISOString(),  assigned_at: new Date(Date.now() - 1*3600000).toISOString() },
-  { id: 'BKG-2026-00003', subject: 'Personal loan not disbursed yet',                      priority: 'Economy',   status: 'Pending',     agent: null,                                                        sender_email: 'adam.doe@gmail.com',        received_at: new Date(Date.now() - 16*3600000).toISOString(), assigned_at: null },
-  { id: 'BKG-2026-00004', subject: 'Transaction failed on my credit card',                 priority: 'Standard',  status: 'Completed',   agent: { id: '3', name: 'Lena Thomas',   email: 'lena@bts.com'   }, sender_email: 'dennis.mand@gmail.com',     received_at: new Date(Date.now() - 1*3600000).toISOString(),  assigned_at: new Date(Date.now() - 0.5*3600000).toISOString() },
-  { id: 'BKG-2026-00005', subject: 'Unable to change billing address in my account',       priority: 'Economy',   status: 'Pending',     agent: { id: '4', name: 'Jos Allen',     email: 'jos@bts.com'    }, sender_email: 'jenny.hale@gmail.com',      received_at: new Date(Date.now() - 22*3600000).toISOString(), assigned_at: null },
-  { id: 'BKG-2026-00006', subject: 'Suspecting fraudulent activity in my account',         priority: 'Urgent',    status: 'In Progress', agent: { id: '2', name: 'Arjun Patel',   email: 'arjun@bts.com'  }, sender_email: 'courtney.b@gmail.com',      received_at: new Date(Date.now() - 0.5*3600000).toISOString(),assigned_at: new Date(Date.now() - 0.3*3600000).toISOString() },
-  { id: 'BKG-2026-00007', subject: 'Economy - Local Road Delivery to Kodaikanal',          priority: 'Economy',   status: 'In Progress', agent: { id: '5', name: 'Maria Garcia',  email: 'maria@bts.com'  }, sender_email: 'agila@logistics.com',       received_at: new Date(Date.now() - 5*3600000).toISOString(),  assigned_at: new Date(Date.now() - 4*3600000).toISOString() },
-  { id: 'BKG-2026-00008', subject: 'Economy - Local Road Delivery to Ooty',                priority: 'Economy',   status: 'In Progress', agent: { id: '3', name: 'Lena Thomas',   email: 'lena@bts.com'   }, sender_email: 'agila@logistics.com',       received_at: new Date(Date.now() - 3*3600000).toISOString(),  assigned_at: new Date(Date.now() - 2*3600000).toISOString() },
-  { id: 'BKG-2026-00009', subject: 'Economy - Local Road Delivery to Kunnur',              priority: 'Economy',   status: 'Pending',     agent: null,                                                        sender_email: 'agila@logistics.com',       received_at: new Date(Date.now() - 7*3600000).toISOString(),  assigned_at: null },
-  { id: 'BKG-2026-00010', subject: 'Ticket #649914 Recovery follow-up',                    priority: 'Standard',  status: 'Pending',     agent: null,                                                        sender_email: 'no-reply@system.com',       received_at: new Date(Date.now() - 7*3600000).toISOString(),  assigned_at: null },
-  { id: 'BKG-2026-00011', subject: 'Urgent cargo pickup from Chennai port',                priority: 'Urgent',    status: 'Pending',     agent: { id: '1', name: 'Sarah Oliver',  email: 'sarah@bts.com'  }, sender_email: 'port.ops@chennaicargo.com', received_at: new Date(Date.now() - 0.8*3600000).toISOString(), assigned_at: null },
-  { id: 'BKG-2026-00012', subject: 'Standard shipment delay notification',                 priority: 'Standard',  status: 'Completed',   agent: { id: '5', name: 'Maria Garcia',  email: 'maria@bts.com'  }, sender_email: 'shipper@blueocean.com',     received_at: new Date(Date.now() - 48*3600000).toISOString(), assigned_at: new Date(Date.now() - 47*3600000).toISOString() },
-  { id: 'BKG-2026-00013', subject: 'Refrigerated container request for Bangalore',         priority: 'Urgent',    status: 'In Progress', agent: { id: '4', name: 'Jos Allen',     email: 'jos@bts.com'    }, sender_email: 'coldchain@freshlogix.in',   received_at: new Date(Date.now() - 2*3600000).toISOString(),  assigned_at: new Date(Date.now() - 1.5*3600000).toISOString() },
-];
-
 /* ── helpers ── */
 const AVATAR_COLORS = [
   'from-sky-400 to-blue-500', 'from-violet-400 to-purple-600',
@@ -371,13 +354,7 @@ export default function MyBookingsPage() {
     page_size: pageSize,
   });
 
-  /* Use real data or fall back to mock when backend is unreachable */
-  const useMock = isError || (!isLoading && (data?.total ?? 0) === 0 && !data);
-  const rawItems = useMock
-    ? MOCK.filter(b => activeTab === 'All' || b.status === activeTab)
-    : (data?.items ?? []);
-
-  const sorted = [...rawItems].sort((a, b) => {
+  const sorted = [...(data?.items ?? [])].sort((a, b) => {
     if (sortBy === 'Priority') {
       const ord: Record<string, number> = { Urgent: 0, Standard: 1, Economy: 2 };
       return (ord[a.priority] ?? 3) - (ord[b.priority] ?? 3);
@@ -389,14 +366,10 @@ export default function MyBookingsPage() {
     return new Date(b.received_at).getTime() - new Date(a.received_at).getTime();
   });
 
-  /* Pagination — server-side when live, client-side for mock */
-  const totalCount   = useMock ? sorted.length           : (data?.total      ?? 0);
-  const totalPages   = useMock ? Math.max(1, Math.ceil(sorted.length / pageSize)) : (data?.total_pages ?? 1);
-  const startIdx     = (currentPage - 1) * pageSize + 1;
-  const endIdx       = Math.min(currentPage * pageSize, totalCount);
-  const visibleItems = useMock
-    ? sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize)
-    : sorted;
+  const totalCount = data?.total      ?? 0;
+  const totalPages = data?.total_pages ?? 1;
+  const startIdx   = totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endIdx     = Math.min(currentPage * pageSize, totalCount);
 
   const agentOpts = ['Any agent', ...agents.map(a => a.name)];
 
@@ -499,7 +472,9 @@ export default function MyBookingsPage() {
         <motion.div variants={staggerItem} className="flex-1 min-h-0">
           <AnimatePresence mode="wait">
             <motion.div key={activeTab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
-              {isLoading ? (
+              {isError ? (
+                <ApiErrorState title="Failed to load tickets" onRetry={refetch} />
+              ) : isLoading ? (
                 <div className="space-y-2">
                   {Array.from({ length: 5 }).map((_, i) => (
                     <div key={i} className="flex items-center gap-3 px-4 py-3.5 bg-white rounded-xl border border-gray-100 shadow-sm">
@@ -518,16 +493,14 @@ export default function MyBookingsPage() {
                     </div>
                   ))}
                 </div>
-              ) : isError && !useMock ? (
-                <ApiErrorState title="Failed to load tickets" onRetry={refetch} />
-              ) : visibleItems.length === 0 ? (
+              ) : sorted.length === 0 ? (
                 <div className="py-16 text-center bg-white rounded-xl border border-gray-100 shadow-sm">
                   <p className="text-3xl mb-2">📋</p>
                   <p className="text-sm font-semibold text-gray-400">No {activeTab === 'All' ? '' : activeTab} tickets</p>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {visibleItems.map(b => <BookingRow key={b.id} booking={b} agents={agents} />)}
+                  {sorted.map(b => <BookingRow key={b.id} booking={b} agents={agents} />)}
                 </div>
               )}
             </motion.div>
