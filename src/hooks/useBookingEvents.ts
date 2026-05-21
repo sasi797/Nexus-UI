@@ -18,16 +18,23 @@ export function useBookingEvents(token: string | null) {
         const data = JSON.parse(e.data);
         if (data.type === 'new_booking') {
           dispatch(api.util.invalidateTags(['Booking', 'Dashboard']));
+        } else if (data.type === 'new_message') {
+          const bookingId: string | undefined = data.booking_id;
+          dispatch(
+            api.util.invalidateTags(
+              bookingId
+                ? [{ type: 'EmailMessage', id: bookingId }, { type: 'Booking', id: bookingId }]
+                : ['EmailMessage', 'Booking']
+            )
+          );
         }
       } catch {
         // ignore malformed messages
       }
     };
 
-    es.onerror = () => {
-      // EventSource automatically reconnects after close
-      es.close();
-    };
+    // Do NOT call es.close() here — EventSource auto-reconnects on error when left open
+    es.onerror = () => {};
 
     return () => es.close();
   }, [token, dispatch]);

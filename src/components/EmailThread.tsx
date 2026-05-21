@@ -38,6 +38,32 @@ function formatBytes(n: number | null) {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function splitQuotedContent(text: string): { main: string; quoted: string | null } {
+  const lines = text.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    // Gmail "On [date], [name] wrote:" — may wrap across a few lines
+    if (/^On .+/i.test(line)) {
+      const chunk = lines.slice(i, Math.min(i + 5, lines.length)).join(' ');
+      if (/wrote:\s*$/i.test(chunk)) {
+        const main = lines.slice(0, i).join('\n').trim();
+        return { main: main || text.trim(), quoted: lines.slice(i).join('\n').trim() };
+      }
+    }
+    // Lines starting with > (quoted text)
+    if (/^>/.test(line)) {
+      const main = lines.slice(0, i).join('\n').trim();
+      return { main: main || text.trim(), quoted: lines.slice(i).join('\n').trim() };
+    }
+    // Outlook-style dividers or *From:* / From:
+    if (/^[-_]{10,}/.test(line) || /^\*From:\*/i.test(line) || /^From:\s/i.test(line)) {
+      const main = lines.slice(0, i).join('\n').trim();
+      return { main: main || text.trim(), quoted: lines.slice(i).join('\n').trim() };
+    }
+  }
+  return { main: text.trim(), quoted: null };
+}
+
 function AttachmentChip({ att, token }: { att: EmailAttachment; token: string | null }) {
   const [loading, setLoading] = useState(false);
 
@@ -82,6 +108,7 @@ function AttachmentChip({ att, token }: { att: EmailAttachment; token: string | 
 function MessageCard({ msg, token, defaultOpen }: { msg: EmailMessage; token: string | null; defaultOpen: boolean }) {
   const isInbound = msg.direction === 'inbound';
   const [collapsed, setCollapsed] = useState(!defaultOpen);
+  const [showQuoted, setShowQuoted] = useState(false);
 
   const senderName = isInbound ? extractName(msg.from_email) : 'BTS Support';
   const senderEmail = isInbound ? msg.from_email : '';
@@ -117,7 +144,9 @@ function MessageCard({ msg, token, defaultOpen }: { msg: EmailMessage; token: st
             )}
           </div>
           {collapsed && msg.body_text && (
-            <p className="text-[11px] text-gray-400 truncate mt-0.5">{msg.body_text.trim().slice(0, 80)}</p>
+            <p className="text-[11px] text-gray-400 truncate mt-0.5">
+              {splitQuotedContent(msg.body_text).main.slice(0, 80)}
+            </p>
           )}
         </div>
 
@@ -163,10 +192,30 @@ function MessageCard({ msg, token, defaultOpen }: { msg: EmailMessage; token: st
 
               {/* Body */}
               <div className="pt-3 text-[13px] text-gray-700 leading-relaxed">
-                {msg.body_text
-                  ? <pre className="whitespace-pre-wrap font-sans">{msg.body_text.trim()}</pre>
-                  : <span className="text-[12px] italic text-gray-400">(No text content)</span>
-                }
+                {msg.body_text ? (() => {
+                  const { main, quoted } = splitQuotedContent(msg.body_text);
+                  return (
+                    <>
+                      <pre className="whitespace-pre-wrap font-sans">{main}</pre>
+                      {quoted && (
+                        <div className="mt-2">
+                          <button
+                            onClick={() => setShowQuoted(v => !v)}
+                            className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 hover:text-indigo-500 transition-colors px-2 py-1 rounded hover:bg-indigo-50/50"
+                          >
+                            <span className="text-base leading-none tracking-tighter">···</span>
+                            <span className="ml-1">{showQuoted ? 'Hide quoted text' : 'Show quoted text'}</span>
+                          </button>
+                          {showQuoted && (
+                            <pre className="mt-2 whitespace-pre-wrap font-sans text-[12px] text-gray-400 border-l-2 border-gray-200 pl-3">
+                              {quoted}
+                            </pre>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  );
+                })() : <span className="text-[12px] italic text-gray-400">(No text content)</span>}
               </div>
 
               {/* Attachments */}
@@ -195,7 +244,7 @@ interface Props {
 
 export default function EmailThread({ bookingId, senderEmail, replyRef, composeTab: controlledTab, onComposeTabChange }: Props) {
   const accessToken = useSelector((s: RootState) => s.auth.accessToken);
-  const { data: messages = [], isLoading } = useGetMessagesQuery(bookingId);
+  const { data: messages = [], isLoading } = useGetMessagesQuery(bookingId, { pollingInterval: 20000 });
   const [replyMessage, { isLoading: sending }] = useReplyMessageMutation();
 
   const [internalTab, setInternalTab] = useState<ComposeTab>('Reply');
