@@ -15,7 +15,7 @@ import { useGetAllocationLogQuery } from '@/services/allocationsApi';
 import EmailThread from '@/components/EmailThread';
 
 type Tab = 'Conversation' | 'History';
-type ComposeTab = 'Reply' | 'Forward' | 'Note';
+type ComposeTab = 'Reply' | 'Reply All' | 'Forward';
 
 /* ── helpers ── */
 const PRIORITY_LEFT: Record<string, string> = {
@@ -186,12 +186,12 @@ export default function BookingDetailPage() {
               Reply
             </motion.button>
 
-            <button onClick={() => focusCompose('Note')}
-              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 border border-gray-200 rounded-lg text-gray-500 hover:text-amber-700 hover:border-amber-200 hover:bg-amber-50 transition-all">
+            <button onClick={() => focusCompose('Reply All')}
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 border border-gray-200 rounded-lg text-gray-500 hover:text-indigo-700 hover:border-indigo-200 hover:bg-indigo-50 transition-all">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6M8 10h5" />
               </svg>
-              Add Note
+              Reply All
             </button>
 
             <button onClick={() => focusCompose('Forward')}

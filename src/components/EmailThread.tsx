@@ -9,7 +9,7 @@ import type { EmailMessage, EmailAttachment } from '@/services/emailApi';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
-type ComposeTab = 'Reply' | 'Forward' | 'Note';
+type ComposeTab = 'Reply' | 'Reply All' | 'Forward';
 
 const AVATAR_COLORS = [
   'from-sky-400 to-blue-500',
@@ -254,9 +254,15 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [sent, setSent] = useState(false);
   const [showAllRecipients, setShowAllRecipients] = useState(false);
+  const [forwardTo, setForwardTo] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const replyToEmails = (() => {
+  const replyOnlyEmails = (() => {
+    const firstInbound = messages.find(m => m.direction === 'inbound');
+    return [firstInbound ? firstInbound.from_email : senderEmail];
+  })();
+
+  const replyAllEmails = (() => {
     const firstInbound = messages.find(m => m.direction === 'inbound');
     if (!firstInbound) return [senderEmail];
     const all = new Set<string>();
@@ -265,6 +271,8 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
     firstInbound.cc_emails?.split(',').map(e => e.trim()).filter(Boolean).forEach(e => all.add(e));
     return [...all];
   })();
+
+  const currentRecipients = composeTab === 'Reply All' ? replyAllEmails : replyOnlyEmails;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -277,12 +285,21 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
 
   const handleSend = async () => {
     if (!replyText.trim() && selectedFiles.length === 0) return;
+    if (composeTab === 'Forward' && !forwardTo.trim()) return;
     const fd = new FormData();
     fd.append('body_text', replyText.trim() || ' ');
     selectedFiles.forEach(f => fd.append('files', f));
+    if (composeTab === 'Reply') {
+      fd.append('to_emails', replyOnlyEmails.join(', '));
+    } else if (composeTab === 'Reply All') {
+      fd.append('to_emails', replyAllEmails.join(', '));
+    } else {
+      fd.append('to_emails', forwardTo.trim());
+    }
     await replyMessage({ bookingId, formData: fd });
     setReplyText('');
     setSelectedFiles([]);
+    if (composeTab === 'Forward') setForwardTo('');
     setSent(true);
     setTimeout(() => setSent(false), 2000);
   };
@@ -298,6 +315,15 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
       ),
     },
     {
+      id: 'Reply All',
+      label: 'Reply All',
+      icon: (
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6M8 10h5" />
+        </svg>
+      ),
+    },
+    {
       id: 'Forward',
       label: 'Forward',
       icon: (
@@ -306,21 +332,9 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
         </svg>
       ),
     },
-    {
-      id: 'Note',
-      label: 'Add note',
-      icon: (
-        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-        </svg>
-      ),
-    },
   ];
 
-  const composePlaceholder =
-    composeTab === 'Note' ? 'Add an internal note…' :
-    composeTab === 'Forward' ? 'Forward this email…' :
-    'Write your reply…';
+  const composePlaceholder = composeTab === 'Forward' ? 'Write your forwarded message…' : 'Write your reply…';
 
   return (
     <div className="space-y-3">
@@ -380,38 +394,38 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
         </div>
 
         <div className="p-4 space-y-3">
-          {/* To: chips — shown for Reply and Forward */}
-          {composeTab !== 'Note' && (
-            <div className="flex items-center gap-1.5 flex-wrap border-b border-gray-50 pb-2">
-              <span className="text-[11px] font-semibold text-gray-400 shrink-0">To:</span>
-              {(showAllRecipients ? replyToEmails : replyToEmails.slice(0, 3)).map((email, i) => (
-                <span key={i} className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100 font-medium">
-                  <svg className="w-2.5 h-2.5 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                  {email}
-                </span>
-              ))}
-              {replyToEmails.length > 3 && (
-                <button
-                  onClick={() => setShowAllRecipients(v => !v)}
-                  className="text-[11px] font-bold text-indigo-500 hover:text-indigo-700 px-2 py-0.5 rounded-full hover:bg-indigo-50 transition-colors"
-                >
-                  {showAllRecipients ? '▲ less' : `+${replyToEmails.length - 3} more`}
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Note banner */}
-          {composeTab === 'Note' && (
-            <div className="flex items-center gap-2 text-[11px] text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
-              <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Internal note — not visible to the customer
-            </div>
-          )}
+          {/* To: row */}
+          <div className="flex items-center gap-1.5 flex-wrap border-b border-gray-50 pb-2">
+            <span className="text-[11px] font-semibold text-gray-400 shrink-0">To:</span>
+            {composeTab === 'Forward' ? (
+              <input
+                type="text"
+                value={forwardTo}
+                onChange={e => setForwardTo(e.target.value)}
+                placeholder="recipient@example.com, another@example.com"
+                className="flex-1 min-w-0 text-[12px] text-gray-700 bg-transparent focus:outline-none placeholder:text-gray-300"
+              />
+            ) : (
+              <>
+                {(showAllRecipients ? currentRecipients : currentRecipients.slice(0, 3)).map((email, i) => (
+                  <span key={i} className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100 font-medium">
+                    <svg className="w-2.5 h-2.5 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    {email}
+                  </span>
+                ))}
+                {currentRecipients.length > 3 && (
+                  <button
+                    onClick={() => setShowAllRecipients(v => !v)}
+                    className="text-[11px] font-bold text-indigo-500 hover:text-indigo-700 px-2 py-0.5 rounded-full hover:bg-indigo-50 transition-colors"
+                  >
+                    {showAllRecipients ? '▲ less' : `+${currentRecipients.length - 3} more`}
+                  </button>
+                )}
+              </>
+            )}
+          </div>
 
           {/* Textarea — transparent, no border */}
           <textarea
@@ -475,12 +489,11 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               onClick={handleSend}
-              disabled={(!replyText.trim() && selectedFiles.length === 0) || sending}
-              className={`flex items-center gap-2 text-xs font-bold px-4 py-1.5 rounded-lg shadow-sm disabled:opacity-50 transition-all text-white ${
-                composeTab === 'Note'
-                  ? 'bg-amber-500 hover:bg-amber-600'
-                  : 'bg-indigo-600 hover:bg-indigo-700'
-              }`}
+              disabled={
+                (composeTab === 'Forward' ? !forwardTo.trim() : (!replyText.trim() && selectedFiles.length === 0)) ||
+                sending
+              }
+              className="flex items-center gap-2 text-xs font-bold px-4 py-1.5 rounded-lg shadow-sm disabled:opacity-50 transition-all text-white bg-indigo-600 hover:bg-indigo-700"
             >
               {sending ? (
                 <>
@@ -490,19 +503,12 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
                   </svg>
                   Sending…
                 </>
-              ) : composeTab === 'Note' ? (
-                <>
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Save Note
-                </>
               ) : (
                 <>
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                   </svg>
-                  {composeTab === 'Forward' ? 'Forward' : 'Send Reply'}
+                  {composeTab === 'Forward' ? 'Forward' : 'Send'}
                 </>
               )}
             </motion.button>
