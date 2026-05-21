@@ -9,6 +9,7 @@ import {
   BookingListItem,
 } from '@/services/bookingsApi';
 import { useGetAgentsQuery, Agent } from '@/services/agentsApi';
+import { useGetDashboardStatsQuery } from '@/services/dashboardApi';
 import ApiErrorState from '@/components/ApiErrorState';
 
 type Tab = 'All' | 'Pending' | 'In Progress' | 'Completed';
@@ -355,6 +356,13 @@ export default function MyBookingsPage() {
 
   const status = activeTab === 'All' ? undefined : activeTab;
   const { data: agents = [] } = useGetAgentsQuery();
+  const { data: stats } = useGetDashboardStatsQuery();
+  const TAB_COUNTS: Record<Tab, number | undefined> = {
+    All:          stats?.total_bookings,
+    Pending:      stats?.pending,
+    'In Progress': stats?.in_progress,
+    Completed:    stats?.completed,
+  };
 
   const agentId = agentFilter === 'Any agent' ? undefined : agents.find(a => a.name === agentFilter)?.id;
 
@@ -430,7 +438,16 @@ export default function MyBookingsPage() {
                   transition={{ type: 'spring', stiffness: 420, damping: 38 }}
                 />
               )}
-              <span className="relative z-10">{tab}</span>
+              <span className="relative z-10 flex items-center gap-1.5">
+                {tab}
+                {TAB_COUNTS[tab] !== undefined && (
+                  <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full leading-none ${
+                    activeTab === tab ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-400'
+                  }`}>
+                    {TAB_COUNTS[tab]}
+                  </span>
+                )}
+              </span>
               {activeTab === tab && (
                 <motion.div
                   layoutId="booking-tab-line"
