@@ -327,6 +327,16 @@ const PAGE_SIZES = [10, 25, 50, 100];
 /* ── Page ── */
 export default function MyBookingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>('All');
+  const [tabDir, setTabDir] = useState(0);
+  const prevTabIdx = useRef(0);
+
+  function handleTabChange(tab: Tab) {
+    const newIdx = TABS.indexOf(tab);
+    setTabDir(newIdx > prevTabIdx.current ? 1 : -1);
+    prevTabIdx.current = newIdx;
+    setActiveTab(tab);
+  }
+
   const [sortBy, setSortBy] = useState('Date created');
   const [agentFilter, setAgentFilter] = useState('Any agent');
   const [sentimentFilter, setSentimentFilter] = useState('Any');
@@ -455,14 +465,25 @@ export default function MyBookingsPage() {
           </div>
         </motion.div>
 
-        {/* Tab bar — font slightly larger */}
+        {/* Tab bar */}
         <motion.div variants={staggerItem} className="flex items-center gap-0.5 border-b border-gray-200">
           {TABS.map(tab => (
-            <button key={tab} onClick={() => setActiveTab(tab)}
-              className={`relative px-4 py-2.5 text-[13px] font-semibold transition-colors ${activeTab === tab ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-700'}`}>
-              {tab}
+            <button key={tab} onClick={() => handleTabChange(tab)}
+              className={`relative px-4 py-2.5 text-[13px] font-semibold transition-colors duration-150 ${activeTab === tab ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-700'}`}>
               {activeTab === tab && (
-                <motion.div layoutId="booking-tab-line" className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 rounded-full" />
+                <motion.div
+                  layoutId="booking-tab-bg"
+                  className="absolute inset-x-0 top-1 bottom-1 bg-indigo-50 rounded-lg"
+                  transition={{ type: 'spring', stiffness: 420, damping: 38 }}
+                />
+              )}
+              <span className="relative z-10">{tab}</span>
+              {activeTab === tab && (
+                <motion.div
+                  layoutId="booking-tab-line"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 rounded-full"
+                  transition={{ type: 'spring', stiffness: 420, damping: 38 }}
+                />
               )}
             </button>
           ))}
@@ -470,8 +491,20 @@ export default function MyBookingsPage() {
 
         {/* Ticket list */}
         <motion.div variants={staggerItem} className="flex-1 min-h-0">
-          <AnimatePresence mode="wait">
-            <motion.div key={activeTab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+          <AnimatePresence mode="wait" custom={tabDir}>
+            <motion.div
+              key={activeTab}
+              custom={tabDir}
+              variants={{
+                enter: (d: number) => ({ opacity: 0, x: d * 22 }),
+                center: { opacity: 1, x: 0 },
+                exit: (d: number) => ({ opacity: 0, x: d * -14 }),
+              }}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.19, ease: [0.25, 0.1, 0.25, 1] }}
+            >
               {isError ? (
                 <ApiErrorState title="Failed to load tickets" onRetry={refetch} />
               ) : isLoading ? (

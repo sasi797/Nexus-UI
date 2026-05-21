@@ -36,8 +36,8 @@ export const staggerFast: Variants = {
 };
 
 export const staggerItem: Variants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.38, ease: [0.22, 1, 0.36, 1] } },
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.22, ease: [0.22, 1, 0.36, 1] } },
 };
 
 export const staggerRow: Variants = {
@@ -66,9 +66,9 @@ export const buttonTap = {
 };
 
 export const pageTransition: Variants = {
-  hidden: { opacity: 0, y: 18 },
+  hidden: { opacity: 0, y: 10 },
   visible: {
     opacity: 1, y: 0,
-    transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1], when: 'beforeChildren', staggerChildren: 0.06 },
+    transition: { duration: 0.2, ease: [0.22, 1, 0.36, 1], staggerChildren: 0.04 },
   },
 };
