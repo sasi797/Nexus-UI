@@ -110,7 +110,7 @@ export default function AgentsPage() {
 
   return (
     <motion.div variants={pageTransition} initial="hidden" animate="visible" className="space-y-3 max-w-3xl">
-      <motion.h1 variants={staggerItem} className="text-lg font-bold text-gray-900">Agents</motion.h1>
+      {/* <motion.h1 variants={staggerItem} className="text-lg font-bold text-gray-900">Agents</motion.h1> */}
 
       {/* Summary row */}
       <motion.div variants={staggerItem} className="grid grid-cols-3 gap-3">

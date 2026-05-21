@@ -44,7 +44,6 @@ export default function ReportsPage() {
   return (
     <motion.div variants={pageTransition} initial="hidden" animate="visible" className="space-y-4">
       <motion.div variants={staggerItem} className="flex items-center justify-between">
-        <h1 className="text-lg font-bold text-gray-900">Reports</h1>
         <motion.div whileHover={{ scale: 1.02 }}
           className="flex items-center gap-2 text-xs text-gray-500 bg-white border border-gray-200 px-3 py-1.5 rounded-lg shadow-sm font-medium">
           <svg className="w-3.5 h-3.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">

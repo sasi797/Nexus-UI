@@ -380,9 +380,9 @@ export default function MyBookingsPage() {
       <div className="flex-1 min-w-0 flex flex-col gap-3">
 
         {/* Page header */}
-        <motion.div variants={staggerItem}>
+        {/* <motion.div variants={staggerItem}>
           <h1 className="text-xl font-bold text-gray-900">All tickets</h1>
-        </motion.div>
+        </motion.div> */}
 
         {/* Sort / Layout / Export / Count bar */}
         <motion.div variants={staggerItem} className="flex items-center gap-3 text-xs text-gray-500">

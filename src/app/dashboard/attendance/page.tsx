@@ -202,7 +202,7 @@ export default function AttendancePage() {
 
   return (
     <motion.div variants={pageTransition} initial="hidden" animate="visible" className="space-y-3 max-w-5xl">
-      <motion.h1 variants={staggerItem} className="text-lg font-bold text-gray-900">Attendance Management</motion.h1>
+      {/* <motion.h1 variants={staggerItem} className="text-lg font-bold text-gray-900">Attendance Management</motion.h1> */}
       <motion.div variants={staggerItem} className="bg-white rounded-xl shadow-sm border border-gray-100/80">
         <div className="px-4 py-3 border-b border-gray-100">
           <h2 className="text-sm font-bold text-gray-900 mb-3">

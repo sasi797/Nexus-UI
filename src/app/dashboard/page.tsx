@@ -61,9 +61,7 @@ export default function DashboardPage() {
 
   return (
     <motion.div variants={pageTransition} initial="hidden" animate="visible" className="space-y-4">
-      <motion.h1 variants={staggerItem} className="text-lg font-bold text-gray-900">Dashboard</motion.h1>
-
-      {statsError && <ApiErrorState title="Failed to load stats" onRetry={refetchStats} />}
+{statsError && <ApiErrorState title="Failed to load stats" onRetry={refetchStats} />}
 
       <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="grid grid-cols-4 gap-3">
         {statsLoading

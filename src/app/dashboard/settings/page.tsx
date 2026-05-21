@@ -84,7 +84,7 @@ export default function SettingsPage() {
 
   return (
     <motion.div variants={pageTransition} initial="hidden" animate="visible" className="space-y-3">
-      <motion.h1 variants={staggerItem} className="text-lg font-bold text-gray-900">Settings</motion.h1>
+      {/* <motion.h1 variants={staggerItem} className="text-lg font-bold text-gray-900">Settings</motion.h1> */}
 
       <motion.div variants={staggerItem} className="bg-white rounded-xl shadow-sm border border-gray-100/80">
         {/* Tabs */}

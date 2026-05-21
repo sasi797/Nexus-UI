@@ -72,7 +72,7 @@ export default function NotificationsPage() {
 
   return (
     <motion.div variants={pageTransition} initial="hidden" animate="visible" className="space-y-3">
-      <motion.h1 variants={staggerItem} className="text-lg font-bold text-gray-900">Pending Queue</motion.h1>
+      {/* <motion.h1 variants={staggerItem} className="text-lg font-bold text-gray-900">Pending Queue</motion.h1> */}
 
       <div className="grid grid-cols-4 gap-3">
         {statsData.map(s => (

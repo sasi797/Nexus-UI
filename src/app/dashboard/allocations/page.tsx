@@ -89,7 +89,7 @@ export default function AllocationsPage() {
 
   return (
     <motion.div variants={pageTransition} initial="hidden" animate="visible" className="space-y-3 max-w-4xl">
-      <motion.h1 variants={staggerItem} className="text-lg font-bold text-gray-900">Allocation</motion.h1>
+      {/* <motion.h1 variants={staggerItem} className="text-lg font-bold text-gray-900">Allocation</motion.h1> */}
 
       {/* Toast */}
       <AnimatePresence>

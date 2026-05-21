@@ -1,14 +1,26 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { usePathname } from 'next/navigation';
 import { useAppSelector } from '@/store/hooks';
 
-interface HeaderProps {
-  searchPlaceholder?: string;
-}
+const PATH_TITLES: { match: (p: string) => boolean; title: string }[] = [
+  { match: p => /^\/dashboard\/my-bookings\/.+/.test(p), title: 'Booking Detail' },
+  { match: p => p.startsWith('/dashboard/my-bookings'),  title: 'My Bookings' },
+  { match: p => p.startsWith('/dashboard/attendance'),   title: 'Attendance' },
+  { match: p => p.startsWith('/dashboard/allocations'),  title: 'Allocations' },
+  { match: p => p.startsWith('/dashboard/agents'),       title: 'Agents' },
+  { match: p => p.startsWith('/dashboard/notifications'),title: 'Notifications' },
+  { match: p => p.startsWith('/dashboard/reports'),      title: 'Reports' },
+  { match: p => p.startsWith('/dashboard/settings'),     title: 'Settings' },
+  { match: p => p === '/dashboard',                      title: 'Dashboard' },
+];
 
-export default function Header({ searchPlaceholder = 'Search bookings...' }: HeaderProps) {
+export default function Header() {
   const user = useAppSelector(state => state.auth.user);
+  const pathname = usePathname();
+  const title = PATH_TITLES.find(t => t.match(pathname))?.title ?? 'Dashboard';
+
   return (
     <motion.header
       initial={{ opacity: 0, y: -16 }}
@@ -16,19 +28,8 @@ export default function Header({ searchPlaceholder = 'Search bookings...' }: Hea
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       className="h-14 bg-white/80 backdrop-blur-md border-b border-gray-200/70 flex items-center justify-between px-6 sticky top-0 z-10"
     >
-      <div className="flex items-center gap-3 flex-1 max-w-sm">
-        <div className="relative w-full">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-          <motion.input
-            whileFocus={{ scale: 1.01, boxShadow: '0 0 0 3px rgba(99,102,241,0.15)' }}
-            transition={{ duration: 0.2 }}
-            type="text"
-            placeholder={searchPlaceholder}
-            className="w-full pl-9 pr-4 py-2 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-transparent transition-all"
-          />
-        </div>
+      <div className="flex items-center">
+        <h1 className="text-[15px] font-bold text-gray-900">{title}</h1>
       </div>
 
       <div className="flex items-center gap-2">
