@@ -2,12 +2,12 @@
 
 import { useState, useRef } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { pageTransition, staggerItem, fadeIn } from '@/lib/animations';
 import {
   useGetBookingQuery, usePatchBookingStatusMutation,
-  useUpdateBookingMutation, useDeleteBookingMutation,
+  useUpdateBookingMutation,
 } from '@/services/bookingsApi';
 
 import { useGetAgentsQuery } from '@/services/agentsApi';
@@ -64,7 +64,6 @@ const labelCls = 'text-[10px] font-bold text-gray-400 uppercase tracking-wider m
 
 export default function BookingDetailPage() {
   const { id }   = useParams<{ id: string }>();
-  const router   = useRouter();
   const replyRef = useRef<HTMLTextAreaElement>(null);
 
   const [activeTab, setActiveTab]         = useState<Tab>('Conversation');
@@ -74,7 +73,6 @@ export default function BookingDetailPage() {
   const { data: b, isLoading }                   = useGetBookingQuery(id);
   const [patchStatus,   { isLoading: patching }] = usePatchBookingStatusMutation();
   const [updateBooking, { isLoading: saving }]   = useUpdateBookingMutation();
-  const [deleteBooking, { isLoading: deleting }] = useDeleteBookingMutation();
   const { data: agents = [] }                    = useGetAgentsQuery();
   const { data: allocLog = [] }                  = useGetAllocationLogQuery({ booking_id: id });
 
@@ -98,12 +96,6 @@ export default function BookingDetailPage() {
   };
 
   const handleClose = () => patchStatus({ id, status: 'Completed' });
-
-  const handleDelete = async () => {
-    if (!window.confirm(`Delete booking ${b?.id}? This cannot be undone.`)) return;
-    await deleteBooking(id);
-    router.push('/dashboard/my-bookings');
-  };
 
   const focusCompose = (tab: ComposeTab) => {
     setComposeTab(tab);
@@ -212,19 +204,9 @@ export default function BookingDetailPage() {
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                {patching ? 'Closing…' : 'Close ticket'}
+                {patching ? 'Completing…' : 'Complete'}
               </motion.button>
             )}
-
-            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-              disabled={deleting}
-              onClick={handleDelete}
-              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 border border-gray-200 rounded-lg text-red-500 hover:border-red-200 hover:bg-red-50 disabled:opacity-60 transition-all">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              Delete
-            </motion.button>
           </div>
 
           {/* Tabs */}

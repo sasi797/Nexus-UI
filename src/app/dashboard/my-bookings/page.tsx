@@ -228,6 +228,7 @@ function BookingRow({ booking, agents }: { booking: BookingListItem; agents: Age
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-0.5">
+            <span className="text-[10px] font-bold text-gray-400 font-mono tracking-tight">{booking.id}</span>
             {booking.status === 'Pending' && (
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 leading-none">New</span>
             )}
@@ -394,9 +395,8 @@ export default function MyBookingsPage() {
           <h1 className="text-xl font-bold text-gray-900">All tickets</h1>
         </motion.div> */}
 
-        {/* Sort / Layout / Export / Count bar */}
+        {/* Sort / Layout bar */}
         <motion.div variants={staggerItem} className="flex items-center gap-3 text-xs text-gray-500">
-          {/* Sort by — align="left" so dropdown opens rightward */}
           <div className="flex items-center gap-1.5">
             <span className="text-gray-400">Sort by:</span>
             <InlineDropdown align="left"
@@ -415,53 +415,6 @@ export default function MyBookingsPage() {
           <div className="flex items-center gap-1.5">
             <span className="text-gray-400">Layout:</span>
             <span className="font-semibold text-gray-700">Card view</span>
-          </div>
-          {/* Right side: Export + page-size picker + count + arrows */}
-          <div className="ml-auto flex items-center gap-2">
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 bg-white text-gray-600 font-semibold hover:bg-gray-50 transition-colors shadow-sm">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Export
-            </button>
-
-            {/* Page size picker */}
-            <InlineDropdown align="right"
-              trigger={(open, toggle) => (
-                <button onClick={toggle}
-                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-gray-600 font-semibold bg-white hover:bg-gray-50 transition-colors shadow-sm ${open ? 'border-indigo-300 ring-2 ring-indigo-100' : 'border-gray-200'}`}>
-                  {pageSize} / page
-                  <Chevron cls={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
-                </button>
-              )}>
-              {close => PAGE_SIZES.map(n => (
-                <DdItem key={n} label={`${n} per page`} active={pageSize === n}
-                  onClick={() => { setPageSize(n); close(); }} />
-              ))}
-            </InlineDropdown>
-
-            {isFetching && <div className="w-3 h-3 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin" />}
-
-            {/* Count */}
-            <span className="text-gray-400 font-medium tabular-nums">
-              {totalCount === 0 ? '0' : `${startIdx}–${endIdx}`} of {totalCount}
-            </span>
-
-            {/* Prev */}
-            <button
-              disabled={currentPage <= 1}
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              className="p-1 rounded hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-            </button>
-
-            {/* Next */}
-            <button
-              disabled={currentPage >= totalPages}
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              className="p-1 rounded hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-            </button>
           </div>
         </motion.div>
 
@@ -539,10 +492,56 @@ export default function MyBookingsPage() {
             </motion.div>
           </AnimatePresence>
         </motion.div>
+
       </div>
 
       {/* ── Filters sidebar ── */}
-      <motion.div variants={staggerItem} className="w-56 shrink-0">
+      <motion.div variants={staggerItem} className="w-64 shrink-0 flex flex-col gap-3">
+
+        {/* Export + pagination — top-right corner */}
+        <div className="flex items-center justify-end gap-1.5 text-xs text-gray-500 h-[26px]">
+          <button className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-600 font-semibold hover:bg-gray-50 transition-colors shadow-sm">
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Export
+          </button>
+
+          <InlineDropdown align="right"
+            trigger={(open, toggle) => (
+              <button onClick={toggle}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-gray-600 font-semibold bg-white hover:bg-gray-50 transition-colors shadow-sm ${open ? 'border-indigo-300 ring-2 ring-indigo-100' : 'border-gray-200'}`}>
+                {pageSize}/pg
+                <Chevron cls={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+              </button>
+            )}>
+            {close => PAGE_SIZES.map(n => (
+              <DdItem key={n} label={`${n} per page`} active={pageSize === n}
+                onClick={() => { setPageSize(n); close(); }} />
+            ))}
+          </InlineDropdown>
+
+          {isFetching && <div className="w-2.5 h-2.5 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin" />}
+
+          <span className="text-gray-400 font-medium tabular-nums text-[11px]">
+            {totalCount === 0 ? '0' : `${startIdx}–${endIdx}`}/{totalCount}
+          </span>
+
+          <button
+            disabled={currentPage <= 1}
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            className="p-0.5 rounded hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+          </button>
+
+          <button
+            disabled={currentPage >= totalPages}
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            className="p-0.5 rounded hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+          </button>
+        </div>
+
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-4 sticky top-0 max-h-[calc(100vh-7rem)] overflow-y-auto">
 
           {/* Header */}
