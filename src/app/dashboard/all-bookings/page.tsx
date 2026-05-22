@@ -43,7 +43,6 @@ function dueIn(b: BookingListItem) {
   return `Due in ${Math.floor((ms % 3_600_000) / 60_000)} min`;
 }
 
-/* ── priority ── */
 const P_DOT: Record<string, string> = { 'Very Urgent': 'bg-red-500', Urgent: 'bg-amber-500', 'Not Urgent': 'bg-green-500' };
 const P_TEXT: Record<string, string> = { 'Very Urgent': 'text-red-600', Urgent: 'text-amber-600', 'Not Urgent': 'text-green-600' };
 const P_BG: Record<string, string> = {
@@ -52,7 +51,6 @@ const P_BG: Record<string, string> = {
   'Not Urgent': 'bg-green-50 hover:bg-green-100/60',
 };
 
-/* ── status ── */
 const S_CFG: Record<string, { dot: string; text: string; label: string; path: string }> = {
   Pending: {
     dot: 'bg-amber-400', text: 'text-amber-600', label: 'Open',
@@ -118,7 +116,7 @@ const Chevron = ({ cls = '' }: { cls?: string }) => (
   </svg>
 );
 
-/* ── Custom filter dropdown (replaces native <select>) ── */
+/* ── FilterDropdown ── */
 function FilterDropdown({ value, options, onChange }: {
   value: string; options: string[]; onChange: (v: string) => void;
 }) {
@@ -142,7 +140,6 @@ function FilterDropdown({ value, options, onChange }: {
         <span className="truncate text-left">{value}</span>
         <Chevron cls={`text-gray-400 shrink-0 transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
       </button>
-
       <AnimatePresence>
         {open && (
           <motion.div
@@ -178,7 +175,21 @@ function FilterDropdown({ value, options, onChange }: {
   );
 }
 
-/* ── Filter panel layout helpers ── */
+/* ── Filter panel helpers ── */
+function FilterSection({ label, children }: { label: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="space-y-1.5">
+      <button onClick={() => setOpen(v => !v)}
+        className="flex items-center justify-between w-full text-[11px] font-bold text-gray-600 hover:text-gray-900 transition-colors">
+        {label}
+        <Chevron cls={`text-gray-400 transition-transform duration-150 ${open ? '' : '-rotate-90'}`} />
+      </button>
+      {open && <div className="mt-1">{children}</div>}
+    </div>
+  );
+}
+
 function FilterSelect({ label, value, options, onChange }: {
   label: string; value: string; options: string[]; onChange: (v: string) => void;
 }) {
@@ -191,13 +202,17 @@ function FilterSelect({ label, value, options, onChange }: {
 }
 
 /* ── Booking row ── */
-function BookingRow({ booking, agents }: { booking: BookingListItem; agents: Agent[] }) {
+function BookingRow({ booking, agents, myUserEmail }: {
+  booking: BookingListItem; agents: Agent[]; myUserEmail: string | undefined;
+}) {
   const [updateBooking, { isLoading: upd }] = useUpdateBookingMutation();
   const [patchStatus, { isLoading: pat }] = usePatchBookingStatusMutation();
   const busy = upd || pat;
   const sc = S_CFG[booking.status] ?? S_CFG.Pending;
   const due = dueIn(booking);
   const overdue = due === 'Overdue';
+  // Booking is assigned to current user — cannot be reassigned away
+  const isMine = !!myUserEmail && booking.agent?.email === myUserEmail;
 
   return (
     <div className={`flex items-center gap-3 px-4 py-3.5 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''}`}>
@@ -208,12 +223,9 @@ function BookingRow({ booking, agents }: { booking: BookingListItem; agents: Age
 
       {/* Clickable → detail */}
       <Link href={`/dashboard/my-bookings/${booking.id}`} className="flex items-center gap-3 flex-1 min-w-0">
-        {/* Avatar */}
         <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${avatarColor(booking.sender_email)} flex items-center justify-center text-white text-[13px] font-bold shrink-0 shadow-sm`}>
           {booking.sender_email.charAt(0).toUpperCase()}
         </div>
-
-        {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-0.5">
             <span className="text-[10px] font-bold text-gray-400 font-mono tracking-tight">{booking.id}</span>
@@ -262,35 +274,47 @@ function BookingRow({ booking, agents }: { booking: BookingListItem; agents: Age
           ))}
         </InlineDropdown>
 
-        {/* Agent */}
-        <InlineDropdown
-          trigger={(open, toggle) => (
-            <button onClick={toggle}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-medium text-gray-500 w-full justify-end text-xs max-w-[160px] transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
-              <svg className="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-              <span className="truncate">{booking.agent?.name ?? '—'}</span>
-              <Chevron cls="text-gray-300" />
-            </button>
-          )}>
-          {close => (
-            <>
-              <DdItem label="Unassign" active={!booking.agent}
-                left={<span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-[9px] text-gray-400 font-bold shrink-0">—</span>}
-                onClick={() => { updateBooking({ id: booking.id, body: { agent_id: undefined } }); close(); }} />
-              {agents.map(a => (
-                <DdItem key={a.id} label={a.name} active={booking.agent?.id === a.id}
-                  left={
-                    <div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[9px] font-bold shrink-0`}>
-                      {a.name.charAt(0).toUpperCase()}
-                    </div>
-                  }
-                  onClick={() => { updateBooking({ id: booking.id, body: { agent_id: a.id } }); close(); }} />
-              ))}
-            </>
-          )}
-        </InlineDropdown>
+        {/* Agent — locked when booking belongs to current user */}
+        {isMine ? (
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg w-full justify-end text-xs text-indigo-600 font-medium">
+            <svg className="w-3.5 h-3.5 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            <span className="truncate">You</span>
+            <svg className="w-3 h-3 text-indigo-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+          </div>
+        ) : (
+          <InlineDropdown
+            trigger={(open, toggle) => (
+              <button onClick={toggle}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-medium text-gray-500 w-full justify-end text-xs max-w-[160px] transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
+                <svg className="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span className="truncate">{booking.agent?.name ?? '—'}</span>
+                <Chevron cls="text-gray-300" />
+              </button>
+            )}>
+            {close => (
+              <>
+                <DdItem label="Unassign" active={!booking.agent}
+                  left={<span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-[9px] text-gray-400 font-bold shrink-0">—</span>}
+                  onClick={() => { updateBooking({ id: booking.id, body: { agent_id: undefined } }); close(); }} />
+                {agents.map(a => (
+                  <DdItem key={a.id} label={a.name} active={booking.agent?.id === a.id}
+                    left={
+                      <div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[9px] font-bold shrink-0`}>
+                        {a.name.charAt(0).toUpperCase()}
+                      </div>
+                    }
+                    onClick={() => { updateBooking({ id: booking.id, body: { agent_id: a.id } }); close(); }} />
+                ))}
+              </>
+            )}
+          </InlineDropdown>
+        )}
 
         {/* Status */}
         <InlineDropdown
@@ -319,8 +343,9 @@ function BookingRow({ booking, agents }: { booking: BookingListItem; agents: Age
 const PAGE_SIZES = [10, 25, 50, 100];
 
 /* ── Page ── */
-export default function MyBookingsPage() {
+export default function AllBookingsPage() {
   const user = useAppSelector(state => state.auth.user);
+
   const [activeTab, setActiveTab] = useState<Tab>('All');
   const [tabDir, setTabDir] = useState(0);
   const prevTabIdx = useRef(0);
@@ -333,29 +358,28 @@ export default function MyBookingsPage() {
   }
 
   const [sortBy, setSortBy] = useState('Date created');
+  const [agentFilter, setAgentFilter] = useState('Any agent');
   const [priorityFilter, setPriorityFilter] = useState('Any priority');
   const [createdFilter, setCreatedFilter] = useState('Anytime');
   const [closedAtFilter, setClosedAtFilter] = useState('Anytime');
   const [pageSize, setPageSize] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
 
-  /* Reset to page 1 whenever filters/tab/sort/pageSize change */
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab, priorityFilter, createdFilter, closedAtFilter, sortBy, pageSize]);
+  }, [activeTab, agentFilter, priorityFilter, createdFilter, closedAtFilter, sortBy, pageSize]);
 
   const status = activeTab === 'All' ? undefined : activeTab;
   const { data: agents = [] } = useGetAgentsQuery();
   const { data: stats } = useGetDashboardStatsQuery();
   const TAB_COUNTS: Record<Tab, number | undefined> = {
-    All:          stats?.total_bookings,
-    Pending:      stats?.pending,
+    All:           stats?.total_bookings,
+    Pending:       stats?.pending,
     'In Progress': stats?.in_progress,
-    Completed:    stats?.completed,
+    Completed:     stats?.completed,
   };
 
-  // Always filter to the current user's own bookings
-  const myAgentId = agents.find(a => a.email === user?.email)?.id;
+  const agentId = agentFilter === 'Any agent' ? undefined : agents.find(a => a.name === agentFilter)?.id;
   const priority = priorityFilter === 'Any priority' ? undefined : priorityFilter;
 
   const CREATED_MAP: Record<string, string | undefined> = {
@@ -368,7 +392,7 @@ export default function MyBookingsPage() {
   const { data, isLoading, isFetching, isError, refetch } = useGetBookingsQuery({
     status,
     priority,
-    agent_id: myAgentId,
+    agent_id: agentId,
     created_after: CREATED_MAP[createdFilter],
     closed_after: CLOSED_MAP[closedAtFilter],
     page: currentPage,
@@ -387,17 +411,12 @@ export default function MyBookingsPage() {
     return new Date(b.received_at).getTime() - new Date(a.received_at).getTime();
   });
 
-  /* Persist the current visible list so the detail page can navigate prev/next */
-  useEffect(() => {
-    if (sorted.length > 0) {
-      sessionStorage.setItem('bts:booking-nav', JSON.stringify(sorted.map(b => b.id)));
-    }
-  }, [sorted]);
-
   const totalCount = data?.total      ?? 0;
   const totalPages = data?.total_pages ?? 1;
   const startIdx   = totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const endIdx     = Math.min(currentPage * pageSize, totalCount);
+
+  const agentOpts = ['Any agent', ...agents.map(a => a.name)];
 
   return (
     <motion.div variants={pageTransition} initial="hidden" animate="visible" className="flex gap-4 h-full min-h-0">
@@ -405,12 +424,7 @@ export default function MyBookingsPage() {
       {/* ── Main ── */}
       <div className="flex-1 min-w-0 flex flex-col gap-3">
 
-        {/* Page header */}
-        {/* <motion.div variants={staggerItem}>
-          <h1 className="text-xl font-bold text-gray-900">All tickets</h1>
-        </motion.div> */}
-
-        {/* Sort / Layout bar */}
+        {/* Sort bar */}
         <motion.div variants={staggerItem} className="flex items-center gap-3 text-sm text-gray-500">
           <div className="flex items-center gap-1.5">
             <span className="text-gray-400">Sort by:</span>
@@ -439,11 +453,9 @@ export default function MyBookingsPage() {
             <button key={tab} onClick={() => handleTabChange(tab)}
               className={`relative px-4 py-2.5 text-[13px] font-semibold transition-colors duration-150 ${activeTab === tab ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-700'}`}>
               {activeTab === tab && (
-                <motion.div
-                  layoutId="booking-tab-bg"
+                <motion.div layoutId="all-tab-bg"
                   className="absolute inset-x-0 top-1 bottom-1 bg-indigo-50 rounded-lg"
-                  transition={{ type: 'spring', stiffness: 420, damping: 38 }}
-                />
+                  transition={{ type: 'spring', stiffness: 420, damping: 38 }} />
               )}
               <span className="relative z-10 flex items-center gap-1.5">
                 {tab}
@@ -456,11 +468,9 @@ export default function MyBookingsPage() {
                 )}
               </span>
               {activeTab === tab && (
-                <motion.div
-                  layoutId="booking-tab-line"
+                <motion.div layoutId="all-tab-line"
                   className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 rounded-full"
-                  transition={{ type: 'spring', stiffness: 420, damping: 38 }}
-                />
+                  transition={{ type: 'spring', stiffness: 420, damping: 38 }} />
               )}
             </button>
           ))}
@@ -475,15 +485,13 @@ export default function MyBookingsPage() {
               variants={{
                 enter: (d: number) => ({ opacity: 0, x: d * 22 }),
                 center: { opacity: 1, x: 0 },
-                exit: (d: number) => ({ opacity: 0, x: d * -14 }),
+                exit:  (d: number) => ({ opacity: 0, x: d * -14 }),
               }}
-              initial="enter"
-              animate="center"
-              exit="exit"
+              initial="enter" animate="center" exit="exit"
               transition={{ duration: 0.19, ease: [0.25, 0.1, 0.25, 1] }}
             >
               {isError ? (
-                <ApiErrorState title="Failed to load tickets" onRetry={refetch} />
+                <ApiErrorState title="Failed to load bookings" onRetry={refetch} />
               ) : isLoading ? (
                 <div className="space-y-2">
                   {Array.from({ length: 5 }).map((_, i) => (
@@ -506,11 +514,13 @@ export default function MyBookingsPage() {
               ) : sorted.length === 0 ? (
                 <div className="py-16 text-center bg-white rounded-xl border border-gray-100 shadow-sm">
                   <p className="text-3xl mb-2">📋</p>
-                  <p className="text-sm font-semibold text-gray-400">No {activeTab === 'All' ? '' : activeTab} tickets</p>
+                  <p className="text-sm font-semibold text-gray-400">No {activeTab === 'All' ? '' : activeTab} bookings</p>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {sorted.map(b => <BookingRow key={b.id} booking={b} agents={agents} />)}
+                  {sorted.map(b => (
+                    <BookingRow key={b.id} booking={b} agents={agents} myUserEmail={user?.email} />
+                  ))}
                 </div>
               )}
             </motion.div>
@@ -522,7 +532,7 @@ export default function MyBookingsPage() {
       {/* ── Filters sidebar ── */}
       <motion.div variants={staggerItem} className="w-80 shrink-0 flex flex-col gap-3">
 
-        {/* Export + pagination — top-right corner */}
+        {/* Export + pagination bar */}
         <div className="flex items-center justify-end gap-1.5 text-sm text-gray-500 mt-6">
           <button className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-gray-200 bg-white text-gray-600 font-semibold hover:bg-gray-50 transition-colors shadow-sm">
             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -551,24 +561,19 @@ export default function MyBookingsPage() {
             {totalCount === 0 ? '0' : `${startIdx}–${endIdx}`} of {totalCount}
           </span>
 
-          <button
-            disabled={currentPage <= 1}
-            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+          <button disabled={currentPage <= 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
             className="p-0.5 rounded hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
           </button>
-
-          <button
-            disabled={currentPage >= totalPages}
-            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+          <button disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
             className="p-0.5 rounded hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
           </button>
         </div>
 
+        {/* Filters card */}
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-4 sticky top-0 max-h-[calc(100vh-7rem)] overflow-y-auto mt-6">
 
-          {/* Header */}
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold tracking-widest text-gray-400 uppercase">Filters</span>
             <button className="p-1 rounded hover:bg-gray-100 transition-colors">
@@ -578,12 +583,38 @@ export default function MyBookingsPage() {
             </button>
           </div>
 
+          <FilterSection label="Agents">
+            <FilterDropdown value={agentFilter} options={agentOpts} onChange={setAgentFilter} />
+          </FilterSection>
+
+          <div className="border-t border-gray-100" />
+
           <FilterSelect label="Priority" value={priorityFilter}
             options={['Any priority', 'Very Urgent', 'Urgent', 'Not Urgent']} onChange={setPriorityFilter} />
           <FilterSelect label="Created" value={createdFilter}
             options={['Anytime', 'Today', 'Last 7 days', 'Last 30 days']} onChange={setCreatedFilter} />
           <FilterSelect label="Closed at" value={closedAtFilter}
             options={['Anytime', 'Today', 'This week', 'This month']} onChange={setClosedAtFilter} />
+
+          {/* Assignment Rules */}
+          <div className="border-t border-gray-100 pt-4 space-y-2">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Assignment Rules</p>
+            <div className="space-y-2">
+              <div className="flex items-start gap-2">
+                <svg className="w-3.5 h-3.5 text-indigo-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/>
+                </svg>
+                <p className="text-[11px] text-gray-500 leading-snug">You can assign any booking to yourself.</p>
+              </div>
+              <div className="flex items-start gap-2">
+                <svg className="w-3.5 h-3.5 text-gray-300 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+                <p className="text-[11px] text-gray-500 leading-snug">Your own bookings cannot be reassigned to others.</p>
+              </div>
+            </div>
+          </div>
+
         </div>
       </motion.div>
 
