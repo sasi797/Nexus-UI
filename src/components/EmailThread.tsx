@@ -271,9 +271,10 @@ interface Props {
   replyRef?: React.RefObject<HTMLTextAreaElement | null>;
   composeTab?: ComposeTab;
   onComposeTabChange?: (tab: ComposeTab) => void;
+  readOnly?: boolean;
 }
 
-export default function EmailThread({ bookingId, senderEmail, replyRef, composeTab: controlledTab, onComposeTabChange }: Props) {
+export default function EmailThread({ bookingId, senderEmail, replyRef, composeTab: controlledTab, onComposeTabChange, readOnly = false }: Props) {
   const accessToken = useSelector((s: RootState) => s.auth.accessToken);
   const { data: messages = [], isLoading } = useGetMessagesQuery(bookingId, { pollingInterval: 20000 });
   const [replyMessage, { isLoading: sending }] = useReplyMessageMutation();
@@ -404,8 +405,22 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
         </div>
       )}
 
+      {/* Closed notice — replaces compose when booking is completed */}
+      {readOnly && (
+        <div className="flex items-center gap-2.5 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl mt-2">
+          <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
+            <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+          </div>
+          <p className="text-[12px] text-gray-500 font-medium">
+            This ticket is closed. Reopen it to send replies.
+          </p>
+        </div>
+      )}
+
       {/* Compose area */}
-      <div className="border border-gray-200 rounded-xl overflow-hidden mt-2 bg-white shadow-sm">
+      {!readOnly && <div className="border border-gray-200 rounded-xl overflow-hidden mt-2 bg-white shadow-sm">
         {/* Tab bar */}
         <div className="flex border-b border-gray-100 bg-gray-50/60">
           {composeTabs.map(tab => (
@@ -540,7 +555,8 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
             </motion.button>
           </div>
         </div>
-      </div>
+      </div>}
+
     </div>
   );
 }

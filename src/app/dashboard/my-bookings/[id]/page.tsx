@@ -222,25 +222,30 @@ export default function BookingDetailPage() {
 
           {/* Action bar */}
           <div className="px-4 py-2.5 border-b border-gray-100 flex items-center gap-1.5">
-            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-              onClick={() => focusCompose('Reply')}
-              className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all shadow-sm">
+            <motion.button whileHover={isOpen ? { scale: 1.02 } : {}} whileTap={isOpen ? { scale: 0.97 } : {}}
+              disabled={!isOpen}
+              onClick={isOpen ? () => focusCompose('Reply') : undefined}
+              className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all shadow-sm disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-indigo-600">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
               </svg>
               Reply
             </motion.button>
 
-            <button onClick={() => focusCompose('Reply All')}
-              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 border border-gray-200 rounded-lg text-gray-500 hover:text-indigo-700 hover:border-indigo-200 hover:bg-indigo-50 transition-all">
+            <button
+              disabled={!isOpen}
+              onClick={isOpen ? () => focusCompose('Reply All') : undefined}
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 border border-gray-200 rounded-lg text-gray-500 hover:text-indigo-700 hover:border-indigo-200 hover:bg-indigo-50 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-gray-500 disabled:hover:border-gray-200 disabled:hover:bg-transparent">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6M8 10h5" />
               </svg>
               Reply All
             </button>
 
-            <button onClick={() => focusCompose('Forward')}
-              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 border border-gray-200 rounded-lg text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50 transition-all">
+            <button
+              disabled={!isOpen}
+              onClick={isOpen ? () => focusCompose('Forward') : undefined}
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 border border-gray-200 rounded-lg text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-gray-500 disabled:hover:border-gray-200 disabled:hover:bg-transparent">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
@@ -290,6 +295,7 @@ export default function BookingDetailPage() {
                   replyRef={replyRef}
                   composeTab={composeTab}
                   onComposeTabChange={setComposeTab}
+                  readOnly={!isOpen}
                 />
               )}
 
@@ -399,7 +405,7 @@ export default function BookingDetailPage() {
                   {(['Pending', 'In Progress', 'Completed'] as const).map(s => (
                     <button
                       key={s}
-                      disabled={saving || patching}
+                      disabled={saving || patching || !isOpen}
                       onClick={() => handleStatusChange(s)}
                       className={`flex-1 flex items-center justify-center gap-1 text-[10px] font-bold py-1.5 rounded-lg border transition-all disabled:opacity-50 ${
                         b.status === s
@@ -421,7 +427,7 @@ export default function BookingDetailPage() {
                   {(['Urgent', 'Standard', 'Economy'] as const).map(p => (
                     <button
                       key={p}
-                      disabled={saving || patching}
+                      disabled={saving || patching || !isOpen}
                       onClick={() => handlePriorityChange(p)}
                       className={`flex-1 flex items-center justify-center gap-1 text-[10px] font-bold py-1.5 rounded-lg border transition-all disabled:opacity-50 ${
                         b.priority === p
@@ -457,7 +463,7 @@ export default function BookingDetailPage() {
                 <select
                   value={b.agent_id ?? ''}
                   onChange={e => handleAgentChange(e.target.value)}
-                  disabled={saving}
+                  disabled={saving || !isOpen}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white transition-all appearance-none cursor-pointer disabled:opacity-60"
                 >
                   <option value="">— Unassigned —</option>
