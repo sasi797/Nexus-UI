@@ -12,6 +12,7 @@ export interface BookingListItem {
   da_number: string | null;
   received_at: string;
   assigned_at: string | null;
+  completed_at: string | null;
 }
 
 export interface PaginatedBookings {
@@ -46,7 +47,7 @@ export interface BookingUpdate extends Partial<BookingCreate> {
 
 export const bookingsApi = api.injectEndpoints({
   endpoints: (build) => ({
-    getBookings: build.query<PaginatedBookings, { status?: string; priority?: string; agent_id?: string; page?: number; page_size?: number }>({
+    getBookings: build.query<PaginatedBookings, { status?: string; priority?: string; agent_id?: string; created_after?: string; closed_after?: string; page?: number; page_size?: number }>({
       query: (params) => ({ url: '/bookings', params }),
       // Handle both old (plain array) and new (paginated object) backend responses
       transformResponse: (raw: PaginatedBookings | BookingListItem[]) => {

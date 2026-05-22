@@ -346,18 +346,16 @@ export default function MyBookingsPage() {
 
   const [sortBy, setSortBy] = useState('Date created');
   const [agentFilter, setAgentFilter] = useState('Any agent');
-  const [sentimentFilter, setSentimentFilter] = useState('Any');
-  const [createdFilter, setCreatedFilter] = useState('Last 30 days');
+  const [priorityFilter, setPriorityFilter] = useState('Any priority');
+  const [createdFilter, setCreatedFilter] = useState('Anytime');
   const [closedAtFilter, setClosedAtFilter] = useState('Anytime');
-  const [resolvedAtFilter, setResolvedAtFilter] = useState('Anytime');
-  const [resDueFilter, setResDueFilter] = useState('Anytime');
-  const [firstRespFilter, setFirstRespFilter] = useState('Anytime');
-  const [nextRespFilter, setNextRespFilter] = useState('Anytime');
   const [pageSize, setPageSize] = useState(25);
-  const [currentPage, setCurrentPage] = useState(1); // 1-indexed to match backend
+  const [currentPage, setCurrentPage] = useState(1);
 
   /* Reset to page 1 whenever filters/tab/sort/pageSize change */
-  useEffect(() => { setCurrentPage(1); }, [activeTab, agentFilter, sortBy, pageSize]);
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, agentFilter, priorityFilter, createdFilter, closedAtFilter, sortBy, pageSize]);
 
   const status = activeTab === 'All' ? undefined : activeTab;
   const { data: agents = [] } = useGetAgentsQuery();
@@ -370,10 +368,21 @@ export default function MyBookingsPage() {
   };
 
   const agentId = agentFilter === 'Any agent' ? undefined : agents.find(a => a.name === agentFilter)?.id;
+  const priority = priorityFilter === 'Any priority' ? undefined : priorityFilter;
+
+  const CREATED_MAP: Record<string, string | undefined> = {
+    'Today': 'today', 'Last 7 days': '7d', 'Last 30 days': '30d', 'Anytime': undefined,
+  };
+  const CLOSED_MAP: Record<string, string | undefined> = {
+    'Today': 'today', 'This week': 'week', 'This month': 'month', 'Anytime': undefined,
+  };
 
   const { data, isLoading, isFetching, isError, refetch } = useGetBookingsQuery({
     status,
+    priority,
     agent_id: agentId,
+    created_after: CREATED_MAP[createdFilter],
+    closed_after: CLOSED_MAP[closedAtFilter],
     page: currentPage,
     page_size: pageSize,
   });
@@ -588,27 +597,14 @@ export default function MyBookingsPage() {
             <FilterDropdown value={agentFilter} options={agentOpts} onChange={setAgentFilter} />
           </FilterSection>
 
-          {/* Groups */}
-          <FilterSection label="Groups">
-            <FilterDropdown value="Any agent" options={['Any agent']} onChange={() => {}} />
-          </FilterSection>
-
           <div className="border-t border-gray-100" />
 
-          <FilterSelect label="Sentiment" value={sentimentFilter}
-            options={['Any', 'Positive', 'Neutral', 'Negative']} onChange={setSentimentFilter} />
+          <FilterSelect label="Priority" value={priorityFilter}
+            options={['Any priority', 'Urgent', 'Standard', 'Economy']} onChange={setPriorityFilter} />
           <FilterSelect label="Created" value={createdFilter}
-            options={['Last 30 days', 'Last 7 days', 'Today', 'Anytime']} onChange={setCreatedFilter} />
+            options={['Anytime', 'Today', 'Last 7 days', 'Last 30 days']} onChange={setCreatedFilter} />
           <FilterSelect label="Closed at" value={closedAtFilter}
             options={['Anytime', 'Today', 'This week', 'This month']} onChange={setClosedAtFilter} />
-          <FilterSelect label="Resolved at" value={resolvedAtFilter}
-            options={['Anytime', 'Today', 'This week', 'This month']} onChange={setResolvedAtFilter} />
-          <FilterSelect label="Resolution due by" value={resDueFilter}
-            options={['Anytime', 'Overdue', 'Today', 'This week']} onChange={setResDueFilter} />
-          <FilterSelect label="First response due by" value={firstRespFilter}
-            options={['Anytime', 'Overdue', 'Today', 'This week']} onChange={setFirstRespFilter} />
-          <FilterSelect label="Next response due by" value={nextRespFilter}
-            options={['Anytime', 'Overdue', 'Today', 'This week']} onChange={setNextRespFilter} />
         </div>
       </motion.div>
 
