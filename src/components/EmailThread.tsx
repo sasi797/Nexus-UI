@@ -85,21 +85,52 @@ function AttachmentChip({ att, token }: { att: EmailAttachment; token: string | 
   };
 
   const isImage = att.content_type.startsWith('image/');
-  const isPdf = att.content_type === 'application/pdf';
+  const isPdf   = att.content_type === 'application/pdf';
+  const isWord  = att.content_type.includes('word') || att.filename.match(/\.docx?$/i);
+  const isExcel = att.content_type.includes('sheet') || att.content_type.includes('excel') || att.filename.match(/\.xlsx?$/i);
+
+  const iconBg  = isImage ? 'bg-emerald-50' : isPdf ? 'bg-red-50' : isWord ? 'bg-blue-50' : isExcel ? 'bg-green-50' : 'bg-gray-100';
+  const iconClr = isImage ? 'text-emerald-500' : isPdf ? 'text-red-500' : isWord ? 'text-blue-500' : isExcel ? 'text-green-600' : 'text-gray-400';
+
+  const FileIcon = () => {
+    if (loading) return <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>;
+    if (isImage) return (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+      </svg>
+    );
+    if (isPdf) return (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+      </svg>
+    );
+    return (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+    );
+  };
 
   return (
     <button
       onClick={handleDownload}
       disabled={loading}
-      className="flex items-center gap-2 px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-lg text-[13px] font-medium text-gray-600 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50/40 transition-all disabled:opacity-60 group"
+      className="flex items-center gap-3 px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-indigo-300 hover:shadow-md transition-all disabled:opacity-60 group min-w-[200px] max-w-[260px]"
     >
-      <span className="text-base leading-none">
-        {loading ? '⏳' : isImage ? '🖼️' : isPdf ? '📄' : '📎'}
-      </span>
-      <span className="truncate max-w-[160px]">{att.filename}</span>
-      {att.size_bytes ? <span className="text-gray-400 text-[11px]">{formatBytes(att.size_bytes)}</span> : null}
-      <svg className="w-3.5 h-3.5 text-gray-300 group-hover:text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+      {/* File type icon */}
+      <div className={`w-9 h-9 rounded-lg ${iconBg} ${iconClr} flex items-center justify-center shrink-0`}>
+        <FileIcon />
+      </div>
+
+      {/* Name + size */}
+      <div className="flex-1 min-w-0 text-left">
+        <p className="text-[12.5px] font-semibold text-gray-800 truncate leading-tight">{att.filename}</p>
+        {att.size_bytes ? <p className="text-[11px] text-gray-400 mt-0.5">{formatBytes(att.size_bytes)}</p> : null}
+      </div>
+
+      {/* Download arrow */}
+      <svg className="w-4 h-4 text-gray-300 group-hover:text-indigo-500 shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
       </svg>
     </button>
   );
