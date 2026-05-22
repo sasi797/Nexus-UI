@@ -1,16 +1,20 @@
 ﻿'use client';
 
 import { motion } from 'framer-motion';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, BarChart, Bar, ResponsiveContainer } from 'recharts';
 import Table, { ColumnDef } from '@/components/Table';
 import { pageTransition, staggerItem, popIn, cardHover, staggerContainer } from '@/lib/animations';
-import { useGetReportStatsQuery, useGetTrendQuery, useGetPriorityDistributionQuery, useGetDailySummaryQuery, DailySummaryRow } from '@/services/reportsApi';
+import { useGetReportStatsQuery, useGetTrendQuery, useGetPriorityDistributionQuery, useGetDailySummaryQuery, useGetHourlyActivityQuery, useGetAvgCompletionQuery, DailySummaryRow } from '@/services/reportsApi';
 
 export default function ReportsPage() {
   const { data: stats } = useGetReportStatsQuery();
   const { data: trend = [] } = useGetTrendQuery({ days: 7 });
   const { data: priorityDist = [] } = useGetPriorityDistributionQuery();
   const { data: dailySummary = [] } = useGetDailySummaryQuery({ days: 7 });
+  const { data: hourly = [] } = useGetHourlyActivityQuery({ days: 30 });
+  const { data: avgCompletion } = useGetAvgCompletionQuery();
+  const maxAvgHours = avgCompletion ? Math.max(...avgCompletion.by_priority.map(x => x.avg_hours), 1) : 1;
+  const PRIORITY_COLORS: Record<string, string> = { 'Very Urgent': 'bg-red-400', 'Urgent': 'bg-amber-400', 'Not Urgent': 'bg-emerald-400' };
 
   const fmt = (v: number) => `${v >= 0 ? '+' : ''}${v}%`;
   const chg = (v: number | undefined) => v ?? 0;
@@ -128,6 +132,65 @@ export default function ReportsPage() {
               ))}
             </div>
           </div>
+        </motion.div>
+      </div>
+
+      {/* Hourly Activity + Avg Completion */}
+      <div className="grid grid-cols-5 gap-3">
+        <motion.div variants={staggerItem} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+          className="col-span-3 bg-white rounded-xl shadow-sm border border-gray-100/80 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xs font-bold text-gray-900">Hourly Activity</h2>
+            <span className="text-[10px] text-gray-400 font-medium">Last 30 days · UTC</span>
+          </div>
+          <ResponsiveContainer width="100%" height={185}>
+            <BarChart data={hourly} margin={{ top: 5, right: 16, left: -14, bottom: 5 }} barGap={2}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false}
+                interval={2} />
+              <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+              <Tooltip contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 11, boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }} cursor={{ fill: '#f8fafc' }} />
+              <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: 11 }} />
+              <Bar dataKey="received" name="Received" fill="#6366f1" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="completed" name="Completed" fill="#10b981" radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </motion.div>
+
+        <motion.div variants={staggerItem} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
+          className="col-span-2 bg-white rounded-xl shadow-sm border border-gray-100/80 p-4 flex flex-col gap-3">
+          <h2 className="text-xs font-bold text-gray-900">Avg Completion Time</h2>
+          {avgCompletion ? (
+            <>
+              <div className="bg-gradient-to-br from-indigo-50 to-violet-50 rounded-xl p-4 text-center">
+                <motion.p initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200, delay: 0.5 }}
+                  className="text-3xl font-black text-indigo-700">{avgCompletion.overall_avg_hours}h</motion.p>
+                <p className="text-[11px] text-gray-500 font-medium mt-1">Overall average</p>
+                <p className="text-[10px] text-gray-400">{avgCompletion.overall_count} completed bookings</p>
+              </div>
+              <div className="flex flex-col gap-2">
+                {avgCompletion.by_priority.map(p => (
+                  <div key={p.priority}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] font-semibold text-gray-600">{p.priority}</span>
+                      <span className="text-[11px] font-bold text-gray-700">{p.avg_hours}h</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.round((p.avg_hours / maxAvgHours) * 100)}%` }}
+                        transition={{ duration: 0.8, ease: 'easeOut' }}
+                        className={`h-full rounded-full ${PRIORITY_COLORS[p.priority] ?? 'bg-indigo-400'}`}
+                      />
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-0.5">{p.count} bookings</p>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-gray-300 text-sm">No data yet</div>
+          )}
         </motion.div>
       </div>
 

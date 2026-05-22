@@ -11,6 +11,9 @@ export interface PrioritySlice { name: string; value: number; color: string }
 export interface DailySummaryRow {
   date: string; received: number; completed: number; pending: number; rate: number;
 }
+export interface HourlyPoint { hour: number; label: string; received: number; completed: number; }
+export interface AvgCompletionByPriority { priority: string; avg_hours: number; count: number; }
+export interface AvgCompletionReport { overall_avg_hours: number; overall_count: number; by_priority: AvgCompletionByPriority[]; }
 
 export const reportsApi = api.injectEndpoints({
   endpoints: (build) => ({
@@ -30,8 +33,19 @@ export const reportsApi = api.injectEndpoints({
       query: (params) => ({ url: '/reports/daily-summary', params }),
       providesTags: ['Reports'],
     }),
+    getHourlyActivity: build.query<HourlyPoint[], { days?: number }>({
+      query: (params) => ({ url: '/reports/hourly', params }),
+      providesTags: ['Reports'],
+    }),
+    getAvgCompletion: build.query<AvgCompletionReport, void>({
+      query: () => '/reports/avg-completion',
+      providesTags: ['Reports'],
+    }),
   }),
   overrideExisting: false,
 });
 
-export const { useGetReportStatsQuery, useGetTrendQuery, useGetPriorityDistributionQuery, useGetDailySummaryQuery } = reportsApi;
+export const {
+  useGetReportStatsQuery, useGetTrendQuery, useGetPriorityDistributionQuery,
+  useGetDailySummaryQuery, useGetHourlyActivityQuery, useGetAvgCompletionQuery,
+} = reportsApi;
