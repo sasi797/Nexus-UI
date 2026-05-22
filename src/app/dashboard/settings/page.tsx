@@ -9,6 +9,47 @@ import { useGetAgentsQuery, useCreateAgentMutation, useDeleteAgentMutation, useU
 
 type SettingsSection = 'General' | 'Shifts' | 'Users' | 'Roles' | 'Transport API' | 'Email Templates';
 
+// ── Icons ───────────────────────────────────────────────────────────────────
+const Icons: Record<string, React.ReactNode> = {
+  General: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+    </svg>
+  ),
+  Users: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+    </svg>
+  ),
+  Shifts: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+  ),
+  Roles: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+    </svg>
+  ),
+  'Transport API': (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+        d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+    </svg>
+  ),
+  'Email Templates': (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+        d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+    </svg>
+  ),
+};
+
 const sidebarNav: { group: string; items: { id: SettingsSection; label: string }[] }[] = [
   {
     group: 'System',
@@ -32,21 +73,23 @@ const sidebarNav: { group: string; items: { id: SettingsSection; label: string }
 ];
 
 const sectionMeta: Record<SettingsSection, { title: string; description: string }> = {
-  General: { title: 'General', description: 'Configure your system name, timezone and basic preferences.' },
-  Shifts: { title: 'Shifts', description: 'Define work shifts and assign agents to them.' },
-  Users: { title: 'Users', description: 'Manage your team members, roles and account access.' },
-  Roles: { title: 'Roles', description: 'View role definitions and their associated permissions.' },
-  'Transport API': { title: 'Transport API', description: 'Configure the external transport API endpoint and credentials.' },
-  'Email Templates': { title: 'Email Templates', description: 'Customise automated email notifications sent to customers.' },
+  General:           { title: 'General',           description: 'Configure your system name, timezone and basic preferences.' },
+  Shifts:            { title: 'Shifts',             description: 'Define work shifts and assign agents to them.' },
+  Users:             { title: 'Users',              description: 'Manage your team members, roles and account access.' },
+  Roles:             { title: 'Roles & Permissions',description: 'View role definitions and their associated permissions.' },
+  'Transport API':   { title: 'Transport API',      description: 'Configure the external transport API endpoint and credentials.' },
+  'Email Templates': { title: 'Email Templates',    description: 'Customise automated email notifications sent to customers.' },
 };
 
 const roles = [
-  { name: 'Admin',  permissions: 'Full access',                   users: 1, icon: '👑' },
-  { name: 'Agent',  permissions: 'Bookings, Attendance, Reports', users: 4, icon: '🧑‍💼' },
-  { name: 'Viewer', permissions: 'Reports only',                  users: 0, icon: '👁️' },
+  { name: 'Admin',      permissions: 'Full access to all modules',        users: 1, color: 'from-violet-500 to-indigo-500',  badge: 'bg-violet-50 text-violet-700 ring-violet-200' },
+  { name: 'Agent',      permissions: 'Bookings, Attendance, Reports',     users: 4, color: 'from-sky-500 to-blue-500',       badge: 'bg-sky-50 text-sky-700 ring-sky-200' },
+  { name: 'Supervisor', permissions: 'All agent access + team management',users: 0, color: 'from-emerald-500 to-teal-500',   badge: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
+  { name: 'Viewer',     permissions: 'Reports & dashboards only',         users: 0, color: 'from-amber-500 to-orange-500',   badge: 'bg-amber-50 text-amber-700 ring-amber-200' },
 ];
 const avatarGrads = ['from-indigo-500 to-violet-500','from-sky-500 to-blue-500','from-emerald-500 to-teal-500','from-rose-400 to-pink-400','from-amber-500 to-orange-500'];
 
+// ── Custom Dropdown ──────────────────────────────────────────────────────────
 function SettingsDropdown({ value, options, onChange, placeholder }: {
   value: string; options: { label: string; value: string }[]; onChange: (v: string) => void; placeholder?: string;
 }) {
@@ -62,11 +105,11 @@ function SettingsDropdown({ value, options, onChange, placeholder }: {
   return (
     <div ref={ref} className="relative">
       <button type="button" onClick={() => setOpen(v => !v)}
-        className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 text-xs font-medium bg-white border rounded-lg transition-all ${
+        className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-sm font-medium bg-white border rounded-lg transition-all ${
           open ? 'border-indigo-400 ring-2 ring-indigo-100 text-gray-800' : 'border-gray-200 hover:border-gray-300 text-gray-700'
         }`}>
         <span className={selected ? 'text-gray-800' : 'text-gray-400'}>{selected?.label ?? placeholder ?? 'Select…'}</span>
-        <svg className={`w-3 h-3 text-gray-400 shrink-0 transition-transform duration-150 ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className={`w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform duration-150 ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
@@ -77,12 +120,12 @@ function SettingsDropdown({ value, options, onChange, placeholder }: {
             className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-gray-200 rounded-xl shadow-xl z-[60]">
             {options.map(opt => (
               <button key={opt.value} type="button" onClick={() => { onChange(opt.value); setOpen(false); }}
-                className={`w-full text-left px-3 py-2.5 text-xs font-medium transition-colors flex items-center justify-between gap-2 first:rounded-t-xl last:rounded-b-xl ${
+                className={`w-full text-left px-3 py-2.5 text-sm font-medium transition-colors flex items-center justify-between gap-2 first:rounded-t-xl last:rounded-b-xl ${
                   value === opt.value ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                 }`}>
                 <span className="flex-1">{opt.label}</span>
                 {value === opt.value && (
-                  <svg className="w-3 h-3 shrink-0 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-3.5 h-3.5 shrink-0 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                   </svg>
                 )}
@@ -95,6 +138,7 @@ function SettingsDropdown({ value, options, onChange, placeholder }: {
   );
 }
 
+// ── Page ────────────────────────────────────────────────────────────────────
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState<SettingsSection>('Users');
   const [showAdd, setShowAdd] = useState(false);
@@ -142,15 +186,15 @@ export default function SettingsPage() {
 
   const shiftColumns: ColumnDef<Shift>[] = [
     { key: 'name',       header: 'Shift Name', sortable: true, filterable: true, render: v => <span className="font-bold text-gray-800">{String(v)}</span> },
-    { key: 'code',       header: 'Code',       render: v => <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md text-xs font-mono font-bold ring-1 ring-indigo-100">{String(v)}</span> },
+    { key: 'code',       header: 'Code',       render: v => <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md text-sm font-mono font-bold ring-1 ring-indigo-100">{String(v)}</span> },
     { key: 'start_time', header: 'Start Time', sortable: true, render: v => <span className="font-medium text-gray-600">{String(v)}</span> },
     { key: 'end_time',   header: 'End Time',   sortable: true, render: v => <span className="font-medium text-gray-600">{String(v)}</span> },
     {
       key: 'id', header: 'Actions', width: '80px',
       render: (v) => (
         <motion.button whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} onClick={() => deleteShift(String(v))}
-          className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors">
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
           </svg>
         </motion.button>
@@ -158,43 +202,66 @@ export default function SettingsPage() {
     },
   ];
 
-  const inputSm = 'px-2 py-1 border border-gray-200 rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white w-full';
+  const inputSm = 'px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white w-full';
   const meta = sectionMeta[activeSection];
 
   return (
     <motion.div variants={pageTransition} initial="hidden" animate="visible" className="h-full">
       <motion.div variants={staggerItem} className="flex bg-white rounded-xl shadow-sm border border-gray-100/80 min-h-[calc(100vh-7rem)]">
 
-        {/* Sidebar */}
-        <aside className="w-52 shrink-0 border-r border-gray-100 py-6 px-4 flex flex-col gap-6">
-          {sidebarNav.map(group => (
-            <div key={group.group}>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 px-2">{group.group}</p>
-              <ul className="space-y-0.5">
-                {group.items.map(item => (
-                  <li key={item.id}>
-                    <button
-                      onClick={() => setActiveSection(item.id)}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors font-medium ${
-                        activeSection === item.id
-                          ? 'bg-indigo-50 text-indigo-700 font-semibold'
-                          : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
-                      }`}>
-                      {item.label}
-                    </button>
-                  </li>
-                ))}
-              </ul>
+        {/* ── Sidebar ── */}
+        <aside className="w-56 shrink-0 border-r border-gray-100 py-6 flex flex-col">
+          {/* Brand mark */}
+          <div className="px-5 mb-6 flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center shadow-sm">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
             </div>
-          ))}
+            <span className="text-sm font-bold text-gray-800">Settings</span>
+          </div>
+
+          <div className="flex flex-col gap-5 px-3">
+            {sidebarNav.map(group => (
+              <div key={group.group}>
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5 px-2">{group.group}</p>
+                <ul className="space-y-0.5">
+                  {group.items.map(item => (
+                    <li key={item.id}>
+                      <button
+                        onClick={() => setActiveSection(item.id)}
+                        className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all flex items-center gap-3 font-medium ${
+                          activeSection === item.id
+                            ? 'bg-indigo-50 text-indigo-700 font-semibold'
+                            : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+                        }`}>
+                        <span className={activeSection === item.id ? 'text-indigo-500' : 'text-gray-400'}>
+                          {Icons[item.id]}
+                        </span>
+                        {item.label}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         </aside>
 
-        {/* Content */}
+        {/* ── Content ── */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Section header */}
-          <div className="px-7 pt-6 pb-4 border-b border-gray-100">
-            <h2 className="text-base font-bold text-gray-900">{meta.title}</h2>
-            <p className="text-xs text-gray-400 mt-0.5">{meta.description}</p>
+          <div className="px-8 pt-7 pb-5 border-b border-gray-100">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500">
+                {Icons[activeSection]}
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-gray-900">{meta.title}</h2>
+                <p className="text-sm text-gray-400 mt-0.5">{meta.description}</p>
+              </div>
+            </div>
           </div>
 
           <AnimatePresence mode="wait">
@@ -203,31 +270,33 @@ export default function SettingsPage() {
               {/* ── USERS ── */}
               {activeSection === 'Users' && (
                 <div>
-                  <div className="px-7 py-4 border-b border-gray-100 flex items-center justify-between">
-                    <p className="text-xs font-semibold text-gray-500">
+                  <div className="px-8 py-4 border-b border-gray-100 flex items-center justify-between">
+                    <p className="text-sm text-gray-500 font-medium">
                       {agents.length} member{agents.length !== 1 ? 's' : ''}
                     </p>
                     <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={() => setShowAddUser(p => !p)}
-                      className="text-xs font-bold text-indigo-600 border border-indigo-200 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-colors">
-                      + Add Employee
+                      className="text-sm font-semibold text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg hover:bg-indigo-50 transition-colors flex items-center gap-1.5">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4"/></svg>
+                      Add Employee
                     </motion.button>
                   </div>
                   <AnimatePresence>
                     {showAddUser && (
                       <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.15 }}
-                        className="px-7 py-4 border-b border-gray-100 bg-gray-50/50">
-                        <div className="grid grid-cols-3 gap-2">
+                        className="px-8 py-5 border-b border-gray-100 bg-gray-50/60">
+                        <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">New Employee</p>
+                        <div className="grid grid-cols-3 gap-3">
                           <input type="text" placeholder="Full Name" value={newAgent.name}
                             onChange={e => setNewAgent(p => ({ ...p, name: e.target.value }))}
-                            className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white" />
+                            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white" />
                           <input type="email" placeholder="Email Address" value={newAgent.email}
                             onChange={e => setNewAgent(p => ({ ...p, email: e.target.value }))}
-                            className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white" />
+                            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white" />
                           <input type="password" placeholder="Password" value={newAgent.password}
                             onChange={e => setNewAgent(p => ({ ...p, password: e.target.value }))}
-                            className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white" />
+                            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white" />
                         </div>
-                        <div className="grid grid-cols-2 gap-2 mt-2">
+                        <div className="grid grid-cols-2 gap-3 mt-3">
                           <SettingsDropdown
                             value={newAgent.role}
                             options={[{ label: 'Agent', value: 'agent' }, { label: 'Supervisor', value: 'supervisor' }, { label: 'Admin', value: 'admin' }]}
@@ -240,27 +309,29 @@ export default function SettingsPage() {
                             onChange={v => setNewAgent(p => ({ ...p, shift_id: v }))}
                           />
                         </div>
-                        <div className="flex gap-2 mt-3">
+                        <div className="flex gap-2 mt-4">
                           <motion.button whileHover={{ scale: 1.02 }} onClick={handleAddAgent} disabled={creatingAgent}
-                            className="text-xs font-bold bg-indigo-600 text-white px-4 py-1.5 rounded-lg disabled:opacity-60">
-                            {creatingAgent ? 'Adding...' : 'Add Employee'}
+                            className="text-sm font-semibold bg-indigo-600 text-white px-5 py-2 rounded-lg disabled:opacity-60 flex items-center gap-1.5">
+                            {creatingAgent
+                              ? <><svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>Adding…</>
+                              : 'Add Employee'}
                           </motion.button>
-                          <button onClick={() => setShowAddUser(false)} className="text-xs text-gray-400 hover:text-gray-600 px-2">Cancel</button>
+                          <button onClick={() => setShowAddUser(false)} className="text-sm text-gray-400 hover:text-gray-600 px-3">Cancel</button>
                         </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
                   {(agentsLoading || agentsFetching) ? (
-                    <div className="px-7 py-4 space-y-3">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />)}</div>
+                    <div className="px-8 py-4 space-y-3">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-12 bg-gray-100 rounded animate-pulse" />)}</div>
                   ) : (
                     <div className="divide-y divide-gray-50">
-                      <div className="grid grid-cols-[2fr_2fr_1.5fr_1fr_auto] gap-3 px-7 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                      <div className="grid grid-cols-[2.5fr_2fr_1.5fr_1fr_auto] gap-4 px-8 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">
                         <span>Name</span><span>Email</span><span>Shift</span><span>Status</span><span className="w-20" />
                       </div>
                       <AnimatePresence>
                         {agents.map((a, i) => (
                           <motion.div key={a.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="grid grid-cols-[2fr_2fr_1.5fr_1fr_auto] gap-3 items-center px-7 py-3 hover:bg-gray-50/60 transition-colors">
+                            className="grid grid-cols-[2.5fr_2fr_1.5fr_1fr_auto] gap-4 items-center px-8 py-3.5 hover:bg-gray-50/60 transition-colors">
                             {editingAgentId === a.id ? (
                               <>
                                 <input value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} className={inputSm} placeholder="Full Name" />
@@ -278,36 +349,38 @@ export default function SettingsPage() {
                                 />
                                 <div className="flex items-center gap-2">
                                   <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={handleSaveAgent} disabled={updatingAgent}
-                                    className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm disabled:opacity-60 transition-colors">
+                                    className="flex items-center gap-1.5 text-sm font-semibold px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm disabled:opacity-60 transition-colors">
                                     {updatingAgent
-                                      ? <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
-                                      : <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/></svg>
+                                      ? <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                                      : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/></svg>
                                     }
                                     Save
                                   </motion.button>
                                   <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setEditingAgentId(null)}
-                                    className="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition-colors">
-                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12"/></svg>
+                                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition-colors">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12"/></svg>
                                   </motion.button>
                                 </div>
                               </>
                             ) : (
                               <>
-                                <div className="flex items-center gap-2.5">
-                                  <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${avatarGrads[i % avatarGrads.length]} flex items-center justify-center text-white text-[11px] font-black shadow shrink-0`}>
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${avatarGrads[i % avatarGrads.length]} flex items-center justify-center text-white text-sm font-black shadow shrink-0`}>
                                     {a.name.charAt(0)}
                                   </div>
                                   <div className="min-w-0">
-                                    <p className="font-semibold text-gray-800 text-xs truncate">{a.name}</p>
-                                    <p className="text-[10px] text-gray-400 capitalize">{a.role}</p>
+                                    <p className="font-semibold text-gray-800 text-sm truncate">{a.name}</p>
+                                    <p className="text-xs text-gray-400 capitalize">{a.role}</p>
                                   </div>
                                 </div>
-                                <span className="text-xs text-gray-400 truncate">{a.email}</span>
-                                <span className="text-xs">
-                                  {a.shift ? <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md font-bold ring-1 ring-indigo-100">{a.shift.name}</span> : <span className="text-gray-300">—</span>}
+                                <span className="text-sm text-gray-400 truncate">{a.email}</span>
+                                <span>
+                                  {a.shift
+                                    ? <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-md text-xs font-bold ring-1 ring-indigo-100">{a.shift.name}</span>
+                                    : <span className="text-gray-300 text-sm">—</span>}
                                 </span>
-                                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 w-fit">Active</span>
-                                <div className="flex items-center gap-2">
+                                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 w-fit">Active</span>
+                                <div className="flex items-center gap-1.5">
                                   <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                                     onClick={() => startEdit({ ...a, role: a.role })}
                                     className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="Edit">
@@ -331,7 +404,15 @@ export default function SettingsPage() {
                           </motion.div>
                         ))}
                       </AnimatePresence>
-                      {agents.length === 0 && <p className="text-xs text-gray-400 text-center py-10">No active users</p>}
+                      {agents.length === 0 && (
+                        <div className="py-16 text-center">
+                          <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3 text-gray-300">
+                            {Icons.Users}
+                          </div>
+                          <p className="text-sm font-medium text-gray-400">No active users</p>
+                          <p className="text-xs text-gray-300 mt-1">Add your first team member above</p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -340,102 +421,144 @@ export default function SettingsPage() {
               {/* ── SHIFTS ── */}
               {activeSection === 'Shifts' && (
                 <div>
-                  <div className="px-7 py-4 border-b border-gray-100 flex items-center justify-between">
-                    <p className="text-xs font-semibold text-gray-500">{shifts.length} shift{shifts.length !== 1 ? 's' : ''} configured</p>
+                  <div className="px-8 py-4 border-b border-gray-100 flex items-center justify-between">
+                    <p className="text-sm text-gray-500 font-medium">{shifts.length} shift{shifts.length !== 1 ? 's' : ''} configured</p>
                     <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={() => setShowAdd(p => !p)}
-                      className="text-xs font-bold text-indigo-600 border border-indigo-200 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-colors">
-                      + Add Shift
+                      className="text-sm font-semibold text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg hover:bg-indigo-50 transition-colors flex items-center gap-1.5">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4"/></svg>
+                      Add Shift
                     </motion.button>
                   </div>
                   <AnimatePresence>
                     {showAdd && (
                       <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.15 }}
-                        className="px-7 py-4 border-b border-gray-100 bg-gray-50/50">
-                        <div className="grid grid-cols-4 gap-2">
+                        className="px-8 py-5 border-b border-gray-100 bg-gray-50/60">
+                        <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">New Shift</p>
+                        <div className="grid grid-cols-4 gap-3">
                           {[
                             { key: 'name', placeholder: 'Shift Name' },
                             { key: 'code', placeholder: 'Code (e.g. MOR)' },
-                            { key: 'start_time', placeholder: 'Start (HH:MM)', type: 'time' },
-                            { key: 'end_time', placeholder: 'End (HH:MM)', type: 'time' },
+                            { key: 'start_time', placeholder: 'Start Time', type: 'time' },
+                            { key: 'end_time', placeholder: 'End Time', type: 'time' },
                           ].map(f => (
                             <input key={f.key} type={f.type ?? 'text'} placeholder={f.placeholder}
                               value={(newShift as Record<string, string>)[f.key]}
                               onChange={e => setNewShift(p => ({ ...p, [f.key]: e.target.value }))}
-                              className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white" />
+                              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white" />
                           ))}
                         </div>
-                        <div className="flex gap-2 mt-3">
+                        <div className="flex gap-2 mt-4">
                           <motion.button whileHover={{ scale: 1.02 }} onClick={handleAddShift} disabled={creating}
-                            className="text-xs font-bold bg-indigo-600 text-white px-4 py-1.5 rounded-lg disabled:opacity-60">
+                            className="text-sm font-semibold bg-indigo-600 text-white px-5 py-2 rounded-lg disabled:opacity-60">
                             {creating ? 'Adding...' : 'Add Shift'}
                           </motion.button>
-                          <button onClick={() => setShowAdd(false)} className="text-xs text-gray-400 hover:text-gray-600 px-2">Cancel</button>
+                          <button onClick={() => setShowAdd(false)} className="text-sm text-gray-400 hover:text-gray-600 px-3">Cancel</button>
                         </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
                   {shiftsLoading
-                    ? <div className="px-7 py-4 space-y-2">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-8 bg-gray-100 rounded animate-pulse" />)}</div>
+                    ? <div className="px-8 py-4 space-y-2">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />)}</div>
                     : <Table columns={shiftColumns} data={shifts} rowKey={r => r.id} />}
                 </div>
               )}
 
               {/* ── GENERAL ── */}
               {activeSection === 'General' && (
-                <div className="px-7 py-6 space-y-5 max-w-md">
+                <div className="px-8 py-7 max-w-lg space-y-6">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">System Name</label>
-                    <input defaultValue="Bookings to Ticket System" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">System Name</label>
+                    <input defaultValue="Bookings to Ticket System"
+                      className="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                    <p className="text-xs text-gray-400 mt-1">This name appears in notifications and reports.</p>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">Timezone</label>
-                    <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white">
-                      <option>Asia/Kolkata (IST)</option><option>UTC</option><option>America/New_York</option>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Timezone</label>
+                    <select className="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white">
+                      <option>Asia/Kolkata (IST)</option>
+                      <option>UTC</option>
+                      <option>America/New_York</option>
                     </select>
+                    <p className="text-xs text-gray-400 mt-1">All timestamps and SLA calculations use this timezone.</p>
                   </div>
-                  <motion.button whileHover={{ scale: 1.02 }} onClick={() => { setSavedGeneral(true); setTimeout(() => setSavedGeneral(false), 2000); }}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-5 py-2 rounded-lg transition-colors">
-                    {savedGeneral ? '✓ Saved!' : 'Save changes'}
-                  </motion.button>
+                  <div className="pt-2 border-t border-gray-100">
+                    <motion.button whileHover={{ scale: 1.02 }}
+                      onClick={() => { setSavedGeneral(true); setTimeout(() => setSavedGeneral(false), 2000); }}
+                      className={`text-sm font-semibold px-6 py-2.5 rounded-lg transition-colors ${savedGeneral ? 'bg-emerald-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}>
+                      {savedGeneral ? '✓ Saved!' : 'Save changes'}
+                    </motion.button>
+                  </div>
                 </div>
               )}
 
               {/* ── TRANSPORT API ── */}
               {activeSection === 'Transport API' && (
-                <div className="px-7 py-6 space-y-5 max-w-md">
+                <div className="px-8 py-7 max-w-lg space-y-6">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">API Endpoint</label>
-                    <input value={apiUrl} onChange={e => setApiUrl(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs font-mono focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">API Endpoint</label>
+                    <input value={apiUrl} onChange={e => setApiUrl(e.target.value)}
+                      className="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                    <p className="text-xs text-gray-400 mt-1">The base URL for outbound transport API calls.</p>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">API Key</label>
-                    <input type="password" defaultValue="sk-••••••••••••••••" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs font-mono focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">API Key</label>
+                    <input type="password" defaultValue="sk-••••••••••••••••"
+                      className="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                    <p className="text-xs text-gray-400 mt-1">Stored encrypted. Leave blank to keep the current key.</p>
                   </div>
-                  <motion.button whileHover={{ scale: 1.02 }} className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-5 py-2 rounded-lg transition-colors">
-                    Save changes
-                  </motion.button>
+                  <div className="flex items-center gap-3 p-3.5 rounded-lg bg-amber-50 border border-amber-200">
+                    <svg className="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                    </svg>
+                    <p className="text-xs text-amber-700 font-medium">Changing the API key will affect all active booking integrations.</p>
+                  </div>
+                  <div className="pt-2 border-t border-gray-100">
+                    <motion.button whileHover={{ scale: 1.02 }} className="text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg transition-colors">
+                      Save changes
+                    </motion.button>
+                  </div>
                 </div>
               )}
 
               {/* ── ROLES ── */}
               {activeSection === 'Roles' && (
-                <div className="px-7 py-6 grid grid-cols-3 gap-4">
-                  {roles.map(r => (
-                    <motion.div key={r.name} whileHover={{ scale: 1.02 }} className="border border-gray-100 rounded-xl p-4 bg-gray-50/50">
-                      <div className="text-xl mb-2">{r.icon}</div>
-                      <p className="text-sm font-bold text-gray-800">{r.name}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{r.permissions}</p>
-                      <p className="text-[11px] text-indigo-600 font-bold mt-2">{r.users} user{r.users !== 1 ? 's' : ''}</p>
-                    </motion.div>
-                  ))}
+                <div className="px-8 py-7">
+                  <div className="grid grid-cols-2 gap-4">
+                    {roles.map(r => (
+                      <motion.div key={r.name} whileHover={{ y: -2 }} transition={{ duration: 0.15 }}
+                        className="border border-gray-100 rounded-xl p-5 bg-white shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-start gap-3">
+                          <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${r.color} flex items-center justify-center shadow-sm shrink-0`}>
+                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+                                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                            </svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-sm font-bold text-gray-800">{r.name}</p>
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-bold ring-1 ${r.badge}`}>
+                                {r.users} user{r.users !== 1 ? 's' : ''}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-400 mt-1">{r.permissions}</p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-5">Role permissions are fixed. Contact your system administrator to request changes.</p>
                 </div>
               )}
 
               {/* ── EMAIL TEMPLATES ── */}
               {activeSection === 'Email Templates' && (
-                <div className="px-7 py-16 text-center">
-                  <div className="text-3xl mb-2">📧</div>
-                  <p className="text-sm font-semibold text-gray-400">Email templates coming soon</p>
+                <div className="px-8 py-16 text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4 text-gray-300">
+                    {Icons['Email Templates']}
+                  </div>
+                  <p className="text-sm font-bold text-gray-500">Email templates coming soon</p>
+                  <p className="text-xs text-gray-400 mt-1">You'll be able to customise booking confirmation, SLA alerts and assignment emails.</p>
                 </div>
               )}
 
