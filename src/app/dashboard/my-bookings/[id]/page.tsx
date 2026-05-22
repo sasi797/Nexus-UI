@@ -70,6 +70,9 @@ export default function BookingDetailPage() {
   const [activeTab, setActiveTab]         = useState<Tab>('Conversation');
   const [composeTab, setComposeTab]       = useState<ComposeTab>('Reply');
   const [savedField, setSavedField]       = useState<string | null>(null);
+  const [showDaModal, setShowDaModal]     = useState(false);
+  const [daNumber, setDaNumber]           = useState('');
+  const [daDesc, setDaDesc]               = useState('');
 
   const { data: b, isLoading }                   = useGetBookingQuery(id);
   const [patchStatus,   { isLoading: patching }] = usePatchBookingStatusMutation();
@@ -103,7 +106,18 @@ export default function BookingDetailPage() {
     flashSaved('agent');
   };
 
-  const handleClose = () => patchStatus({ id, status: 'Completed' });
+  const handleClose = () => {
+    setDaNumber(b?.da_number ?? '');
+    setDaDesc(b?.da_description ?? '');
+    setShowDaModal(true);
+  };
+
+  const handleDaConfirm = async () => {
+    if (!daNumber.trim()) return;
+    await patchStatus({ id, status: 'Completed', da_number: daNumber.trim(), da_description: daDesc.trim() || undefined });
+    setShowDaModal(false);
+    flashSaved('status');
+  };
 
   const focusCompose = (tab: ComposeTab) => {
     setComposeTab(tab);
@@ -235,17 +249,21 @@ export default function BookingDetailPage() {
 
             <div className="flex-1" />
 
-            {isOpen && (
-              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                disabled={patching}
-                onClick={handleClose}
-                className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:border-emerald-300 hover:text-emerald-700 hover:bg-emerald-50 disabled:opacity-60 transition-all">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                {patching ? 'Completing…' : 'Complete'}
-              </motion.button>
-            )}
+            <motion.button
+              whileHover={isOpen ? { scale: 1.02 } : {}}
+              whileTap={isOpen ? { scale: 0.97 } : {}}
+              disabled={!isOpen || patching}
+              onClick={isOpen ? handleClose : undefined}
+              className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 border rounded-lg transition-all ${
+                isOpen
+                  ? 'border-gray-200 text-gray-600 hover:border-emerald-300 hover:text-emerald-700 hover:bg-emerald-50 disabled:opacity-60'
+                  : 'border-emerald-200 text-emerald-600 bg-emerald-50 opacity-60 cursor-not-allowed'
+              }`}>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              {patching ? 'Completing…' : isOpen ? 'Complete' : 'Completed'}
+            </motion.button>
           </div>
 
           {/* Tabs */}
@@ -449,6 +467,25 @@ export default function BookingDetailPage() {
                 </select>
               </div>
 
+              {/* DA details (shown when completed) */}
+              {(b.da_number || b.da_description) && (
+                <div className="bg-emerald-50/60 border border-emerald-100 rounded-xl px-3 py-3 space-y-2">
+                  <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Completion Details</p>
+                  {b.da_number && (
+                    <div>
+                      <p className="text-[10px] text-gray-400 font-semibold">DA Number</p>
+                      <p className="text-xs font-bold text-gray-800 font-mono">{b.da_number}</p>
+                    </div>
+                  )}
+                  {b.da_description && (
+                    <div>
+                      <p className="text-[10px] text-gray-400 font-semibold">Description</p>
+                      <p className="text-xs text-gray-700 leading-relaxed">{b.da_description}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Divider */}
               <div className="border-t border-gray-100" />
 
@@ -515,6 +552,94 @@ export default function BookingDetailPage() {
           </div>
         </motion.div>
       </div>
+
+      {/* ── DA Completion Modal ── */}
+      <AnimatePresence>
+        {showDaModal && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
+            onClick={() => setShowDaModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 12 }}
+              transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-md mx-4 overflow-hidden"
+            >
+              {/* Modal header */}
+              <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-900">Complete Booking</p>
+                    <p className="text-[11px] text-gray-400">Enter DA details to close this ticket</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowDaModal(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Modal body */}
+              <div className="px-6 py-5 space-y-4">
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+                    DA Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    autoFocus
+                    type="text"
+                    value={daNumber}
+                    onChange={e => setDaNumber(e.target.value)}
+                    placeholder="e.g. DA-2026-00123"
+                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+                    Description <span className="text-gray-300 font-normal normal-case">(optional)</span>
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={daDesc}
+                    onChange={e => setDaDesc(e.target.value)}
+                    placeholder="Add any notes about the completion..."
+                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 transition-all resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* Modal footer */}
+              <div className="px-6 py-4 bg-gray-50/60 border-t border-gray-100 flex items-center justify-end gap-2">
+                <button
+                  onClick={() => setShowDaModal(false)}
+                  className="px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors">
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDaConfirm}
+                  disabled={!daNumber.trim() || patching}
+                  className="flex items-center gap-1.5 px-5 py-2 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm">
+                  {patching
+                    ? <><span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />Saving…</>
+                    : <><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>Complete Booking</>
+                  }
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </motion.div>
   );
 }

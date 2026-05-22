@@ -20,13 +20,14 @@ export function useBookingEvents(token: string | null) {
           dispatch(api.util.invalidateTags(['Booking', 'Dashboard']));
         } else if (data.type === 'new_message') {
           const bookingId: string | undefined = data.booking_id;
-          dispatch(
-            api.util.invalidateTags(
-              bookingId
-                ? [{ type: 'EmailMessage', id: bookingId }, { type: 'Booking', id: bookingId }]
-                : ['EmailMessage', 'Booking']
-            )
-          );
+          const reopened: boolean = data.reopened === true;
+          const tags: Parameters<typeof api.util.invalidateTags>[0] = bookingId
+            ? [{ type: 'EmailMessage', id: bookingId }, { type: 'Booking', id: bookingId }]
+            : ['EmailMessage', 'Booking'];
+          if (reopened) {
+            (tags as unknown[]).push('Booking', 'Dashboard');
+          }
+          dispatch(api.util.invalidateTags(tags));
         }
       } catch {
         // ignore malformed messages

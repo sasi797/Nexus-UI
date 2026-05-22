@@ -233,6 +233,11 @@ function BookingRow({ booking, agents }: { booking: BookingListItem; agents: Age
             {booking.status === 'Pending' && (
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 leading-none">New</span>
             )}
+            {booking.status === 'Completed' && booking.da_number && (
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-mono leading-none border border-emerald-200">
+                {booking.da_number}
+              </span>
+            )}
           </div>
           <p className="text-[13.5px] font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors leading-snug truncate">
             {booking.subject}

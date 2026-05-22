@@ -91,14 +91,14 @@ function AttachmentChip({ att, token }: { att: EmailAttachment; token: string | 
     <button
       onClick={handleDownload}
       disabled={loading}
-      className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50/40 transition-all disabled:opacity-60 group"
+      className="flex items-center gap-2 px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-lg text-[13px] font-medium text-gray-600 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50/40 transition-all disabled:opacity-60 group"
     >
-      <span className="text-sm leading-none">
+      <span className="text-base leading-none">
         {loading ? '⏳' : isImage ? '🖼️' : isPdf ? '📄' : '📎'}
       </span>
-      <span className="truncate max-w-[140px]">{att.filename}</span>
-      {att.size_bytes ? <span className="text-gray-400 text-[10px]">{formatBytes(att.size_bytes)}</span> : null}
-      <svg className="w-3 h-3 text-gray-300 group-hover:text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <span className="truncate max-w-[160px]">{att.filename}</span>
+      {att.size_bytes ? <span className="text-gray-400 text-[11px]">{formatBytes(att.size_bytes)}</span> : null}
+      <svg className="w-3.5 h-3.5 text-gray-300 group-hover:text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
       </svg>
     </button>
@@ -190,6 +190,15 @@ function MessageCard({ msg, token, defaultOpen }: { msg: EmailMessage; token: st
                 </div>
               )}
 
+              {/* Attachments — shown above body */}
+              {msg.attachments.length > 0 && (
+                <div className="pt-3 pb-3 border-b border-gray-50 flex flex-wrap gap-2">
+                  {msg.attachments.map(att => (
+                    <AttachmentChip key={att.id} att={att} token={token} />
+                  ))}
+                </div>
+              )}
+
               {/* Body */}
               <div className="pt-3 text-[13px] text-gray-700 leading-relaxed">
                 {msg.body_text ? (() => {
@@ -217,15 +226,6 @@ function MessageCard({ msg, token, defaultOpen }: { msg: EmailMessage; token: st
                   );
                 })() : <span className="text-[12px] italic text-gray-400">(No text content)</span>}
               </div>
-
-              {/* Attachments */}
-              {msg.attachments.length > 0 && (
-                <div className="mt-4 pt-3 border-t border-gray-50 flex flex-wrap gap-2">
-                  {msg.attachments.map(att => (
-                    <AttachmentChip key={att.id} att={att} token={token} />
-                  ))}
-                </div>
-              )}
             </div>
           </motion.div>
         )}

@@ -9,6 +9,7 @@ export interface BookingListItem {
   status: string;
   agent: AgentBrief | null;
   sender_email: string;
+  da_number: string | null;
   received_at: string;
   assigned_at: string | null;
 }
@@ -27,6 +28,7 @@ export interface Booking {
   cargo_type: string | null; pickup_location: string | null; delivery_location: string | null;
   cargo_weight: number | null; cargo_volume: number | null; shipping_mode: string | null;
   special_instructions: string | null; remarks: string | null;
+  da_number: string | null; da_description: string | null;
   received_at: string; assigned_at: string | null; completed_at: string | null;
   created_at: string; updated_at: string;
 }
@@ -73,8 +75,12 @@ export const bookingsApi = api.injectEndpoints({
       query: ({ id, body }) => ({ url: `/bookings/${id}`, method: 'PUT', body }),
       invalidatesTags: (_r, _e, { id }) => [{ type: 'Booking', id }, 'Booking', 'Dashboard'],
     }),
-    patchBookingStatus: build.mutation<Booking, { id: string; status: string }>({
-      query: ({ id, status }) => ({ url: `/bookings/${id}/status`, method: 'PATCH', body: { status } }),
+    patchBookingStatus: build.mutation<Booking, { id: string; status: string; da_number?: string; da_description?: string }>({
+      query: ({ id, status, da_number, da_description }) => ({
+        url: `/bookings/${id}/status`,
+        method: 'PATCH',
+        body: { status, da_number, da_description },
+      }),
       invalidatesTags: (_r, _e, { id }) => [{ type: 'Booking', id }, 'Booking', 'Dashboard'],
     }),
     deleteBooking: build.mutation<void, string>({
