@@ -441,10 +441,10 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
           {selectedFiles.length > 0 && (
             <div className="flex flex-wrap gap-2 pt-1">
               {selectedFiles.map((f, i) => (
-                <div key={i} className="flex items-center gap-1.5 px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600 font-medium">
-                  <span>📎</span>
-                  <span className="truncate max-w-[120px]">{f.name}</span>
-                  <button onClick={() => removeFile(i)} className="text-gray-400 hover:text-gray-600 transition-colors leading-none ml-0.5">✕</button>
+                <div key={i} className="flex items-center gap-2 px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-lg text-[13px] text-gray-600 font-medium">
+                  <span className="text-base leading-none">📎</span>
+                  <span className="truncate max-w-[160px]">{f.name}</span>
+                  <button onClick={() => removeFile(i)} className="text-gray-400 hover:text-gray-600 transition-colors leading-none ml-0.5 text-sm">✕</button>
                 </div>
               ))}
             </div>
