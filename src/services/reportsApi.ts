@@ -33,7 +33,7 @@ export const reportsApi = api.injectEndpoints({
       query: (params) => ({ url: '/reports/daily-summary', params }),
       providesTags: ['Reports'],
     }),
-    getHourlyActivity: build.query<HourlyPoint[], { days?: number }>({
+    getHourlyActivity: build.query<HourlyPoint[], { days?: number; tz?: string }>({
       query: (params) => ({ url: '/reports/hourly', params }),
       providesTags: ['Reports'],
     }),
