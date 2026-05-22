@@ -372,12 +372,6 @@ export default function AllBookingsPage() {
   const status = activeTab === 'All' ? undefined : activeTab;
   const { data: agents = [] } = useGetAgentsQuery();
   const { data: stats } = useGetDashboardStatsQuery();
-  const TAB_COUNTS: Record<Tab, number | undefined> = {
-    All:           stats?.total_bookings,
-    Pending:       stats?.pending,
-    'In Progress': stats?.in_progress,
-    Completed:     stats?.completed,
-  };
 
   const agentId = agentFilter === 'Any agent' ? undefined : agents.find(a => a.name === agentFilter)?.id;
   const priority = priorityFilter === 'Any priority' ? undefined : priorityFilter;
@@ -398,6 +392,14 @@ export default function AllBookingsPage() {
     page: currentPage,
     page_size: pageSize,
   });
+
+  // Active tab uses live query total so badge matches list. Inactive tabs fall back to cached stats.
+  const TAB_COUNTS: Record<Tab, number | undefined> = {
+    All:           activeTab === 'All'         ? data?.total : stats?.total_bookings,
+    Pending:       activeTab === 'Pending'     ? data?.total : stats?.pending,
+    'In Progress': activeTab === 'In Progress' ? data?.total : stats?.in_progress,
+    Completed:     activeTab === 'Completed'   ? data?.total : stats?.completed,
+  };
 
   const sorted = [...(data?.items ?? [])].sort((a, b) => {
     if (sortBy === 'Priority') {

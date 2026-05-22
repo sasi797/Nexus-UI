@@ -358,17 +358,13 @@ export default function MyBookingsPage() {
   }, [activeTab, priorityFilter, createdFilter, closedAtFilter, sortBy, pageSize]);
 
   const status = activeTab === 'All' ? undefined : activeTab;
-  const { data: agents = [] } = useGetAgentsQuery();
-  const { data: stats } = useGetDashboardStatsQuery();
-  const TAB_COUNTS: Record<Tab, number | undefined> = {
-    All:          stats?.total_bookings,
-    Pending:      stats?.pending,
-    'In Progress': stats?.in_progress,
-    Completed:    stats?.completed,
-  };
+  const { data: agents = [], isLoading: agentsLoading } = useGetAgentsQuery();
+  useGetDashboardStatsQuery(); // keep cache warm; not used for tab counts here
 
-  // Always filter to the current user's own bookings
+  // Always filter to the current user's own bookings.
+  // agentsLoading guard prevents a flash of "all bookings" before agents resolve.
   const myAgentId = agents.find(a => a.email === user?.email)?.id;
+  const hasNoAgentProfile = !agentsLoading && !myAgentId;
   const priority = priorityFilter === 'Any priority' ? undefined : priorityFilter;
 
   const CREATED_MAP: Record<string, string | undefined> = {
@@ -386,7 +382,16 @@ export default function MyBookingsPage() {
     closed_after: CLOSED_MAP[closedAtFilter],
     page: currentPage,
     page_size: pageSize,
-  });
+  }, { skip: agentsLoading || hasNoAgentProfile });
+
+  // Show 0 when no agent profile. For active tab use live query total so badge matches list.
+  // Inactive tabs show no badge — global stats don't reflect per-user counts.
+  const TAB_COUNTS: Record<Tab, number | undefined> = {
+    All:           hasNoAgentProfile ? 0 : activeTab === 'All'         ? data?.total : undefined,
+    Pending:       hasNoAgentProfile ? 0 : activeTab === 'Pending'     ? data?.total : undefined,
+    'In Progress': hasNoAgentProfile ? 0 : activeTab === 'In Progress' ? data?.total : undefined,
+    Completed:     hasNoAgentProfile ? 0 : activeTab === 'Completed'   ? data?.total : undefined,
+  };
 
   const sorted = [...(data?.items ?? [])].sort((a, b) => {
     if (sortBy === 'Priority') {
@@ -515,6 +520,12 @@ export default function MyBookingsPage() {
                       </div>
                     </div>
                   ))}
+                </div>
+              ) : hasNoAgentProfile ? (
+                <div className="py-16 text-center bg-white rounded-xl border border-gray-100 shadow-sm">
+                  <p className="text-3xl mb-2">🔗</p>
+                  <p className="text-sm font-semibold text-gray-400">No agent profile linked to your account</p>
+                  <p className="text-xs text-gray-300 mt-1">Ask an admin to create an agent profile for you in Settings</p>
                 </div>
               ) : sorted.length === 0 ? (
                 <div className="py-16 text-center bg-white rounded-xl border border-gray-100 shadow-sm">
