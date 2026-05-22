@@ -12,11 +12,13 @@ export default function ReportsPage() {
   const { data: priorityDist = [] } = useGetPriorityDistributionQuery();
   const { data: dailySummary = [] } = useGetDailySummaryQuery({ days: 7 });
 
+  const fmt = (v: number) => `${v >= 0 ? '+' : ''}${v}%`;
+  const chg = (v: number | undefined) => v ?? 0;
   const statCards = stats ? [
-    { label: 'Total Bookings', value: stats.total_bookings, change: '+12%', up: true,  bg: 'from-indigo-50 to-violet-50',  text: 'text-indigo-700',  icon: '📊' },
-    { label: 'Completed',      value: stats.completed,      change: '+18%', up: true,  bg: 'from-emerald-50 to-teal-50',   text: 'text-emerald-700', icon: '✅' },
-    { label: 'Pending',        value: stats.pending,        change: '-5%',  up: false, bg: 'from-amber-50 to-orange-50',   text: 'text-amber-700',   icon: '⏳' },
-    { label: 'SLA Breach',     value: stats.sla_breach,     change: '-15%', up: false, bg: 'from-red-50 to-rose-50',       text: 'text-red-700',     icon: '🚨' },
+    { label: 'Total Bookings', value: stats.total_bookings, change: fmt(chg(stats.total_bookings_change)), up: chg(stats.total_bookings_change) >= 0, bg: 'from-indigo-50 to-violet-50',  text: 'text-indigo-700',  icon: '📊' },
+    { label: 'Completed',      value: stats.completed,      change: fmt(chg(stats.completed_change)),      up: chg(stats.completed_change) >= 0,      bg: 'from-emerald-50 to-teal-50',   text: 'text-emerald-700', icon: '✅' },
+    { label: 'Pending',        value: stats.pending,        change: fmt(chg(stats.pending_change)),        up: chg(stats.pending_change) <= 0,        bg: 'from-amber-50 to-orange-50',   text: 'text-amber-700',   icon: '⏳' },
+    { label: 'SLA Breach',     value: stats.sla_breach,     change: fmt(chg(stats.sla_breach_change)),     up: chg(stats.sla_breach_change) <= 0,     bg: 'from-red-50 to-rose-50',       text: 'text-red-700',     icon: '🚨' },
   ] : [];
 
   const summaryColumns: ColumnDef<DailySummaryRow>[] = [

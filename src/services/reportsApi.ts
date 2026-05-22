@@ -3,6 +3,8 @@ import { api } from './api';
 export interface ReportStats {
   total_bookings: number; completed: number; pending: number;
   sla_breach: number; completion_rate: number;
+  total_bookings_change: number; completed_change: number;
+  pending_change: number; sla_breach_change: number;
 }
 export interface TrendPoint { date: string; received: number; completed: number }
 export interface PrioritySlice { name: string; value: number; color: string }

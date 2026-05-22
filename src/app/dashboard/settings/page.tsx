@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Table, { ColumnDef } from '@/components/Table';
 import { pageTransition, staggerItem } from '@/lib/animations';
@@ -16,6 +16,54 @@ const roles = [
   { name: 'Viewer', permissions: 'Reports only',                  users: 0, icon: '👁️' },
 ];
 const avatarGrads = ['from-indigo-500 to-violet-500','from-sky-500 to-blue-500','from-emerald-500 to-teal-500','from-rose-400 to-pink-400','from-amber-500 to-orange-500'];
+
+function SettingsDropdown({ value, options, onChange, placeholder }: {
+  value: string; options: { label: string; value: string }[]; onChange: (v: string) => void; placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [open]);
+  const selected = options.find(o => o.value === value);
+  return (
+    <div ref={ref} className="relative">
+      <button type="button" onClick={() => setOpen(v => !v)}
+        className={`w-full flex items-center justify-between gap-2 px-2.5 py-1.5 text-xs font-medium bg-white border rounded-lg transition-all ${
+          open ? 'border-indigo-400 ring-2 ring-indigo-100 text-gray-800' : 'border-gray-200 hover:border-gray-300 text-gray-700'
+        }`}>
+        <span className={selected ? 'text-gray-800' : 'text-gray-400'}>{selected?.label ?? placeholder ?? 'Select…'}</span>
+        <svg className={`w-3 h-3 text-gray-400 shrink-0 transition-transform duration-150 ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div initial={{ opacity: 0, y: -6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.97 }} transition={{ duration: 0.12 }}
+            className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-gray-200 rounded-xl shadow-xl z-[60] overflow-hidden">
+            {options.map(opt => (
+              <button key={opt.value} type="button" onClick={() => { onChange(opt.value); setOpen(false); }}
+                className={`w-full text-left px-3 py-2.5 text-xs font-medium transition-colors flex items-center justify-between gap-2 ${
+                  value === opt.value ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                }`}>
+                <span className="flex-1">{opt.label}</span>
+                {value === opt.value && (
+                  <svg className="w-3 h-3 shrink-0 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('Shifts');
@@ -112,8 +160,8 @@ export default function SettingsPage() {
                 </div>
                 <AnimatePresence>
                   {showAdd && (
-                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                      className="px-4 py-3 border-b border-gray-100 overflow-hidden">
+                    <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.15 }}
+                      className="px-4 py-3 border-b border-gray-100">
                       <div className="grid grid-cols-4 gap-2">
                         {[
                           { key: 'name', placeholder: 'Shift Name' },
@@ -154,8 +202,8 @@ export default function SettingsPage() {
                 </div>
                 <AnimatePresence>
                   {showAddUser && (
-                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
-                      className="px-4 py-3 border-b border-gray-100 overflow-hidden">
+                    <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.15 }}
+                      className="px-4 py-3 border-b border-gray-100">
                       <div className="grid grid-cols-3 gap-2">
                         <input type="text" placeholder="Full Name" value={newAgent.name}
                           onChange={e => setNewAgent(p => ({ ...p, name: e.target.value }))}
@@ -168,17 +216,17 @@ export default function SettingsPage() {
                           className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white" />
                       </div>
                       <div className="grid grid-cols-2 gap-2 mt-2">
-                        <select value={newAgent.role} onChange={e => setNewAgent(p => ({ ...p, role: e.target.value }))}
-                          className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white">
-                          <option value="agent">Agent</option>
-                          <option value="supervisor">Supervisor</option>
-                          <option value="admin">Admin</option>
-                        </select>
-                        <select value={newAgent.shift_id} onChange={e => setNewAgent(p => ({ ...p, shift_id: e.target.value }))}
-                          className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white">
-                          <option value="">No Shift</option>
-                          {shifts.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                        </select>
+                        <SettingsDropdown
+                          value={newAgent.role}
+                          options={[{ label: 'Agent', value: 'agent' }, { label: 'Supervisor', value: 'supervisor' }, { label: 'Admin', value: 'admin' }]}
+                          onChange={v => setNewAgent(p => ({ ...p, role: v }))}
+                        />
+                        <SettingsDropdown
+                          value={newAgent.shift_id}
+                          placeholder="No Shift"
+                          options={[{ label: 'No Shift', value: '' }, ...shifts.map(s => ({ label: s.name, value: s.id }))]}
+                          onChange={v => setNewAgent(p => ({ ...p, shift_id: v }))}
+                        />
                       </div>
                       <div className="flex gap-2 mt-2">
                         <motion.button whileHover={{ scale: 1.02 }} onClick={handleAddAgent} disabled={creatingAgent}
@@ -205,10 +253,12 @@ export default function SettingsPage() {
                             <>
                               <input value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} className={inputSm} placeholder="Full Name" />
                               <input value={editForm.email} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} className={inputSm} placeholder="Email" type="email" />
-                              <select value={editForm.shift_id} onChange={e => setEditForm(p => ({ ...p, shift_id: e.target.value }))} className={inputSm}>
-                                <option value="">No Shift</option>
-                                {shifts.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                              </select>
+                              <SettingsDropdown
+                                value={editForm.shift_id}
+                                placeholder="No Shift"
+                                options={[{ label: 'No Shift', value: '' }, ...shifts.map(s => ({ label: s.name, value: s.id }))]}
+                                onChange={v => setEditForm(p => ({ ...p, shift_id: v }))}
+                              />
                               <span />
                               <div className="flex items-center gap-1 w-16">
                                 <motion.button whileTap={{ scale: 0.93 }} onClick={handleSaveAgent} disabled={updatingAgent}
