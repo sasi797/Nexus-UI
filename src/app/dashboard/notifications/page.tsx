@@ -7,6 +7,7 @@ import {
   useGetNotificationsQuery,
   useMarkReadMutation,
   useMarkAllReadMutation,
+  useDeleteNotificationMutation,
   NotificationItem,
 } from '@/services/notificationsApi';
 
@@ -98,7 +99,7 @@ function groupByDate(items: NotificationItem[]) {
 type Filter = 'all' | 'unread' | 'read';
 
 /* ── Notification card ── */
-function NotifCard({ n, onRead }: { n: NotificationItem; onRead: (id: string) => void }) {
+function NotifCard({ n, onRead, onDelete }: { n: NotificationItem; onRead: (id: string) => void; onDelete: (id: string) => void }) {
   const cfg = TYPE_CFG[n.type] ?? DEFAULT_CFG;
   return (
     <motion.div
@@ -107,8 +108,7 @@ function NotifCard({ n, onRead }: { n: NotificationItem; onRead: (id: string) =>
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -20 }}
       transition={{ duration: 0.18 }}
-      onClick={() => !n.is_read && onRead(n.id)}
-      className={`relative flex items-start gap-4 px-5 py-4 cursor-pointer transition-all duration-150 group
+      className={`relative flex items-start gap-4 px-5 py-4 transition-all duration-150 group
         ${n.is_read
           ? 'bg-white hover:bg-gray-50/70'
           : 'bg-gradient-to-r from-indigo-50/60 to-white hover:from-indigo-50 hover:to-white'
@@ -125,7 +125,7 @@ function NotifCard({ n, onRead }: { n: NotificationItem; onRead: (id: string) =>
       </div>
 
       {/* Content */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 cursor-pointer" onClick={() => !n.is_read && onRead(n.id)}>
         <div className="flex items-center gap-2 mb-0.5">
           <span className={`text-[10px] font-bold uppercase tracking-widest ${n.is_read ? 'text-gray-400' : cfg.iconColor}`}>
             {cfg.label}
@@ -143,12 +143,20 @@ function NotifCard({ n, onRead }: { n: NotificationItem; onRead: (id: string) =>
         <p className="text-[11px] text-gray-300 mt-1.5 font-medium">{timeAgo(n.created_at)}</p>
       </div>
 
-      {/* Unread dot */}
-      {!n.is_read ? (
-        <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 shrink-0 mt-1.5 ring-2 ring-indigo-100" />
-      ) : (
-        <div className="w-2.5 h-2.5 shrink-0" />
-      )}
+      {/* Right: unread dot + delete */}
+      <div className="flex flex-col items-end gap-2 shrink-0">
+        {!n.is_read && (
+          <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 ring-2 ring-indigo-100 mt-1" />
+        )}
+        <button
+          onClick={() => onDelete(n.id)}
+          className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-red-50 text-gray-300 hover:text-red-400"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </button>
+      </div>
     </motion.div>
   );
 }
@@ -158,6 +166,7 @@ export default function NotificationsPage() {
   const { data, isLoading } = useGetNotificationsQuery(undefined, { pollingInterval: 15_000 });
   const [markRead] = useMarkReadMutation();
   const [markAllRead, { isLoading: markingAll }] = useMarkAllReadMutation();
+  const [deleteNotif] = useDeleteNotificationMutation();
   const [filter, setFilter] = useState<Filter>('all');
 
   const allItems = data?.items ?? [];
@@ -275,11 +284,13 @@ export default function NotificationsPage() {
                 {/* Notifications in group */}
                 <div className="divide-y divide-gray-50">
                   <AnimatePresence mode="popLayout">
-                    {group.items.map((n, idx) => (
-                      <div key={n.id}>
-                        <NotifCard n={n} onRead={(id) => markRead(id)} />
-                        {idx < group.items.length - 1 && <div className="mx-5 border-b border-gray-50" />}
-                      </div>
+                    {group.items.map(n => (
+                      <NotifCard
+                        key={n.id}
+                        n={n}
+                        onRead={(id) => markRead(id)}
+                        onDelete={(id) => deleteNotif(id)}
+                      />
                     ))}
                   </AnimatePresence>
                 </div>
