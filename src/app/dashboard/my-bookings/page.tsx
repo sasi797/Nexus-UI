@@ -191,13 +191,14 @@ function FilterSelect({ label, value, options, onChange }: {
 }
 
 /* ── Booking row ── */
-function BookingRow({ booking, agents }: { booking: BookingListItem; agents: Agent[] }) {
+function BookingRow({ booking, agents, myUserEmail }: { booking: BookingListItem; agents: Agent[]; myUserEmail: string | undefined }) {
   const [updateBooking, { isLoading: upd }] = useUpdateBookingMutation();
   const [patchStatus, { isLoading: pat }] = usePatchBookingStatusMutation();
   const busy = upd || pat;
   const sc = S_CFG[booking.status] ?? S_CFG.Pending;
   const due = dueIn(booking);
   const overdue = due === 'Overdue';
+  const isMine = !!myUserEmail && booking.agent?.email === myUserEmail;
 
   return (
     <div className={`flex items-center gap-3 px-4 py-3.5 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''}`}>
@@ -262,35 +263,47 @@ function BookingRow({ booking, agents }: { booking: BookingListItem; agents: Age
           ))}
         </InlineDropdown>
 
-        {/* Agent */}
-        <InlineDropdown
-          trigger={(open, toggle) => (
-            <button onClick={toggle}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-medium text-gray-500 w-full justify-end text-xs max-w-[160px] transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
-              <svg className="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-              <span className="truncate">{booking.agent?.name ?? '—'}</span>
-              <Chevron cls="text-gray-300" />
-            </button>
-          )}>
-          {close => (
-            <>
-              <DdItem label="Unassign" active={!booking.agent}
-                left={<span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-[9px] text-gray-400 font-bold shrink-0">—</span>}
-                onClick={() => { updateBooking({ id: booking.id, body: { agent_id: undefined } }); close(); }} />
-              {agents.map(a => (
-                <DdItem key={a.id} label={a.name} active={booking.agent?.id === a.id}
-                  left={
-                    <div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[9px] font-bold shrink-0`}>
-                      {a.name.charAt(0).toUpperCase()}
-                    </div>
-                  }
-                  onClick={() => { updateBooking({ id: booking.id, body: { agent_id: a.id } }); close(); }} />
-              ))}
-            </>
-          )}
-        </InlineDropdown>
+        {/* Agent — locked when this booking belongs to the current user */}
+        {isMine ? (
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg w-full justify-end text-xs text-indigo-600 font-medium">
+            <svg className="w-3.5 h-3.5 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            <span className="truncate">You</span>
+            <svg className="w-3 h-3 text-indigo-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+          </div>
+        ) : (
+          <InlineDropdown
+            trigger={(open, toggle) => (
+              <button onClick={toggle}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-medium text-gray-500 w-full justify-end text-xs max-w-[160px] transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
+                <svg className="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span className="truncate">{booking.agent?.name ?? '—'}</span>
+                <Chevron cls="text-gray-300" />
+              </button>
+            )}>
+            {close => (
+              <>
+                <DdItem label="Unassign" active={!booking.agent}
+                  left={<span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-[9px] text-gray-400 font-bold shrink-0">—</span>}
+                  onClick={() => { updateBooking({ id: booking.id, body: { agent_id: undefined } }); close(); }} />
+                {agents.map(a => (
+                  <DdItem key={a.id} label={a.name} active={booking.agent?.id === a.id}
+                    left={
+                      <div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[9px] font-bold shrink-0`}>
+                        {a.name.charAt(0).toUpperCase()}
+                      </div>
+                    }
+                    onClick={() => { updateBooking({ id: booking.id, body: { agent_id: a.id } }); close(); }} />
+                ))}
+              </>
+            )}
+          </InlineDropdown>
+        )}
 
         {/* Status */}
         <InlineDropdown
@@ -510,7 +523,7 @@ export default function MyBookingsPage() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {sorted.map(b => <BookingRow key={b.id} booking={b} agents={agents} />)}
+                  {sorted.map(b => <BookingRow key={b.id} booking={b} agents={agents} myUserEmail={user?.email} />)}
                 </div>
               )}
             </motion.div>
