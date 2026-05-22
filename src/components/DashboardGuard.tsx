@@ -9,7 +9,6 @@ const ADMIN_ONLY_PATHS = [
   '/dashboard/attendance',
   '/dashboard/allocations',
   '/dashboard/agents',
-  '/dashboard/notifications',
   '/dashboard/reports',
   '/dashboard/settings',
 ];

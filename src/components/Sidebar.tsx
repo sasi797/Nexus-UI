@@ -132,7 +132,7 @@ export default function Sidebar() {
                   {item.label}
                   {item.label === 'Notifications' && unreadCount > 0 && (
                     <motion.span
-                      key={pendingCount}
+                      key={unreadCount}
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       transition={{ type: 'spring', stiffness: 500 }}
