@@ -9,9 +9,9 @@ import { useGetBookingsQuery, BookingListItem } from '@/services/bookingsApi';
 import ApiErrorState from '@/components/ApiErrorState';
 
 const priorityStyle: Record<string, string> = {
-  Urgent:   'bg-red-50 text-red-700 ring-1 ring-red-200',
-  Standard: 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200',
-  Economy:  'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
+  'Very Urgent': 'bg-red-50 text-red-700 ring-1 ring-red-200',
+  Urgent:        'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
+  'Not Urgent':  'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
 };
 const statusStyle: Record<string, string> = {
   'In Progress': 'bg-blue-50 text-blue-700 ring-1 ring-blue-200',

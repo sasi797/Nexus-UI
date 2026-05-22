@@ -15,9 +15,9 @@ const statusStyle: Record<string, string> = {
   Completed:     'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
 };
 const priorityStyle: Record<string, string> = {
-  Urgent:   'bg-red-50 text-red-700',
-  Standard: 'bg-indigo-50 text-indigo-700',
-  Economy:  'bg-emerald-50 text-emerald-700',
+  'Very Urgent': 'bg-red-50 text-red-700',
+  Urgent:        'bg-amber-50 text-amber-700',
+  'Not Urgent':  'bg-emerald-50 text-emerald-700',
 };
 const avatarGrads = [
   'from-indigo-500 to-violet-500', 'from-sky-500 to-blue-500', 'from-emerald-500 to-teal-500',

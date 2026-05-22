@@ -1,4 +1,4 @@
-export type Priority = 'Urgent' | 'Standard' | 'Economy';
+export type Priority = 'Very Urgent' | 'Urgent' | 'Not Urgent';
 export type BookingStatus = 'In Progress' | 'Pending' | 'Completed';
 export type AttendanceStatus = 'Present' | 'Absent' | 'On Break' | 'Late';
 
@@ -54,7 +54,7 @@ export const bookings: Booking[] = [
   {
     id: 'BKG-2026-00147',
     subject: 'Export to Dubai',
-    priority: 'Urgent',
+    priority: 'Very Urgent',
     status: 'In Progress',
     assignedAt: '9:15 AM',
     assignedDate: '6 May 2026',
@@ -65,7 +65,7 @@ export const bookings: Booking[] = [
   {
     id: 'BKG-2026-00146',
     subject: 'Import from China',
-    priority: 'Standard',
+    priority: 'Urgent',
     status: 'Pending',
     assignedAt: '8:42 AM',
     assignedDate: '6 May 2026',
@@ -76,7 +76,7 @@ export const bookings: Booking[] = [
   {
     id: 'BKG-2026-00145',
     subject: 'Local Delivery',
-    priority: 'Economy',
+    priority: 'Not Urgent',
     status: 'In Progress',
     assignedAt: '8:10 AM',
     assignedDate: '6 May 2026',
@@ -87,7 +87,7 @@ export const bookings: Booking[] = [
   {
     id: 'BKG-2026-00144',
     subject: 'Export to USA',
-    priority: 'Urgent',
+    priority: 'Very Urgent',
     status: 'Completed',
     assignedAt: '7:30 AM',
     assignedDate: '6 May 2026',
@@ -98,7 +98,7 @@ export const bookings: Booking[] = [
   {
     id: 'BKG-2026-00143',
     subject: 'Machinery Import',
-    priority: 'Standard',
+    priority: 'Urgent',
     status: 'Pending',
     assignedAt: '6:55 AM',
     assignedDate: '6 May 2026',
@@ -109,7 +109,7 @@ export const bookings: Booking[] = [
   {
     id: 'BKG-2026-00142',
     subject: 'Pharma Shipment',
-    priority: 'Urgent',
+    priority: 'Very Urgent',
     status: 'Completed',
     assignedAt: '6:20 AM',
     assignedDate: '5 May 2026',
@@ -120,7 +120,7 @@ export const bookings: Booking[] = [
   {
     id: 'BKG-2026-00141',
     subject: 'Cold Chain Logistics',
-    priority: 'Standard',
+    priority: 'Urgent',
     status: 'Completed',
     assignedAt: '5:45 AM',
     assignedDate: '5 May 2026',
@@ -131,7 +131,7 @@ export const bookings: Booking[] = [
   {
     id: 'BKG-2026-00150',
     subject: 'Textile Export',
-    priority: 'Economy',
+    priority: 'Not Urgent',
     status: 'Pending',
     assignedAt: '9:20 AM',
     assignedDate: '6 May 2026',
@@ -142,7 +142,7 @@ export const bookings: Booking[] = [
   {
     id: 'BKG-2026-00149',
     subject: 'Auto Parts Import',
-    priority: 'Standard',
+    priority: 'Urgent',
     status: 'Pending',
     assignedAt: '9:18 AM',
     assignedDate: '6 May 2026',
@@ -153,7 +153,7 @@ export const bookings: Booking[] = [
   {
     id: 'BKG-2026-00148',
     subject: 'Food Commodities',
-    priority: 'Economy',
+    priority: 'Not Urgent',
     status: 'Pending',
     assignedAt: '9:10 AM',
     assignedDate: '6 May 2026',
@@ -219,9 +219,9 @@ export const reportsTrend: ReportTrend[] = [
 ];
 
 export const priorityDistribution = [
-  { name: 'Urgent', value: 35, color: '#ef4444' },
-  { name: 'Standard', value: 45, color: '#6366f1' },
-  { name: 'Economy', value: 20, color: '#22c55e' },
+  { name: 'Very Urgent', value: 35, color: '#ef4444' },
+  { name: 'Urgent', value: 45, color: '#f59e0b' },
+  { name: 'Not Urgent', value: 20, color: '#22c55e' },
 ];
 
 export const dashboardStats = {

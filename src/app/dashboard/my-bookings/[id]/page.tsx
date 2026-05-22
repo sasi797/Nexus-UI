@@ -19,20 +19,20 @@ type ComposeTab = 'Reply' | 'Reply All' | 'Forward';
 
 /* ── helpers ── */
 const PRIORITY_LEFT: Record<string, string> = {
-  Urgent: 'border-l-red-500', Standard: 'border-l-indigo-400', Economy: 'border-l-gray-300',
+  'Very Urgent': 'border-l-red-500', Urgent: 'border-l-amber-400', 'Not Urgent': 'border-l-green-400',
 };
 const PRIORITY_BADGE: Record<string, string> = {
-  Urgent: 'bg-red-50 text-red-700 ring-1 ring-red-200',
-  Standard: 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200',
-  Economy: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
+  'Very Urgent': 'bg-red-50 text-red-700 ring-1 ring-red-200',
+  Urgent: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
+  'Not Urgent': 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
 };
 const PRIORITY_PILL_ON: Record<string, string> = {
-  Urgent: 'bg-red-50 text-red-700 border-red-300',
-  Standard: 'bg-indigo-50 text-indigo-700 border-indigo-300',
-  Economy: 'bg-emerald-50 text-emerald-700 border-emerald-300',
+  'Very Urgent': 'bg-red-50 text-red-700 border-red-300',
+  Urgent: 'bg-amber-50 text-amber-700 border-amber-300',
+  'Not Urgent': 'bg-emerald-50 text-emerald-700 border-emerald-300',
 };
 const PRIORITY_DOT: Record<string, string> = {
-  Urgent: 'bg-red-500', Standard: 'bg-indigo-400', Economy: 'bg-emerald-500',
+  'Very Urgent': 'bg-red-500', Urgent: 'bg-amber-400', 'Not Urgent': 'bg-emerald-500',
 };
 const STATUS_PILL_ON: Record<string, string> = {
   Pending: 'bg-amber-50 text-amber-700 border-amber-300',
@@ -424,7 +424,7 @@ export default function BookingDetailPage() {
               <div>
                 <p className={labelCls}>Priority</p>
                 <div className="flex gap-1.5">
-                  {(['Urgent', 'Standard', 'Economy'] as const).map(p => (
+                  {(['Very Urgent', 'Urgent', 'Not Urgent'] as const).map(p => (
                     <button
                       key={p}
                       disabled={saving || patching || !isOpen}

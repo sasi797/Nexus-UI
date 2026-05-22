@@ -31,7 +31,7 @@ function extractName(email: string) {
     .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
 }
 
-const SLA: Record<string, number> = { Urgent: 4, Standard: 8, Economy: 24 };
+const SLA: Record<string, number> = { 'Very Urgent': 4, Urgent: 8, 'Not Urgent': 24 };
 function dueIn(b: BookingListItem) {
   const dueAt = new Date(b.received_at).getTime() + (SLA[b.priority] ?? 8) * 3_600_000;
   const ms = dueAt - Date.now();
@@ -43,12 +43,12 @@ function dueIn(b: BookingListItem) {
 }
 
 /* ── priority ── */
-const P_DOT: Record<string, string> = { Urgent: 'bg-red-500', Standard: 'bg-blue-500', Economy: 'bg-green-500' };
-const P_TEXT: Record<string, string> = { Urgent: 'text-red-600', Standard: 'text-blue-600', Economy: 'text-green-600' };
+const P_DOT: Record<string, string> = { 'Very Urgent': 'bg-red-500', Urgent: 'bg-amber-500', 'Not Urgent': 'bg-green-500' };
+const P_TEXT: Record<string, string> = { 'Very Urgent': 'text-red-600', Urgent: 'text-amber-600', 'Not Urgent': 'text-green-600' };
 const P_BG: Record<string, string> = {
-  Urgent: 'bg-red-50 hover:bg-red-100/60',
-  Standard: 'bg-blue-50 hover:bg-blue-100/60',
-  Economy: 'bg-green-50 hover:bg-green-100/60',
+  'Very Urgent': 'bg-red-50 hover:bg-red-100/60',
+  Urgent: 'bg-amber-50 hover:bg-amber-100/60',
+  'Not Urgent': 'bg-green-50 hover:bg-green-100/60',
 };
 
 /* ── status ── */
@@ -268,7 +268,7 @@ function BookingRow({ booking, agents }: { booking: BookingListItem; agents: Age
               <Chevron cls="text-current opacity-40" />
             </button>
           )}>
-          {close => ['Urgent', 'Standard', 'Economy'].map(p => (
+          {close => ['Very Urgent', 'Urgent', 'Not Urgent'].map(p => (
             <DdItem key={p} label={p} active={booking.priority === p}
               left={<span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${P_DOT[p] ?? 'bg-gray-300'}`} />}
               onClick={() => { updateBooking({ id: booking.id, body: { priority: p } }); close(); }} />
@@ -389,7 +389,7 @@ export default function MyBookingsPage() {
 
   const sorted = [...(data?.items ?? [])].sort((a, b) => {
     if (sortBy === 'Priority') {
-      const ord: Record<string, number> = { Urgent: 0, Standard: 1, Economy: 2 };
+      const ord: Record<string, number> = { 'Very Urgent': 0, Urgent: 1, 'Not Urgent': 2 };
       return (ord[a.priority] ?? 3) - (ord[b.priority] ?? 3);
     }
     if (sortBy === 'Due date') {
@@ -600,7 +600,7 @@ export default function MyBookingsPage() {
           <div className="border-t border-gray-100" />
 
           <FilterSelect label="Priority" value={priorityFilter}
-            options={['Any priority', 'Urgent', 'Standard', 'Economy']} onChange={setPriorityFilter} />
+            options={['Any priority', 'Very Urgent', 'Urgent', 'Not Urgent']} onChange={setPriorityFilter} />
           <FilterSelect label="Created" value={createdFilter}
             options={['Anytime', 'Today', 'Last 7 days', 'Last 30 days']} onChange={setCreatedFilter} />
           <FilterSelect label="Closed at" value={closedAtFilter}

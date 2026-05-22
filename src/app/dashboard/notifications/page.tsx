@@ -9,9 +9,9 @@ import { useGetBookingsQuery } from '@/services/bookingsApi';
 import { useRunAllocationMutation } from '@/services/allocationsApi';
 
 const priorityStyle: Record<string, string> = {
-  Urgent:   'bg-red-50 text-red-700 ring-1 ring-red-200',
-  Standard: 'bg-gray-100 text-gray-600 ring-1 ring-gray-200',
-  Economy:  'bg-sky-50 text-sky-600 ring-1 ring-sky-200',
+  'Very Urgent': 'bg-red-50 text-red-700 ring-1 ring-red-200',
+  Urgent:        'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
+  'Not Urgent':  'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
 };
 
 interface QueueRow { booking_id: string; subject: string; priority: string; reason: string; pending_since: string }
@@ -29,7 +29,7 @@ export default function NotificationsPage() {
       return {
         booking_id: item.booking_id,
         subject: booking?.subject ?? '—',
-        priority: booking?.priority ?? 'Standard',
+        priority: booking?.priority ?? 'Urgent',
         reason: item.reason,
         pending_since: item.pending_since,
       };
