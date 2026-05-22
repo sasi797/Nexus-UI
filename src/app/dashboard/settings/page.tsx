@@ -74,7 +74,7 @@ export default function SettingsPage() {
   const [apiUrl, setApiUrl] = useState('https://api.transport.example.com/v2');
   const [savedGeneral, setSavedGeneral] = useState(false);
   const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', email: '', shift_id: '' });
+  const [editForm, setEditForm] = useState({ name: '', email: '', shift_id: '', role: 'agent' });
   const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
 
   const { data: shifts = [], isLoading: shiftsLoading } = useGetShiftsQuery();
@@ -85,14 +85,14 @@ export default function SettingsPage() {
   const [deleteAgent] = useDeleteAgentMutation();
   const [updateAgent, { isLoading: updatingAgent }] = useUpdateAgentMutation();
 
-  const startEdit = (a: { id: string; name: string; email: string; shift_id: string | null }) => {
+  const startEdit = (a: { id: string; name: string; email: string; shift_id: string | null; role?: string }) => {
     setEditingAgentId(a.id);
-    setEditForm({ name: a.name, email: a.email, shift_id: a.shift_id ?? '' });
+    setEditForm({ name: a.name, email: a.email, shift_id: a.shift_id ?? '', role: a.role ?? 'agent' });
   };
 
   const handleSaveAgent = async () => {
     if (!editingAgentId) return;
-    await updateAgent({ id: editingAgentId, body: { name: editForm.name, email: editForm.email, shift_id: editForm.shift_id || undefined } });
+    await updateAgent({ id: editingAgentId, body: { name: editForm.name, email: editForm.email, shift_id: editForm.shift_id || undefined, role: editForm.role } });
     setEditingAgentId(null);
   };
 
@@ -243,12 +243,12 @@ export default function SettingsPage() {
                 ) : (
                   <div className="divide-y divide-gray-50">
                     <div className="grid grid-cols-[2fr_2fr_1.5fr_1fr_auto] gap-3 px-4 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                      <span>Name</span><span>Email</span><span>Shift</span><span>Status</span><span className="w-16" />
+                      <span>Name</span><span>Email</span><span>Shift</span><span>Status</span><span className="w-20" />
                     </div>
                     <AnimatePresence>
                       {agents.map((a, i) => (
                         <motion.div key={a.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                          className="grid grid-cols-[2fr_2fr_1.5fr_1fr_auto] gap-3 items-center px-4 py-2.5 hover:bg-gray-50/60 transition-colors">
+                          className={`grid gap-3 items-center px-4 py-2.5 hover:bg-gray-50/60 transition-colors ${editingAgentId === a.id ? 'grid-cols-[2fr_2fr_1.5fr_1fr_auto]' : 'grid-cols-[2fr_2fr_1.5fr_1fr_auto]'}`}>
                           {editingAgentId === a.id ? (
                             <>
                               <input value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} className={inputSm} placeholder="Full Name" />
@@ -259,19 +259,30 @@ export default function SettingsPage() {
                                 options={[{ label: 'No Shift', value: '' }, ...shifts.map(s => ({ label: s.name, value: s.id }))]}
                                 onChange={v => setEditForm(p => ({ ...p, shift_id: v }))}
                               />
-                              <span />
-                              <div className="flex items-center gap-1 w-16">
-                                <motion.button whileTap={{ scale: 0.93 }} onClick={handleSaveAgent} disabled={updatingAgent}
-                                  className="text-[10px] font-bold px-2 py-1 bg-indigo-600 text-white rounded-md disabled:opacity-60">
-                                  {updatingAgent ? '…' : 'Save'}
+                              <SettingsDropdown
+                                value={editForm.role}
+                                options={[{ label: 'Agent', value: 'agent' }, { label: 'Supervisor', value: 'supervisor' }, { label: 'Admin', value: 'admin' }]}
+                                onChange={v => setEditForm(p => ({ ...p, role: v }))}
+                              />
+                              <div className="flex items-center gap-2">
+                                <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={handleSaveAgent} disabled={updatingAgent}
+                                  className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm disabled:opacity-60 transition-colors">
+                                  {updatingAgent
+                                    ? <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                                    : <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/></svg>
+                                  }
+                                  Save
                                 </motion.button>
-                                <button onClick={() => setEditingAgentId(null)} className="text-[10px] text-gray-400 hover:text-gray-600 px-1">✕</button>
+                                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setEditingAgentId(null)}
+                                  className="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition-colors">
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12"/></svg>
+                                </motion.button>
                               </div>
                             </>
                           ) : (
                             <>
                               <div className="flex items-center gap-2">
-                                <div className={`w-6 h-6 rounded-lg bg-gradient-to-br ${avatarGrads[i % avatarGrads.length]} flex items-center justify-center text-white text-[10px] font-black shadow shrink-0`}>
+                                <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${avatarGrads[i % avatarGrads.length]} flex items-center justify-center text-white text-[11px] font-black shadow shrink-0`}>
                                   {a.name.charAt(0)}
                                 </div>
                                 <span className="font-semibold text-gray-800 text-xs truncate">{a.name}</span>
@@ -281,21 +292,22 @@ export default function SettingsPage() {
                                 {a.shift ? <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md font-bold ring-1 ring-indigo-100">{a.shift.name}</span> : <span className="text-gray-300">—</span>}
                               </span>
                               <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 w-fit">Active</span>
-                              <div className="flex items-center gap-1 w-16">
-                                <motion.button whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} onClick={() => startEdit(a)}
-                                  className="p-1 text-gray-300 hover:text-indigo-500 hover:bg-indigo-50 rounded-md transition-colors" title="Edit">
-                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <div className="flex items-center gap-2">
+                                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                                  onClick={() => startEdit({ ...a, role: a.role })}
+                                  className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors" title="Edit">
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                                   </svg>
                                 </motion.button>
                                 <motion.button
-                                  whileHover={{ scale: deactivatingId === a.id ? 1 : 1.15 }} whileTap={{ scale: 0.9 }}
+                                  whileHover={{ scale: deactivatingId === a.id ? 1 : 1.05 }} whileTap={{ scale: 0.95 }}
                                   disabled={deactivatingId === a.id}
                                   onClick={async () => { setDeactivatingId(a.id); await deleteAgent(a.id); setDeactivatingId(null); }}
-                                  className="p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors disabled:opacity-60" title="Deactivate">
+                                  className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-60" title="Deactivate">
                                   {deactivatingId === a.id
-                                    ? <svg className="w-3.5 h-3.5 animate-spin text-red-400" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
-                                    : <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                                    ? <svg className="w-4 h-4 animate-spin text-red-400" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                                    : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
                                   }
                                 </motion.button>
                               </div>
