@@ -37,6 +37,38 @@ function ViewToggle({ view, onChange }: { view: ViewMode; onChange: (v: ViewMode
   );
 }
 
+function HourlyTick({ x, y, payload }: { x?: number; y?: number; payload?: { value: number } }) {
+  const h = payload?.value ?? 0;
+  const end = (h + 1) % 24;
+  const fmt = (n: number) => String(n).padStart(2, '0');
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text x={0} y={0} dy={4} transform="rotate(-45)" textAnchor="end" fill="#94a3b8" fontSize={7.5}>
+        {`${fmt(h)}:00–${fmt(end)}:00`}
+      </text>
+    </g>
+  );
+}
+
+function HourlyTooltip({ active, payload }: { active?: boolean; payload?: { name: string; value: number; color: string }[] }) {
+  if (!active || !payload?.length) return null;
+  const h = Number((payload[0] as unknown as { payload: { hour: number } }).payload.hour);
+  const end = (h + 1) % 24;
+  const fmt = (n: number) => String(n).padStart(2, '0');
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl shadow-lg px-3.5 py-2.5 text-[11px]">
+      <p className="font-bold text-gray-700 mb-1.5">{`${fmt(h)}:00 – ${fmt(end)}:00`}</p>
+      {payload.map(p => (
+        <div key={p.name} className="flex items-center gap-2 mb-0.5">
+          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
+          <span className="text-gray-500">{p.name}:</span>
+          <span className="font-bold text-gray-800">{p.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function ReportsPage() {
   const [hourlyView, setHourlyView] = useState<ViewMode>('chart');
   const [avgView, setAvgView] = useState<ViewMode>('chart');
@@ -62,7 +94,15 @@ export default function ReportsPage() {
   ] : [];
 
   const hourlyColumns: ColumnDef<HourlyPoint & { rate: number }>[] = [
-    { key: 'label',     header: 'Hour',              sortable: true,  render: v => <span className="font-semibold text-gray-700">{String(v)}</span> },
+    {
+      key: 'label', header: 'Hour', sortable: true,
+      render: v => {
+        const h = parseInt(String(v), 10);
+        const end = (h + 1) % 24;
+        const fmt = (n: number) => String(n).padStart(2, '0');
+        return <span className="font-semibold text-gray-700">{`${fmt(h)}:00 – ${fmt(end)}:00`}</span>;
+      },
+    },
     { key: 'received',  header: 'Received',           sortable: true,  render: v => <span className="font-medium text-indigo-600">{String(v)}</span> },
     { key: 'completed', header: 'Completed',          sortable: true,  render: v => <span className="font-bold text-emerald-600">{String(v)}</span> },
     {
@@ -223,7 +263,6 @@ export default function ReportsPage() {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <h2 className="text-xs font-bold text-gray-900">Hourly Activity</h2>
-              <span className="text-[10px] text-gray-400 font-medium">Last 30 days · {userTz}</span>
             </div>
             <div className="flex items-center gap-2">
               {hourlyView === 'table' && (
@@ -245,9 +284,9 @@ export default function ReportsPage() {
             <ResponsiveContainer width="100%" height={185}>
               <BarChart data={hourly} margin={{ top: 5, right: 16, left: -14, bottom: 5 }} barGap={2}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 9, fill: '#94a3b8' }} axisLine={false} tickLine={false} interval={2} />
-                <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 11, boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }} cursor={{ fill: '#f8fafc' }} />
+                <XAxis dataKey="hour" tick={<HourlyTick />} axisLine={false} tickLine={false} interval={0} height={55} />
+                <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip content={<HourlyTooltip />} cursor={{ fill: '#f8fafc' }} />
                 <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: 11 }} />
                 <Bar dataKey="received" name="Received" fill="#6366f1" radius={[3, 3, 0, 0]} />
                 <Bar dataKey="completed" name="Completed" fill="#10b981" radius={[3, 3, 0, 0]} />
