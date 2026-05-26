@@ -50,7 +50,7 @@ function ShiftSelect({ value, shifts, onChange }: { value: string; shifts: Shift
   return (
     <>
       <button ref={btnRef} onClick={() => setOpen(o => !o)}
-        className="inline-flex items-center gap-2 pl-3 pr-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-[13px] font-medium text-gray-700 hover:border-indigo-300 hover:bg-indigo-50/40 focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-all shadow-sm min-w-[150px] justify-between">
+        className="inline-flex items-center gap-2 pl-2.5 pr-2 py-1 bg-white border border-gray-200 rounded-lg text-[12px] font-medium text-gray-700 hover:border-indigo-300 hover:bg-indigo-50/40 focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-all shadow-sm min-w-[130px] justify-between">
         <span className="truncate">{selected ? selected.name : <span className="text-gray-400">— No Shift —</span>}</span>
         <svg className={`w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/>
@@ -103,7 +103,7 @@ function StatusSelect({ value, onChange }: { value: AttendanceStatus; onChange: 
   return (
     <>
       <button ref={btnRef} onClick={() => setOpen(o => !o)}
-        className={`inline-flex items-center gap-2 pl-3 pr-2 py-1.5 rounded-full text-[13px] font-bold border focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all shadow-sm ${c.bg} ${c.text} ${c.ring}`}>
+        className={`inline-flex items-center gap-1.5 pl-3 pr-2 py-1 rounded-full text-[13px] font-bold border focus:outline-none focus:ring-2 focus:ring-offset-1 transition-all shadow-sm ${c.bg} ${c.text} ${c.ring}`}>
         <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${c.dot}`} />
         <span>{value}</span>
         <svg className={`w-3 h-3 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -280,11 +280,11 @@ export default function AttendancePage() {
             className={`w-7 h-7 rounded-lg bg-gradient-to-br ${avatarGrads[(row as AttendanceRow).avatarIdx % avatarGrads.length]} flex items-center justify-center text-white font-bold text-xs shadow-md`}>
             {String(v).charAt(0)}
           </motion.div>
-          <span className="font-semibold text-gray-800 text-xs">{String(v)}</span>
+          <span className="font-semibold text-gray-800 text-[13px]">{String(v)}</span>
         </div>
       ),
     },
-    { key: 'email', header: 'Email', sortable: true, filterable: true, render: v => <span className="text-gray-400 text-xs">{String(v)}</span> },
+    { key: 'email', header: 'Email', sortable: true, filterable: true, render: v => <span className="text-gray-400 text-[13px]">{String(v)}</span> },
     {
       key: 'shiftName', header: 'Shift', sortable: true, filterable: true,
       render: (_, row) => {
@@ -300,7 +300,7 @@ export default function AttendancePage() {
         return (
           <AnimatePresence mode="wait">
             <motion.span key={st} initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }} transition={{ type: 'spring', stiffness: 400 }}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ring-1 ${c.ring} ${c.bg} ${c.text}`}>
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[13px] font-semibold ring-1 ${c.ring} ${c.bg} ${c.text}`}>
               <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />{st}
             </motion.span>
           </AnimatePresence>
