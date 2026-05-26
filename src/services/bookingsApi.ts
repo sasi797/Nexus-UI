@@ -10,6 +10,7 @@ export interface BookingListItem {
   agent: AgentBrief | null;
   sender_email: string;
   da_number: string | null;
+  da_description: string | null;
   received_at: string;
   assigned_at: string | null;
   completed_at: string | null;

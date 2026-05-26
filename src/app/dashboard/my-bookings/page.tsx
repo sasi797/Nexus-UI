@@ -33,14 +33,30 @@ function extractName(email: string) {
     .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
 }
 
+function formatHMS(ms: number): string {
+  const totalSecs = Math.floor(Math.max(ms, 0) / 1000);
+  const s = totalSecs % 60;
+  const totalMins = Math.floor(totalSecs / 60);
+  const m = totalMins % 60;
+  const h = Math.floor(totalMins / 60);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
 function formatDuration(ms: number): string {
   const totalMins = Math.floor(ms / 60_000);
   const mins = totalMins % 60;
   const hours = Math.floor(totalMins / 60) % 24;
   const days = Math.floor(totalMins / 1440);
-  if (days > 0) return `${days}d ${hours}h`;
+  if (days > 0) return `${days}d ${hours}h ${mins}m`;
   if (hours > 0) return `${hours}h ${mins}m`;
-  return `${Math.max(totalMins, 1)}m`;
+  return `${totalMins}m`;
+}
+
+function elapsedCfg(ms: number) {
+  const mins = ms / 60_000;
+  if (mins <= 15) return { text: 'text-emerald-600', bg: 'bg-emerald-50 ring-emerald-200', dot: 'bg-emerald-400', label: 'Low' };
+  if (mins <= 30) return { text: 'text-amber-600',   bg: 'bg-amber-50 ring-amber-200',     dot: 'bg-amber-400',   label: 'Med' };
+  return              { text: 'text-red-600',         bg: 'bg-red-50 ring-red-200',         dot: 'bg-red-500',     label: 'High' };
 }
 
 function ElapsedBadge({ booking }: { booking: BookingListItem }) {
@@ -48,21 +64,28 @@ function ElapsedBadge({ booking }: { booking: BookingListItem }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     if (done) return;
-    const id = setInterval(() => setNow(Date.now()), 60_000);
+    const id = setInterval(() => setNow(Date.now()), 1_000);
     return () => clearInterval(id);
   }, [done]);
   const end = done && booking.completed_at ? new Date(booking.completed_at).getTime() : now;
   const ms = end - new Date(booking.received_at).getTime();
   if (ms < 0) return null;
-  return done ? (
-    <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-gray-400">
-      <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-      {formatDuration(ms)}
-    </span>
-  ) : (
-    <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-indigo-500">
-      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse shrink-0" />
-      {formatDuration(ms)}
+
+  if (done) {
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-gray-100 ring-1 ring-gray-200 text-[10px] font-mono font-semibold text-gray-500">
+        <svg className="w-2.5 h-2.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        {formatDuration(ms)}
+      </span>
+    );
+  }
+
+  const cfg = elapsedCfg(ms);
+  return (
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md ring-1 text-[10px] font-mono font-bold ${cfg.bg} ${cfg.text}`}>
+      <span className={`w-1.5 h-1.5 rounded-full shrink-0 animate-pulse ${cfg.dot}`} />
+      {formatHMS(ms)}
+      <span className="text-[9px] font-semibold opacity-60">{cfg.label}</span>
     </span>
   );
 }
@@ -98,7 +121,7 @@ const S_CFG: Record<string, { dot: string; text: string; label: string; path: st
     path: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15',
   },
   Completed: {
-    dot: 'bg-gray-400', text: 'text-gray-500', label: 'Closed',
+    dot: 'bg-gray-400', text: 'text-gray-500', label: 'Completed',
     path: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
   },
 };
@@ -229,13 +252,27 @@ function FilterSelect({ label, value, options, onChange }: {
 function BookingRow({ booking, agents, myUserEmail }: { booking: BookingListItem; agents: Agent[]; myUserEmail: string | undefined }) {
   const [updateBooking, { isLoading: upd }] = useUpdateBookingMutation();
   const [patchStatus, { isLoading: pat }] = usePatchBookingStatusMutation();
+  const [showDa, setShowDa] = useState(false);
+  const [daNumber, setDaNumber] = useState('');
+  const [daDesc, setDaDesc] = useState('');
   const busy = upd || pat;
   const sc = S_CFG[booking.status] ?? S_CFG.Pending;
-  const due = dueIn(booking);
-  const overdue = due === 'Overdue';
   const isMine = !!myUserEmail && booking.agent?.email === myUserEmail;
 
+  function handleStatusClick(s: string, close: () => void) {
+    close();
+    if (s === booking.status) return;
+    if (s === 'Completed') { setDaNumber(booking.da_number ?? ''); setDaDesc(booking.da_description ?? ''); setShowDa(true); return; }
+    patchStatus({ id: booking.id, status: s });
+  }
+
+  function submitDa() {
+    patchStatus({ id: booking.id, status: 'Completed', da_number: daNumber || undefined, da_description: daDesc || undefined });
+    setShowDa(false);
+  }
+
   return (
+    <>
     <div className={`flex items-center gap-3 px-4 py-3.5 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''}`}>
 
       {/* Checkbox */}
@@ -253,9 +290,6 @@ function BookingRow({ booking, agents, myUserEmail }: { booking: BookingListItem
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-0.5">
             <span className="text-[10px] font-bold text-gray-400 font-mono tracking-tight">{booking.id}</span>
-            {booking.status === 'Pending' && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 leading-none">New</span>
-            )}
             {booking.status === 'Completed' && booking.da_number && (
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-mono leading-none border border-emerald-200">
                 {booking.da_number}
@@ -270,11 +304,7 @@ function BookingRow({ booking, agents, myUserEmail }: { booking: BookingListItem
             <svg className="w-3 h-3 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
-            <span className="text-[11px] text-gray-400">
-              {extractName(booking.sender_email)}
-              <span className="mx-1.5 text-gray-200">·</span>
-              <span className={overdue ? 'text-red-500 font-semibold' : ''}>{due}</span>
-            </span>
+            <span className="text-[11px] text-gray-400">{extractName(booking.sender_email)}</span>
           </div>
         </div>
       </Link>
@@ -356,12 +386,73 @@ function BookingRow({ booking, agents, myUserEmail }: { booking: BookingListItem
           {close => ['Pending', 'In Progress', 'Completed'].map(s => (
             <DdItem key={s} label={S_CFG[s].label} active={booking.status === s}
               left={<span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${S_CFG[s].dot}`} />}
-              onClick={() => { patchStatus({ id: booking.id, status: s }); close(); }} />
+              onClick={() => handleStatusClick(s, close)} />
           ))}
         </InlineDropdown>
 
       </div>
     </div>
+
+    {/* DA number modal */}
+    <AnimatePresence>
+      {showDa && (
+        <motion.div
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+          onClick={() => setShowDa(false)}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 8 }} transition={{ duration: 0.15 }}
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
+                <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-[15px] font-bold text-gray-900">Complete Booking</h3>
+                <p className="text-[12px] text-gray-400 mt-0.5">Optionally enter the DA number and description</p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-500 mb-1">DA Number</label>
+                <input
+                  type="text" value={daNumber} onChange={e => setDaNumber(e.target.value)}
+                  placeholder="e.g. DA-2024-001"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 placeholder:text-gray-300 font-mono"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-semibold text-gray-500 mb-1">DA Description</label>
+                <textarea
+                  value={daDesc} onChange={e => setDaDesc(e.target.value)}
+                  rows={3} placeholder="Brief description of the delivery arrangement…"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 placeholder:text-gray-300 resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setShowDa(false)}
+                className="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+                Cancel
+              </button>
+              <button onClick={submitDa}
+                className="flex-1 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-colors">
+                Confirm
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+    </>
   );
 }
 
