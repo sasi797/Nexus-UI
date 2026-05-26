@@ -90,6 +90,58 @@ function ElapsedBadge({ booking }: { booking: BookingListItem }) {
   );
 }
 
+function DaTagInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [inputVal, setInputVal] = useState('');
+  const tags = value.split(',').map(s => s.trim()).filter(Boolean);
+
+  function addTag(raw: string) {
+    const tag = raw.trim();
+    if (!tag || tags.includes(tag)) { setInputVal(''); return; }
+    onChange([...tags, tag].join(', '));
+    setInputVal('');
+  }
+
+  function removeTag(idx: number) {
+    onChange(tags.filter((_, i) => i !== idx).join(', '));
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter' || e.key === ',' || e.key === 'Tab') {
+      e.preventDefault();
+      addTag(inputVal);
+    } else if (e.key === 'Backspace' && !inputVal && tags.length > 0) {
+      removeTag(tags.length - 1);
+    }
+  }
+
+  return (
+    <div
+      className="min-h-[44px] w-full px-2 py-1.5 border border-gray-200 rounded-lg focus-within:ring-2 focus-within:ring-emerald-300 focus-within:border-emerald-400 flex flex-wrap gap-1.5 items-center cursor-text transition-all"
+      onClick={e => (e.currentTarget.querySelector('input') as HTMLInputElement | null)?.focus()}
+    >
+      {tags.map((tag, i) => (
+        <span key={i} className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-mono font-semibold shrink-0">
+          {tag}
+          <button type="button" onClick={() => removeTag(i)}
+            className="w-3.5 h-3.5 flex items-center justify-center rounded text-emerald-400 hover:text-emerald-700 hover:bg-emerald-100 transition-colors">
+            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </span>
+      ))}
+      <input
+        value={inputVal}
+        onChange={e => setInputVal(e.target.value)}
+        onKeyDown={handleKeyDown}
+        onBlur={() => addTag(inputVal)}
+        placeholder={tags.length === 0 ? 'Type DA number, press Enter to add…' : '+ Add another'}
+        className="flex-1 min-w-[160px] text-sm outline-none bg-transparent placeholder:text-gray-300 font-mono py-0.5"
+      />
+    </div>
+  );
+}
+
 function DaBadges({ daNumber }: { daNumber: string }) {
   const all = daNumber.split(',').map(s => s.trim()).filter(Boolean);
   const shown = all.slice(0, 3);
@@ -447,11 +499,8 @@ function BookingRow({ booking, agents, myUserEmail }: { booking: BookingListItem
             <div className="space-y-3">
               <div>
                 <label className="block text-[11px] font-semibold text-gray-500 mb-1">DA Number</label>
-                <input
-                  type="text" value={daNumber} onChange={e => setDaNumber(e.target.value)}
-                  placeholder="e.g. DA-2024-001"
-                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 placeholder:text-gray-300 font-mono"
-                />
+                <DaTagInput value={daNumber} onChange={setDaNumber} />
+                <p className="text-[10px] text-gray-300 mt-1">Press Enter or Tab after each number to add it</p>
               </div>
               <div>
                 <label className="block text-[11px] font-semibold text-gray-500 mb-1">DA Description</label>
