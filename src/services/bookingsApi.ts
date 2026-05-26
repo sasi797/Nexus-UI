@@ -39,6 +39,15 @@ export interface BookingUpdate extends Partial<BookingCreate> {
   status?: string; agent_id?: string;
 }
 
+export interface BookingEvent {
+  id: number;
+  event: string;
+  actor_name: string | null;
+  old_value: string | null;
+  new_value: string | null;
+  created_at: string;
+}
+
 export const bookingsApi = api.injectEndpoints({
   endpoints: (build) => ({
     getBookings: build.query<PaginatedBookings, { status?: string; priority?: string; agent_id?: string; created_after?: string; closed_after?: string; page?: number; page_size?: number }>({
@@ -82,6 +91,10 @@ export const bookingsApi = api.injectEndpoints({
       query: (id) => ({ url: `/bookings/${id}`, method: 'DELETE' }),
       invalidatesTags: ['Booking', 'Dashboard'],
     }),
+    getBookingEvents: build.query<BookingEvent[], string>({
+      query: (id) => `/bookings/${id}/events`,
+      providesTags: (_r, _e, id) => [{ type: 'Booking', id }],
+    }),
   }),
   overrideExisting: false,
 });
@@ -89,4 +102,5 @@ export const bookingsApi = api.injectEndpoints({
 export const {
   useGetBookingsQuery, useGetBookingQuery, useCreateBookingMutation,
   useUpdateBookingMutation, usePatchBookingStatusMutation, useDeleteBookingMutation,
+  useGetBookingEventsQuery,
 } = bookingsApi;

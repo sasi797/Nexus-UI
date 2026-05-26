@@ -385,13 +385,18 @@ export default function MyBookingsPage() {
     page_size: pageSize,
   }, { skip: agentsLoading || hasNoAgentProfile });
 
-  // Show 0 when no agent profile. For active tab use live query total so badge matches list.
-  // Inactive tabs show no badge — global stats don't reflect per-user counts.
+  const countBase = { agent_id: myAgentId, priority, created_after: CREATED_MAP[createdFilter], closed_after: CLOSED_MAP[closedAtFilter], page_size: 1 };
+  const skipCount = agentsLoading || hasNoAgentProfile;
+  const { data: cAll }  = useGetBookingsQuery({ ...countBase },                          { skip: skipCount });
+  const { data: cPend } = useGetBookingsQuery({ ...countBase, status: 'Pending' },       { skip: skipCount });
+  const { data: cProg } = useGetBookingsQuery({ ...countBase, status: 'In Progress' },   { skip: skipCount });
+  const { data: cDone } = useGetBookingsQuery({ ...countBase, status: 'Completed' },     { skip: skipCount });
+
   const TAB_COUNTS: Record<Tab, number | undefined> = {
-    All:           hasNoAgentProfile ? 0 : activeTab === 'All'         ? data?.total : undefined,
-    Pending:       hasNoAgentProfile ? 0 : activeTab === 'Pending'     ? data?.total : undefined,
-    'In Progress': hasNoAgentProfile ? 0 : activeTab === 'In Progress' ? data?.total : undefined,
-    Completed:     hasNoAgentProfile ? 0 : activeTab === 'Completed'   ? data?.total : undefined,
+    All:           hasNoAgentProfile ? 0 : cAll?.total,
+    Pending:       hasNoAgentProfile ? 0 : cPend?.total,
+    'In Progress': hasNoAgentProfile ? 0 : cProg?.total,
+    Completed:     hasNoAgentProfile ? 0 : cDone?.total,
   };
 
   const sorted = [...(data?.items ?? [])].sort((a, b) => {

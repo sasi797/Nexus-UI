@@ -7,11 +7,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { pageTransition, staggerItem, fadeIn } from '@/lib/animations';
 import {
   useGetBookingQuery, usePatchBookingStatusMutation,
-  useUpdateBookingMutation,
+  useUpdateBookingMutation, useGetBookingEventsQuery,
 } from '@/services/bookingsApi';
 
 import { useGetAgentsQuery } from '@/services/agentsApi';
-import { useGetAllocationLogQuery } from '@/services/allocationsApi';
+
 import EmailThread from '@/components/EmailThread';
 
 type Tab = 'Conversation' | 'History';
@@ -75,10 +75,10 @@ export default function BookingDetailPage() {
   const [daDesc, setDaDesc]               = useState('');
 
   const { data: b, isLoading }                   = useGetBookingQuery(id);
+  const { data: bookingEvents = [] }             = useGetBookingEventsQuery(id);
   const [patchStatus,   { isLoading: patching }] = usePatchBookingStatusMutation();
   const [updateBooking, { isLoading: saving }]   = useUpdateBookingMutation();
   const { data: agents = [] }                    = useGetAgentsQuery();
-  const { data: allocLog = [] }                  = useGetAllocationLogQuery({ booking_id: id });
 
   const bookingIds  = typeof window !== 'undefined'
     ? JSON.parse(sessionStorage.getItem('bts:booking-nav') ?? '[]') as string[]
@@ -304,52 +304,40 @@ export default function BookingDetailPage() {
               )}
 
               {activeTab === 'History' && (() => {
-                const firstLogTime = allocLog.length > 0
-                  ? new Date(allocLog[0].allocated_at).getTime()
-                  : Infinity;
-                const needsSynthetic = !!b.assigned_at && new Date(b.assigned_at).getTime() < firstLogTime;
-
-                const assignEvents = [
-                  ...(needsSynthetic ? [{
-                    time: b.assigned_at as string,
-                    label: allocLog.length === 0
-                      ? `Auto-assigned to ${b.agent?.name ?? 'agent'}`
-                      : 'Auto-assigned (round-robin)',
-                    color: 'bg-sky-50', icon: '🔄',
-                  }] : []),
-                  ...allocLog.map((log, i) => ({
-                    time:  log.allocated_at,
-                    label: log.pointer_value === -1
-                      ? `Manually assigned to ${log.agent?.name ?? 'agent'}`
-                      : `Auto-assigned to ${log.agent?.name ?? 'agent'} (round-robin #${i + 1})`,
-                    color: log.pointer_value === -1 ? 'bg-indigo-50' : 'bg-sky-50',
-                    icon:  log.pointer_value === -1 ? '✏️' : '🔄',
-                  })),
-                ];
-
-                const events = [
-                  { time: b.received_at, label: 'Booking received', color: 'bg-gray-100', icon: '📩' },
-                  ...(b.completed_at ? [{ time: b.completed_at, label: 'Booking closed', color: 'bg-emerald-50', icon: '✅' }] : []),
-                  ...assignEvents,
-                ].sort((a, bk) => new Date(a.time).getTime() - new Date(bk.time).getTime());
-
+                const EVENT_CFG: Record<string, { icon: string; color: string; label: (e: typeof bookingEvents[0]) => string }> = {
+                  created:             { icon: '📩', color: 'bg-gray-100',    label: e => `Booking created${e.new_value ? ` · ${e.new_value}` : ''}` },
+                  status_changed:      { icon: '🔄', color: 'bg-blue-50',     label: e => `Status → ${e.new_value === 'Pending' ? 'Open' : e.new_value}` },
+                  priority_changed:    { icon: '⚡', color: 'bg-amber-50',    label: e => `Priority → ${e.new_value}` },
+                  agent_assigned:      { icon: '👤', color: 'bg-indigo-50',   label: e => `Assigned to ${e.new_value ?? 'agent'}${e.old_value ? ` (${e.old_value})` : ''}` },
+                  agent_unassigned:    { icon: '↩️', color: 'bg-gray-50',     label: () => 'Agent removed' },
+                  no_agents_available: { icon: '⚠️', color: 'bg-amber-50',    label: () => 'No present agents — stays Open' },
+                  reply_received:      { icon: '💬', color: 'bg-sky-50',      label: e => `${e.new_value ?? 'Reply received'} — booking reopened` },
+                };
                 return (
                   <div className="relative">
                     <div className="absolute left-[11px] top-4 bottom-4 w-px bg-gray-100" />
-                    {events.map((h, i) => (
-                      <div key={i} className="flex items-start gap-3 relative py-3">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0 z-10 ring-2 ring-white ${h.color}`}>
-                          {h.icon}
+                    {bookingEvents.length === 0 && (
+                      <p className="text-xs text-gray-400 py-6 text-center">No history yet</p>
+                    )}
+                    {bookingEvents.map((ev) => {
+                      const cfg = EVENT_CFG[ev.event] ?? { icon: '•', color: 'bg-gray-100', label: () => ev.event };
+                      return (
+                        <div key={ev.id} className="flex items-start gap-3 relative py-3">
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0 z-10 ring-2 ring-white ${cfg.color}`}>
+                            {cfg.icon}
+                          </div>
+                          <div className="flex-1 min-w-0 pt-0.5">
+                            <p className="text-xs font-semibold text-gray-700">{cfg.label(ev)}</p>
+                            {ev.actor_name && (
+                              <p className="text-[10px] text-indigo-500 font-medium">{ev.actor_name}</p>
+                            )}
+                            <p className="text-[10px] text-gray-400 mt-0.5">
+                              {new Date(ev.created_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0 pt-0.5">
-                          <p className="text-xs font-semibold text-gray-700">{h.label}</p>
-                          <p className="text-[10px] text-gray-400 mt-0.5">
-                            {new Date(h.time).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                    {events.length === 0 && <p className="text-xs text-gray-400 py-6 text-center">No history yet</p>}
+                      );
+                    })}
                   </div>
                 );
               })()}
