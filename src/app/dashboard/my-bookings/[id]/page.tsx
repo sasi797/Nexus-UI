@@ -83,6 +83,10 @@ export default function BookingDetailPage() {
   const bookingIds  = typeof window !== 'undefined'
     ? JSON.parse(sessionStorage.getItem('bts:booking-nav') ?? '[]') as string[]
     : [];
+  const listOrigin  = (typeof window !== 'undefined'
+    ? sessionStorage.getItem('bts:booking-origin')
+    : null) ?? '/dashboard/my-bookings';
+  const listLabel   = listOrigin === '/dashboard/all-bookings' ? 'All Bookings' : 'My Bookings';
   const currentIdx  = bookingIds.indexOf(id);
   const prevId      = currentIdx > 0 ? bookingIds[currentIdx - 1] : null;
   const nextId      = currentIdx >= 0 && currentIdx < bookingIds.length - 1 ? bookingIds[currentIdx + 1] : null;
@@ -157,18 +161,18 @@ export default function BookingDetailPage() {
           {/* Subject header */}
           <div className="px-6 py-4 border-b border-gray-100">
             <div className="flex items-center justify-between mb-3">
-              <Link href="/dashboard/my-bookings"
+              <Link href={listOrigin}
                 className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-400 hover:text-indigo-600 transition-colors">
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
                 </svg>
-                My Bookings
+                {listLabel}
               </Link>
 
               {/* Prev / Next navigation */}
               <div className="flex items-center gap-1">
                 <button
-                  onClick={() => prevId && router.push(`/dashboard/my-bookings/${prevId}`)}
+                  onClick={() => prevId && router.push(`${listOrigin}/${prevId}`)}
                   disabled={!prevId}
                   title="Previous booking"
                   className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
@@ -183,7 +187,7 @@ export default function BookingDetailPage() {
                   </span>
                 )}
                 <button
-                  onClick={() => nextId && router.push(`/dashboard/my-bookings/${nextId}`)}
+                  onClick={() => nextId && router.push(`${listOrigin}/${nextId}`)}
                   disabled={!nextId}
                   title="Next booking"
                   className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all">

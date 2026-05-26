@@ -413,6 +413,14 @@ export default function AllBookingsPage() {
     return new Date(b.received_at).getTime() - new Date(a.received_at).getTime();
   });
 
+  /* Persist nav list + origin so the detail page's Back/Prev/Next work from this context */
+  useEffect(() => {
+    if (sorted.length > 0) {
+      sessionStorage.setItem('bts:booking-nav', JSON.stringify(sorted.map(b => b.id)));
+      sessionStorage.setItem('bts:booking-origin', '/dashboard/all-bookings');
+    }
+  }, [sorted]);
+
   const totalCount = data?.total      ?? 0;
   const totalPages = data?.total_pages ?? 1;
   const startIdx   = totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1;

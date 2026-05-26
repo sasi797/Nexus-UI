@@ -405,10 +405,11 @@ export default function MyBookingsPage() {
     return new Date(b.received_at).getTime() - new Date(a.received_at).getTime();
   });
 
-  /* Persist the current visible list so the detail page can navigate prev/next */
+  /* Persist the current visible list + origin so the detail page's Back/Prev/Next work from this context */
   useEffect(() => {
     if (sorted.length > 0) {
       sessionStorage.setItem('bts:booking-nav', JSON.stringify(sorted.map(b => b.id)));
+      sessionStorage.setItem('bts:booking-origin', '/dashboard/my-bookings');
     }
   }, [sorted]);
 
