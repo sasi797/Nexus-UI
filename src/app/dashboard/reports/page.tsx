@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, BarChart, Bar, ResponsiveContainer } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, BarChart, Bar, ResponsiveContainer } from 'recharts';
 import Table, { ColumnDef } from '@/components/Table';
 import { pageTransition, staggerItem, popIn, cardHover, staggerContainer } from '@/lib/animations';
-import { useGetReportStatsQuery, useGetTrendQuery, useGetPriorityDistributionQuery, useGetDailySummaryQuery, useGetHourlyActivityQuery, useGetAvgCompletionQuery, DailySummaryRow, HourlyPoint } from '@/services/reportsApi';
+import { useGetReportStatsQuery, useGetPriorityDistributionQuery, useGetDailySummaryQuery, useGetHourlyActivityQuery, useGetAvgCompletionQuery, useGetStatusBreakdownQuery, DailySummaryRow, HourlyPoint } from '@/services/reportsApi';
 
 type ViewMode = 'chart' | 'table';
 
@@ -76,7 +76,7 @@ export default function ReportsPage() {
   const [hourlyDate, setHourlyDate] = useState(todayISO);
 
   const { data: stats } = useGetReportStatsQuery();
-  const { data: trend = [] } = useGetTrendQuery({ days: 7 });
+  const { data: statusBreakdown = [] } = useGetStatusBreakdownQuery();
   const { data: priorityDist = [] } = useGetPriorityDistributionQuery();
   const { data: dailySummary = [] } = useGetDailySummaryQuery({ days: 7 });
   const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -209,18 +209,33 @@ export default function ReportsPage() {
       <div className="grid grid-cols-5 gap-3">
         <motion.div variants={staggerItem} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
           className="col-span-3 bg-white rounded-xl shadow-sm border border-gray-100/80 p-4">
-          <h2 className="text-xs font-bold text-gray-900 mb-3">Bookings Trend</h2>
-          <ResponsiveContainer width="100%" height={185}>
-            <LineChart data={trend} margin={{ top: 5, right: 16, left: -14, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false}/>
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false}/>
-              <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false}/>
-              <Tooltip contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 11, boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }} cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }}/>
-              <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: 11 }}/>
-              <Line type="monotone" dataKey="received" name="Received" stroke="#6366f1" strokeWidth={2.5} dot={{ r: 3.5, fill: '#6366f1', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }}/>
-              <Line type="monotone" dataKey="completed" name="Completed" stroke="#10b981" strokeWidth={2.5} dot={{ r: 3.5, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }}/>
-            </LineChart>
-          </ResponsiveContainer>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xs font-bold text-gray-900">Booking Status by Priority</h2>
+            <div className="flex items-center gap-3 text-[10px] font-semibold">
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" />Pending</span>
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-blue-400 inline-block" />In Progress</span>
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" />Completed</span>
+            </div>
+          </div>
+          {statusBreakdown.length === 0 ? (
+            <div className="flex items-center justify-center h-[185px] text-gray-300 text-sm">No data yet</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={185}>
+              <BarChart data={statusBreakdown} layout="vertical" margin={{ top: 0, right: 16, left: 4, bottom: 0 }} barCategoryGap="30%">
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <YAxis type="category" dataKey="priority" tick={{ fontSize: 11, fill: '#374151', fontWeight: 600 }} axisLine={false} tickLine={false} width={72} />
+                <Tooltip
+                  contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 11, boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}
+                  cursor={{ fill: '#f8fafc' }}
+                  formatter={(value, name) => [value, name === 'in_progress' ? 'In Progress' : name === 'pending' ? 'Pending' : 'Completed']}
+                />
+                <Bar dataKey="pending" name="Pending" stackId="a" fill="#fbbf24" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="in_progress" name="In Progress" stackId="a" fill="#60a5fa" />
+                <Bar dataKey="completed" name="Completed" stackId="a" fill="#10b981" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
         </motion.div>
 
         <motion.div variants={staggerItem} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
