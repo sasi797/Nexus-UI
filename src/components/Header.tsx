@@ -88,7 +88,7 @@ export default function Header() {
     >
       {/* Left: accent bar + animated title */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
-        <div className="w-[3px] h-9 rounded-full bg-gradient-to-b from-indigo-500 to-violet-500 shrink-0" />
+        <div className="w-[3px] h-6 rounded-full bg-gradient-to-b from-indigo-500 to-violet-500 shrink-0" />
         <AnimatePresence mode="wait">
           <motion.div
             key={pathname}
