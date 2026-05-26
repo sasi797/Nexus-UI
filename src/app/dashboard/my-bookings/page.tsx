@@ -33,6 +33,40 @@ function extractName(email: string) {
     .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
 }
 
+function formatDuration(ms: number): string {
+  const totalMins = Math.floor(ms / 60_000);
+  const mins = totalMins % 60;
+  const hours = Math.floor(totalMins / 60) % 24;
+  const days = Math.floor(totalMins / 1440);
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${mins}m`;
+  return `${Math.max(totalMins, 1)}m`;
+}
+
+function ElapsedBadge({ booking }: { booking: BookingListItem }) {
+  const done = booking.status === 'Completed';
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (done) return;
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, [done]);
+  const end = done && booking.completed_at ? new Date(booking.completed_at).getTime() : now;
+  const ms = end - new Date(booking.received_at).getTime();
+  if (ms < 0) return null;
+  return done ? (
+    <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-gray-400">
+      <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      {formatDuration(ms)}
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-indigo-500">
+      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse shrink-0" />
+      {formatDuration(ms)}
+    </span>
+  );
+}
+
 const SLA: Record<string, number> = { 'Very Urgent': 4, Urgent: 8, 'Not Urgent': 24 };
 function dueIn(b: BookingListItem) {
   const dueAt = new Date(b.received_at).getTime() + (SLA[b.priority] ?? 8) * 3_600_000;
@@ -227,6 +261,7 @@ function BookingRow({ booking, agents, myUserEmail }: { booking: BookingListItem
                 {booking.da_number}
               </span>
             )}
+            <ElapsedBadge booking={booking} />
           </div>
           <p className="text-[13.5px] font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors leading-snug truncate">
             {booking.subject}
