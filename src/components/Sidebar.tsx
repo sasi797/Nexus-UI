@@ -87,7 +87,14 @@ export default function Sidebar() {
             className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200"
           >
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              {/* Nexus hub: 3 nodes connected at a central point */}
+              <line x1="12" y1="11" x2="12" y2="4" strokeWidth="2" strokeLinecap="round" stroke="currentColor" />
+              <line x1="12" y1="11" x2="4.5" y2="18.5" strokeWidth="2" strokeLinecap="round" stroke="currentColor" />
+              <line x1="12" y1="11" x2="19.5" y2="18.5" strokeWidth="2" strokeLinecap="round" stroke="currentColor" />
+              <circle cx="12" cy="3.5" r="1.8" fill="currentColor" stroke="none" />
+              <circle cx="4" cy="19.5" r="1.8" fill="currentColor" stroke="none" />
+              <circle cx="20" cy="19.5" r="1.8" fill="currentColor" stroke="none" />
+              <circle cx="12" cy="11" r="2.2" fill="currentColor" stroke="none" opacity="0.5" />
             </svg>
           </motion.div>
           <div>
