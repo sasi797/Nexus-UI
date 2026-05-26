@@ -67,18 +67,33 @@ export default function Header() {
     if (!n.is_read) await markRead(n.id);
   };
 
+  const dateLabel = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+
   return (
     <motion.header
       initial={{ opacity: 0, y: -16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className="h-14 bg-white/80 backdrop-blur-md border-b border-gray-200/70 flex items-center justify-between px-6 sticky top-0 z-10"
+      className="h-14 bg-white/90 backdrop-blur-md border-b border-gray-200/60 flex items-center justify-between px-6 sticky top-0 z-10"
     >
-      <div className="flex items-center">
-        <h1 className="text-[15px] font-bold text-gray-900">{title}</h1>
+      {/* Left: accent bar + breadcrumb + title */}
+      <div className="flex items-center gap-3">
+        <div className="w-[3px] h-5 rounded-full bg-gradient-to-b from-indigo-500 to-violet-500" />
+        <div>
+          <p className="text-[9.5px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-0.5">Nexus</p>
+          <h1 className="text-[15px] font-bold text-gray-900 leading-tight">{title}</h1>
+        </div>
       </div>
 
       <div className="flex items-center gap-2">
+
+        {/* Date pill */}
+        <div className="hidden md:flex items-center gap-1.5 text-[11px] text-gray-400 font-medium bg-gray-50 border border-gray-100 px-2.5 py-1.5 rounded-lg select-none">
+          <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+          {dateLabel}
+        </div>
 
         {/* Bell + dropdown */}
         <div ref={ref} className="relative">
@@ -186,14 +201,23 @@ export default function Header() {
           </AnimatePresence>
         </div>
 
-        {/* Avatar */}
-        <motion.button
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.93 }}
-          className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-sm font-bold shadow-md shadow-indigo-200"
-        >
-          {user?.name?.charAt(0)?.toUpperCase() ?? '?'}
-        </motion.button>
+        {/* Divider */}
+        <div className="w-px h-6 bg-gray-100 mx-1" />
+
+        {/* User profile */}
+        <div className="flex items-center gap-2.5">
+          <div className="text-right hidden sm:block">
+            <p className="text-[12px] font-bold text-gray-700 leading-tight">{user?.name ?? '—'}</p>
+            <p className="text-[10px] text-gray-400 capitalize leading-tight">{user?.role ?? ''}</p>
+          </div>
+          <motion.div
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.93 }}
+            className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-sm font-bold shadow-md shadow-indigo-200 cursor-default select-none"
+          >
+            {user?.name?.charAt(0)?.toUpperCase() ?? '?'}
+          </motion.div>
+        </div>
       </div>
     </motion.header>
   );
