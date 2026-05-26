@@ -84,7 +84,7 @@ export default function AllocationsPage() {
     { label: 'Present Agents', value: String(status.pool_size), bg: 'from-emerald-50 to-teal-50', text: 'text-emerald-700' },
     { label: 'RR Pointer', value: String(status.pointer), bg: 'from-indigo-50 to-violet-50', text: 'text-indigo-600' },
     { label: 'Next Agent', value: status.next_agent_name ?? 'None', bg: 'from-sky-50 to-blue-50', text: 'text-sky-700', small: true },
-    { label: 'Pending', value: String(pendingBookings.length), bg: 'from-amber-50 to-orange-50', text: 'text-amber-700' },
+    { label: 'Open', value: String(pendingBookings.length), bg: 'from-amber-50 to-orange-50', text: 'text-amber-700' },
   ] : [];
 
   return (
@@ -153,7 +153,7 @@ export default function AllocationsPage() {
           {(['pending', 'log'] as Tab[]).map(t => (
             <button key={t} onClick={() => setTab(t)}
               className={`relative px-3 py-2.5 text-xs font-bold capitalize transition-colors ${tab === t ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-700'}`}>
-              {t === 'pending' ? `Pending Bookings${pendingBookings.length ? ` (${pendingBookings.length})` : ''}` : 'Allocation Log'}
+              {t === 'pending' ? `Open Bookings${pendingBookings.length ? ` (${pendingBookings.length})` : ''}` : 'Allocation Log'}
               {tab === t && (
                 <motion.div layoutId="alloc-tab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 rounded-full" />
               )}

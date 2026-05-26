@@ -418,7 +418,7 @@ export default function BookingDetailPage() {
                       }`}
                     >
                       <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${b.status === s ? STATUS_DOT[s] : 'bg-gray-300'}`} />
-                      {s === 'In Progress' ? 'In Prog.' : s}
+                      {s === 'Pending' ? 'Open' : s === 'In Progress' ? 'In Prog.' : s}
                     </button>
                   ))}
                 </div>

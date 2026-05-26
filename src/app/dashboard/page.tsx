@@ -35,7 +35,7 @@ const bookingColumns: ColumnDef<BookingListItem>[] = [
   },
   {
     key: 'status', header: 'Status', sortable: true, filterable: true,
-    render: v => <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${statusStyle[String(v)] ?? ''}`}>{String(v)}</span>,
+    render: v => <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-bold ${statusStyle[String(v)] ?? ''}`}>{String(v) === 'Pending' ? 'Open' : String(v)}</span>,
   },
   {
     key: 'received_at', header: 'Received At', sortable: true,
@@ -54,7 +54,7 @@ export default function DashboardPage() {
 
   const statCards = stats ? [
     { label: 'Total Bookings', value: stats.total_bookings, icon: '📋', bg: 'from-indigo-50 to-violet-50', text: 'text-indigo-700' },
-    { label: 'Pending',        value: stats.pending,        icon: '⏳', bg: 'from-amber-50 to-orange-50',  text: 'text-amber-700' },
+    { label: 'Open',           value: stats.pending,        icon: '⏳', bg: 'from-amber-50 to-orange-50',  text: 'text-amber-700' },
     { label: 'In Progress',    value: stats.in_progress,    icon: '🔄', bg: 'from-blue-50 to-sky-50',      text: 'text-blue-700' },
     { label: 'Completed',      value: stats.completed,      icon: '✅', bg: 'from-emerald-50 to-teal-50',  text: 'text-emerald-700' },
   ] : [];

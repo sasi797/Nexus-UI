@@ -53,7 +53,7 @@ function AgentBookingsPanel({ agent, idx }: { agent: Agent; idx: number }) {
           <div className="flex items-center gap-2 mr-2">
             <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{inProgress > 0 || open ? inProgress : '—'} In Progress</span>
             <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{completed > 0 || open ? completed : '—'} Done</span>
-            {pending > 0 && <span className="text-[11px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">{pending} Pending</span>}
+            {pending > 0 && <span className="text-[11px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">{pending} Open</span>}
           </div>
           <motion.svg animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}
             className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -83,7 +83,7 @@ function AgentBookingsPanel({ agent, idx }: { agent: Agent; idx: number }) {
                       <span className="text-xs text-gray-700 flex-1 truncate">{b.subject}</span>
                       <span className={`text-[11px] font-semibold px-2 py-0.5 rounded ${priorityStyle[b.priority] ?? ''}`}>{b.priority}</span>
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ring-1 ${statusStyle[b.status] ?? ''}`}>
-                        {b.status}
+                        {b.status === 'Pending' ? 'Open' : b.status}
                       </span>
                       <span className="text-[11px] text-gray-400 shrink-0">
                         {new Date(b.received_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}

@@ -15,6 +15,7 @@ import ApiErrorState from '@/components/ApiErrorState';
 
 type Tab = 'All' | 'Pending' | 'In Progress' | 'Completed';
 const TABS: Tab[] = ['All', 'Pending', 'In Progress', 'Completed'];
+const TAB_LABEL: Record<Tab, string> = { All: 'All', Pending: 'Open', 'In Progress': 'In Progress', Completed: 'Completed' };
 
 /* ── helpers ── */
 const AVATAR_COLORS = [
@@ -468,7 +469,7 @@ export default function AllBookingsPage() {
                   transition={{ type: 'spring', stiffness: 420, damping: 38 }} />
               )}
               <span className="relative z-10 flex items-center gap-1.5">
-                {tab}
+                {TAB_LABEL[tab]}
                 {TAB_COUNTS[tab] !== undefined && (
                   <span className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full leading-none ${
                     activeTab === tab ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-400'
@@ -524,7 +525,7 @@ export default function AllBookingsPage() {
               ) : sorted.length === 0 ? (
                 <div className="py-16 text-center bg-white rounded-xl border border-gray-100 shadow-sm">
                   <p className="text-3xl mb-2">📋</p>
-                  <p className="text-sm font-semibold text-gray-400">No {activeTab === 'All' ? '' : activeTab} bookings</p>
+                  <p className="text-sm font-semibold text-gray-400">No {activeTab === 'All' ? '' : TAB_LABEL[activeTab]} bookings</p>
                 </div>
               ) : (
                 <div className="space-y-2">

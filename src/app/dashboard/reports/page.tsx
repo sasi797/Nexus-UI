@@ -106,7 +106,7 @@ export default function ReportsPage() {
   const statCards = stats ? [
     { label: 'Total Bookings', value: stats.total_bookings, change: fmt(chg(stats.total_bookings_change)), up: chg(stats.total_bookings_change) >= 0, bg: 'from-indigo-50 to-violet-50',  text: 'text-indigo-700',  icon: '📊' },
     { label: 'Completed',      value: stats.completed,      change: fmt(chg(stats.completed_change)),      up: chg(stats.completed_change) >= 0,      bg: 'from-emerald-50 to-teal-50',   text: 'text-emerald-700', icon: '✅' },
-    { label: 'Pending',        value: stats.pending,        change: fmt(chg(stats.pending_change)),        up: chg(stats.pending_change) <= 0,        bg: 'from-amber-50 to-orange-50',   text: 'text-amber-700',   icon: '⏳' },
+    { label: 'Open',           value: stats.pending,        change: fmt(chg(stats.pending_change)),        up: chg(stats.pending_change) <= 0,        bg: 'from-amber-50 to-orange-50',   text: 'text-amber-700',   icon: '⏳' },
     { label: 'SLA Breach',     value: stats.sla_breach,     change: fmt(chg(stats.sla_breach_change)),     up: chg(stats.sla_breach_change) <= 0,     bg: 'from-red-50 to-rose-50',       text: 'text-red-700',     icon: '🚨' },
   ] : [];
 
@@ -114,7 +114,7 @@ export default function ReportsPage() {
     { key: 'date',      header: 'Date',      sortable: true, render: v => <span className="font-bold text-gray-700">{String(v)}</span> },
     { key: 'received',  header: 'Received',  sortable: true, render: v => <span className="font-medium text-gray-600">{String(v)}</span> },
     { key: 'completed', header: 'Completed', sortable: true, render: v => <span className="font-bold text-emerald-600">{String(v)}</span> },
-    { key: 'pending',   header: 'Pending',   sortable: true, render: v => <span className="font-bold text-amber-600">{String(v)}</span> },
+    { key: 'pending',   header: 'Open',      sortable: true, render: v => <span className="font-bold text-amber-600">{String(v)}</span> },
     {
       key: 'rate', header: 'Completion Rate', sortable: true,
       render: v => {
