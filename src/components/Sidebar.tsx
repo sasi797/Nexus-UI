@@ -91,8 +91,8 @@ export default function Sidebar() {
             </svg>
           </motion.div>
           <div>
-            <p className="font-bold text-gray-900 text-sm leading-tight tracking-tight">BTS</p>
-            <p className="text-[10px] text-gray-400 font-medium">Bookings System</p>
+            <p className="font-bold text-gray-900 text-sm leading-tight tracking-tight">Nexus</p>
+            <p className="text-[10px] text-gray-500 font-medium">BookOps AI</p>
           </div>
         </div>
       </motion.div>

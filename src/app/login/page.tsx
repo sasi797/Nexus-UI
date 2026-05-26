@@ -152,7 +152,7 @@ export default function LoginPage() {
             </ul>
           </motion.div>
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 }}
-            className="text-indigo-300/60 text-xs mt-6 relative z-10">© 2026 BTS. All rights reserved.</motion.p>
+            className="text-indigo-300/60 text-xs mt-6 relative z-10">© 2026 Nexus. All rights reserved.</motion.p>
         </motion.div>
       </motion.div>
     </div>

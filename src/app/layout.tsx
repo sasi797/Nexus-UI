@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BTS - Bookings to Ticket System",
-  description: "Bookings to Ticket System - Agent Dashboard",
+  title: "Nexus - Bookings to Ticket System",
+  description: "Nexus - Agent Dashboard",
 };
 
 export default function RootLayout({

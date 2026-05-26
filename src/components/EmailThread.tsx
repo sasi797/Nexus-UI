@@ -141,7 +141,7 @@ function MessageCard({ msg, token, defaultOpen }: { msg: EmailMessage; token: st
   const [collapsed, setCollapsed] = useState(!defaultOpen);
   const [showQuoted, setShowQuoted] = useState(false);
 
-  const senderName = isInbound ? extractName(msg.from_email) : 'BTS Support';
+  const senderName = isInbound ? extractName(msg.from_email) : 'Nexus Support';
   const senderEmail = isInbound ? msg.from_email : '';
   const initials = isInbound ? msg.from_email.charAt(0).toUpperCase() : 'B';
   const gradientClass = isInbound
