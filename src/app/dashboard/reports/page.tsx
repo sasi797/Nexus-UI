@@ -15,7 +15,7 @@ function downloadCSV(filename: string, headers: string[], rows: (string | number
     return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
   };
   const csv = [headers, ...rows].map(r => r.map(escape).join(',')).join('\r\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = filename; a.click();
@@ -321,7 +321,11 @@ export default function ReportsPage() {
                   onClick={() => downloadCSV(
                     'hourly-activity.csv',
                     ['Hour', 'Received', 'Completed', 'Completion Rate (%)'],
-                    hourlyTableData.map(h => [h.label, h.received, h.completed, h.rate])
+                    hourlyTableData.map(h => {
+                      const end = (h.hour + 1) % 24;
+                      const fmt = (n: number) => String(n).padStart(2, '0');
+                      return [`${fmt(h.hour)}:00 - ${fmt(end)}:00`, h.received, h.completed, h.rate];
+                    })
                   )}
                   className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors"
                 >
