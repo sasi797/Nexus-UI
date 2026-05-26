@@ -72,13 +72,15 @@ function HourlyTooltip({ active, payload }: { active?: boolean; payload?: { name
 export default function ReportsPage() {
   const [hourlyView, setHourlyView] = useState<ViewMode>('chart');
   const [avgView, setAvgView] = useState<ViewMode>('chart');
+  const todayISO = new Date().toISOString().split('T')[0];
+  const [hourlyDate, setHourlyDate] = useState(todayISO);
 
   const { data: stats } = useGetReportStatsQuery();
   const { data: trend = [] } = useGetTrendQuery({ days: 7 });
   const { data: priorityDist = [] } = useGetPriorityDistributionQuery();
   const { data: dailySummary = [] } = useGetDailySummaryQuery({ days: 7 });
   const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const { data: hourly = [] } = useGetHourlyActivityQuery({ days: 30, tz: userTz });
+  const { data: hourly = [] } = useGetHourlyActivityQuery({ date: hourlyDate, tz: userTz });
   const { data: avgCompletion } = useGetAvgCompletionQuery();
   const maxAvgHours = avgCompletion ? Math.max(...avgCompletion.by_priority.map(x => x.avg_hours), 1) : 1;
   const PRIORITY_COLORS: Record<string, string> = { 'Very Urgent': 'bg-red-400', 'Urgent': 'bg-amber-400', 'Not Urgent': 'bg-emerald-400' };
@@ -263,6 +265,40 @@ export default function ReportsPage() {
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <h2 className="text-xs font-bold text-gray-900">Hourly Activity</h2>
+              {/* Date navigation */}
+              <div className="flex items-center gap-1 ml-1">
+                <button
+                  onClick={() => {
+                    const d = new Date(hourlyDate);
+                    d.setDate(d.getDate() - 1);
+                    setHourlyDate(d.toISOString().split('T')[0]);
+                  }}
+                  className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors text-sm"
+                >‹</button>
+                <input
+                  type="date"
+                  value={hourlyDate}
+                  max={todayISO}
+                  onChange={e => setHourlyDate(e.target.value)}
+                  className="text-[11px] font-semibold text-gray-600 border border-gray-200 rounded-lg px-2 py-0.5 bg-white cursor-pointer focus:outline-none focus:border-indigo-300"
+                />
+                <button
+                  onClick={() => {
+                    const d = new Date(hourlyDate);
+                    d.setDate(d.getDate() + 1);
+                    const next = d.toISOString().split('T')[0];
+                    if (next <= todayISO) setHourlyDate(next);
+                  }}
+                  disabled={hourlyDate >= todayISO}
+                  className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors text-sm disabled:opacity-30 disabled:cursor-not-allowed"
+                >›</button>
+                {hourlyDate !== todayISO && (
+                  <button
+                    onClick={() => setHourlyDate(todayISO)}
+                    className="text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded-md transition-colors"
+                  >Today</button>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2">
               {hourlyView === 'table' && (
