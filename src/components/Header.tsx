@@ -12,23 +12,23 @@ import {
 } from '@/services/notificationsApi';
 
 const PATH_TITLES: { match: (p: string) => boolean; title: string; sub: string }[] = [
-  { match: p => /^\/dashboard\/my-bookings\/.+/.test(p), title: 'Booking Detail',  sub: 'Full booking context'      },
-  { match: p => p.startsWith('/dashboard/my-bookings'),  title: 'My Bookings',     sub: 'Manage your queue'         },
-  { match: p => p.startsWith('/dashboard/all-bookings'), title: 'All Bookings',    sub: 'Every booking, unified'    },
-  { match: p => p.startsWith('/dashboard/attendance'),   title: 'Attendance',      sub: 'Track daily presence'      },
-  { match: p => p.startsWith('/dashboard/allocations'),  title: 'Allocations',     sub: 'Smart agent dispatch'      },
-  { match: p => p.startsWith('/dashboard/agents'),       title: 'Agents',          sub: 'Your team roster'          },
-  { match: p => p.startsWith('/dashboard/notifications'),title: 'Notifications',   sub: 'Stay in the loop'          },
-  { match: p => p.startsWith('/dashboard/reports'),      title: 'Reports',         sub: 'Data-driven insights'      },
-  { match: p => p.startsWith('/dashboard/settings'),     title: 'Settings',        sub: 'Configure your workspace'  },
-  { match: p => p === '/dashboard',                      title: 'Dashboard',       sub: 'Live ops overview'         },
+  { match: p => /^\/dashboard\/my-bookings\/.+/.test(p), title: 'Booking Detail',  sub: 'Full booking context'     },
+  { match: p => p.startsWith('/dashboard/my-bookings'),  title: 'My Bookings',     sub: 'Manage your queue'        },
+  { match: p => p.startsWith('/dashboard/all-bookings'), title: 'All Bookings',    sub: 'Every booking, unified'   },
+  { match: p => p.startsWith('/dashboard/attendance'),   title: 'Attendance',      sub: 'Track daily presence'     },
+  { match: p => p.startsWith('/dashboard/allocations'),  title: 'Allocations',     sub: 'Smart agent dispatch'     },
+  { match: p => p.startsWith('/dashboard/agents'),       title: 'Agents',          sub: 'Your team roster'         },
+  { match: p => p.startsWith('/dashboard/notifications'),title: 'Notifications',   sub: 'Stay in the loop'         },
+  { match: p => p.startsWith('/dashboard/reports'),      title: 'Reports',         sub: 'Data-driven insights'     },
+  { match: p => p.startsWith('/dashboard/settings'),     title: 'Settings',        sub: 'Configure your workspace' },
+  { match: p => p === '/dashboard',                      title: 'Dashboard',       sub: 'Live ops overview'        },
 ];
 
 const TYPE_ICON: Record<string, { bg: string; icon: string }> = {
-  booking_created: { bg: 'bg-indigo-100',  icon: '📥' },
-  booking_assigned:{ bg: 'bg-blue-100',    icon: '👤' },
-  booking_completed:{ bg: 'bg-emerald-100', icon: '✅' },
-  status_changed:  { bg: 'bg-amber-100',   icon: '🔄' },
+  booking_created:   { bg: 'bg-indigo-100',  icon: '📥' },
+  booking_assigned:  { bg: 'bg-blue-100',    icon: '👤' },
+  booking_completed: { bg: 'bg-emerald-100', icon: '✅' },
+  status_changed:    { bg: 'bg-amber-100',   icon: '🔄' },
 };
 
 function timeAgo(iso: string) {
@@ -40,21 +40,29 @@ function timeAgo(iso: string) {
 }
 
 export default function Header() {
-  const user = useAppSelector(state => state.auth.user);
+  const user     = useAppSelector(state => state.auth.user);
   const pathname = usePathname();
-  const page  = PATH_TITLES.find(t => t.match(pathname)) ?? { title: 'Dashboard', sub: 'Live ops overview' };
+  const page     = PATH_TITLES.find(t => t.match(pathname)) ?? { title: 'Dashboard', sub: 'Live ops overview' };
   const { title, sub } = page;
 
-  const [open, setOpen] = useState(false);
+  const [open, setOpen]   = useState(false);
+  const [clock, setClock] = useState(() => new Date());
   const ref = useRef<HTMLDivElement>(null);
 
-  const { data } = useGetNotificationsQuery(undefined, { pollingInterval: 30_000 });
-  const [markRead] = useMarkReadMutation();
+  const { data }      = useGetNotificationsQuery(undefined, { pollingInterval: 30_000 });
+  const [markRead]    = useMarkReadMutation();
   const [markAllRead] = useMarkAllReadMutation();
 
   const unread = data?.unread_count ?? 0;
-  const items = data?.items ?? [];
+  const items  = data?.items ?? [];
 
+  /* live clock */
+  useEffect(() => {
+    const t = setInterval(() => setClock(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  /* close notif dropdown on outside click */
   useEffect(() => {
     if (!open) return;
     const h = (e: MouseEvent) => {
@@ -68,23 +76,49 @@ export default function Header() {
     if (!n.is_read) await markRead(n.id);
   };
 
+  const timeStr = clock.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  const dateStr = clock.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+
   return (
     <motion.header
       initial={{ opacity: 0, y: -16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className="h-14 bg-white/95 backdrop-blur-md border-b border-gray-200/60 flex items-center gap-4 px-6 sticky top-0 z-10 shadow-sm"
+      className="h-14 bg-gradient-to-r from-indigo-50/40 via-white to-white backdrop-blur-md border-b border-gray-200/60 flex items-center gap-4 px-6 sticky top-0 z-10 shadow-sm"
     >
-      {/* Left: accent + title + tagline */}
-      <div className="flex items-center gap-3 flex-1">
-        <div className="w-[3px] h-9 rounded-full bg-gradient-to-b from-indigo-500 to-violet-500" />
-        <div>
-          <h1 className="text-[15px] font-bold text-gray-900 leading-tight">{title}</h1>
-          <p className="text-[11px] font-medium bg-gradient-to-r from-indigo-500 to-violet-500 bg-clip-text text-transparent leading-tight">{sub}</p>
-        </div>
+      {/* Left: accent bar + animated title */}
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <div className="w-[3px] h-9 rounded-full bg-gradient-to-b from-indigo-500 to-violet-500 shrink-0" />
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={pathname}
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+          >
+            <h1 className="text-[15px] font-bold text-gray-900 leading-tight">{title}</h1>
+            <p className="text-[11px] font-semibold bg-gradient-to-r from-indigo-500 to-violet-500 bg-clip-text text-transparent leading-tight">
+              {sub}
+            </p>
+          </motion.div>
+        </AnimatePresence>
       </div>
 
-      <div className="flex items-center gap-1.5 shrink-0">
+      {/* Right */}
+      <div className="flex items-center gap-2 shrink-0">
+
+        {/* Live status */}
+        <div className="hidden lg:flex items-center gap-1.5 text-[10.5px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2.5 py-1.5 rounded-lg select-none">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+          Live
+        </div>
+
+        {/* Clock */}
+        <div className="hidden lg:flex flex-col items-end leading-none bg-gray-50 border border-gray-100 px-2.5 py-1.5 rounded-lg select-none">
+          <span className="text-[12.5px] font-bold text-gray-700 tabular-nums">{timeStr}</span>
+          <span className="text-[9.5px] text-gray-400 font-medium mt-0.5">{dateStr}</span>
+        </div>
 
         {/* Bell + dropdown */}
         <div ref={ref} className="relative">
@@ -122,7 +156,6 @@ export default function Header() {
                 transition={{ duration: 0.15 }}
                 className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50"
               >
-                {/* Header */}
                 <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold text-gray-900">Notifications</span>
@@ -133,16 +166,12 @@ export default function Header() {
                     )}
                   </div>
                   {unread > 0 && (
-                    <button
-                      onClick={() => markAllRead()}
-                      className="text-[11px] font-semibold text-indigo-500 hover:text-indigo-700 transition-colors"
-                    >
+                    <button onClick={() => markAllRead()} className="text-[11px] font-semibold text-indigo-500 hover:text-indigo-700 transition-colors">
                       Mark all read
                     </button>
                   )}
                 </div>
 
-                {/* List */}
                 <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
                   {items.length === 0 ? (
                     <div className="py-10 text-center">
@@ -162,28 +191,20 @@ export default function Header() {
                             {cfg.icon}
                           </span>
                           <div className="flex-1 min-w-0">
-                            <p className={`text-[12.5px] leading-snug ${n.is_read ? 'text-gray-600 font-medium' : 'text-gray-900 font-semibold'}`}>
-                              {n.title}
-                            </p>
+                            <p className={`text-[12.5px] leading-snug ${n.is_read ? 'text-gray-600 font-medium' : 'text-gray-900 font-semibold'}`}>{n.title}</p>
                             <p className="text-[11px] text-gray-400 truncate mt-0.5">{n.body}</p>
                             <p className="text-[10px] text-gray-300 mt-0.5">{timeAgo(n.created_at)}</p>
                           </div>
-                          {!n.is_read && (
-                            <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0 mt-1.5" />
-                          )}
+                          {!n.is_read && <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0 mt-1.5" />}
                         </button>
                       );
                     })
                   )}
                 </div>
 
-                {/* Footer */}
                 <div className="border-t border-gray-100 px-4 py-2.5">
-                  <a
-                    href="/dashboard/notifications"
-                    onClick={() => setOpen(false)}
-                    className="block text-center text-[12px] font-semibold text-indigo-500 hover:text-indigo-700 transition-colors"
-                  >
+                  <a href="/dashboard/notifications" onClick={() => setOpen(false)}
+                    className="block text-center text-[12px] font-semibold text-indigo-500 hover:text-indigo-700 transition-colors">
                     View all notifications
                   </a>
                 </div>
@@ -193,16 +214,16 @@ export default function Header() {
         </div>
 
         {/* Divider */}
-        <div className="w-px h-6 bg-gray-200 mx-1" />
+        <div className="w-px h-6 bg-gray-200 mx-0.5" />
 
         {/* User profile pill */}
         <motion.button
-          whileHover={{ backgroundColor: '#f8fafc' }}
+          whileHover={{ backgroundColor: '#f5f3ff' }}
           whileTap={{ scale: 0.97 }}
           transition={{ duration: 0.15 }}
-          className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-xl border border-transparent hover:border-gray-200 cursor-default select-none"
+          className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-xl border border-transparent hover:border-violet-100 cursor-default select-none"
         >
-          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold shadow-sm shadow-indigo-200 shrink-0">
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold shadow-sm shadow-indigo-200 shrink-0 ring-2 ring-white">
             {user?.name?.charAt(0)?.toUpperCase() ?? '?'}
           </div>
           <div className="text-left hidden sm:block">
