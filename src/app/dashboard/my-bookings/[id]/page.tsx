@@ -525,39 +525,6 @@ export default function BookingDetailPage() {
                 )}
               </div>
 
-              {/* Cargo info if present */}
-              {(b.cargo_type || b.shipping_mode || b.pickup_location || b.delivery_location) && (
-                <>
-                  <div className="border-t border-gray-100" />
-                  <div className="space-y-3">
-                    {b.cargo_type && (
-                      <div>
-                        <p className={labelCls}>Cargo Type</p>
-                        <p className="text-xs font-medium text-gray-700 px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-100">{b.cargo_type}</p>
-                      </div>
-                    )}
-                    {b.shipping_mode && (
-                      <div>
-                        <p className={labelCls}>Shipping Mode</p>
-                        <p className="text-xs font-medium text-gray-700 px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-100">{b.shipping_mode}</p>
-                      </div>
-                    )}
-                    {b.pickup_location && (
-                      <div>
-                        <p className={labelCls}>Pickup</p>
-                        <p className="text-xs font-medium text-gray-700 px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-100">{b.pickup_location}</p>
-                      </div>
-                    )}
-                    {b.delivery_location && (
-                      <div>
-                        <p className={labelCls}>Delivery</p>
-                        <p className="text-xs font-medium text-gray-700 px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-100">{b.delivery_location}</p>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
-
             </div>
           </div>
         </motion.div>

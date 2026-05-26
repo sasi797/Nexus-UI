@@ -2,12 +2,14 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { AttendanceStatus } from '@/lib/data';
+
 import Table, { ColumnDef } from '@/components/Table';
 import { pageTransition, staggerItem, popIn } from '@/lib/animations';
 import { useGetAgentsQuery } from '@/services/agentsApi';
 import { useGetAttendanceQuery, useUpsertAttendanceMutation } from '@/services/attendanceApi';
 import { useGetShiftsQuery } from '@/services/shiftsApi';
+
+type AttendanceStatus = 'Present' | 'Absent' | 'On Break' | 'Late';
 
 const statusCfg: Record<AttendanceStatus, { text: string; bg: string; ring: string; dot: string }> = {
   Present:    { text: 'text-emerald-700', bg: 'bg-emerald-50',  ring: 'ring-emerald-200', dot: 'bg-emerald-500' },
