@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -63,6 +63,118 @@ function extractName(email: string) {
 
 const labelCls = 'text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 block';
 
+function DaTagInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [inputVal, setInputVal] = useState('');
+  const tags = value.split(',').map(s => s.trim()).filter(Boolean);
+
+  function addTag(raw: string) {
+    const tag = raw.trim();
+    if (!tag || tags.includes(tag)) { setInputVal(''); return; }
+    onChange([...tags, tag].join(', '));
+    setInputVal('');
+  }
+
+  function removeTag(idx: number) {
+    onChange(tags.filter((_, i) => i !== idx).join(', '));
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter' || e.key === ',' || e.key === 'Tab') {
+      e.preventDefault();
+      addTag(inputVal);
+    } else if (e.key === 'Backspace' && !inputVal && tags.length > 0) {
+      removeTag(tags.length - 1);
+    }
+  }
+
+  return (
+    <div
+      className="min-h-[44px] w-full px-2 py-1.5 border border-gray-200 rounded-xl focus-within:ring-2 focus-within:ring-emerald-300 focus-within:border-emerald-400 flex flex-wrap gap-1.5 items-center cursor-text transition-all"
+      onClick={e => (e.currentTarget.querySelector('input') as HTMLInputElement | null)?.focus()}
+    >
+      {tags.map((tag, i) => (
+        <span key={i} className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-mono font-semibold shrink-0">
+          {tag}
+          <button type="button" onClick={() => removeTag(i)}
+            className="w-3.5 h-3.5 flex items-center justify-center rounded text-emerald-400 hover:text-emerald-700 hover:bg-emerald-100 transition-colors">
+            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </span>
+      ))}
+      <input
+        value={inputVal}
+        onChange={e => setInputVal(e.target.value)}
+        onKeyDown={handleKeyDown}
+        onBlur={() => addTag(inputVal)}
+        placeholder={tags.length === 0 ? 'Type DA number, press Enter to add…' : '+ Add another'}
+        className="flex-1 min-w-[160px] text-sm outline-none bg-transparent placeholder:text-gray-300 font-mono py-0.5"
+      />
+    </div>
+  );
+}
+
+function SupportAgentPicker({ available, onAdd, disabled }: {
+  available: { id: string; name: string; email: string }[];
+  onAdd: (id: string) => void;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [open]);
+
+  if (available.length === 0) return null;
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        disabled={disabled}
+        onClick={() => setOpen(v => !v)}
+        className={`w-full flex items-center gap-2 px-3 py-2 border border-dashed rounded-lg text-xs font-medium transition-all disabled:opacity-60 ${
+          open ? 'border-violet-400 bg-violet-50 text-violet-600' : 'border-gray-200 bg-white text-gray-400 hover:border-violet-300 hover:text-violet-500'
+        }`}
+      >
+        <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+        </svg>
+        Add support agent
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -4, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -4, scale: 0.97 }} transition={{ duration: 0.1 }}
+            className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden max-h-52 overflow-y-auto"
+          >
+            {available.map(a => (
+              <button key={a.id}
+                onClick={() => { onAdd(a.id); setOpen(false); }}
+                className="w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-violet-50 text-left transition-colors group">
+                <div className={`w-7 h-7 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[11px] font-bold shrink-0`}>
+                  {a.name.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-gray-800 group-hover:text-violet-700 truncate">{a.name}</p>
+                  <p className="text-[10px] text-gray-400 truncate">{a.email}</p>
+                </div>
+                <svg className="w-3.5 h-3.5 text-violet-300 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export default function BookingDetailPage() {
   const { id }   = useParams<{ id: string }>();
   const router   = useRouter();
@@ -120,8 +232,9 @@ export default function BookingDetailPage() {
   };
 
   const handleDaConfirm = async () => {
-    if (!daNumber.trim()) return;
-    await patchStatus({ id, status: 'Completed', da_number: daNumber.trim(), da_description: daDesc.trim() || undefined });
+    const tags = daNumber.split(',').map(s => s.trim()).filter(Boolean);
+    if (tags.length === 0) return;
+    await patchStatus({ id, status: 'Completed', da_number: tags.join(', '), da_description: daDesc.trim() || undefined });
     setShowDaModal(false);
     flashSaved('status');
   };
@@ -352,7 +465,7 @@ export default function BookingDetailPage() {
         </motion.div>
 
         {/* ── Right sidebar ── */}
-        <motion.div variants={staggerItem} className="w-72 shrink-0">
+        <motion.div variants={staggerItem} className="w-80 shrink-0">
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
 
             {/* Sidebar header */}
@@ -411,7 +524,7 @@ export default function BookingDetailPage() {
                       }`}
                     >
                       <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${b.status === s ? STATUS_DOT[s] : 'bg-gray-300'}`} />
-                      {s === 'Pending' ? 'Open' : s === 'In Progress' ? 'In Prog.' : s}
+                      {s === 'Pending' ? 'Open' : s}
                     </button>
                   ))}
                 </div>
@@ -501,19 +614,13 @@ export default function BookingDetailPage() {
                   {isOpen && (() => {
                     const supportIds = new Set((b.support_agents ?? []).map(a => a.id));
                     const available = agents.filter(a => a.id !== b.agent_id && !supportIds.has(a.id));
-                    return available.length > 0 ? (
-                      <select
-                        value=""
-                        onChange={e => { if (e.target.value) { addSupport({ id, agent_id: e.target.value }); flashSaved('agent'); } }}
+                    return (
+                      <SupportAgentPicker
+                        available={available}
                         disabled={saving}
-                        className="w-full px-3 py-2 border border-gray-200 border-dashed rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-violet-300 bg-white appearance-none cursor-pointer disabled:opacity-60 text-gray-500"
-                      >
-                        <option value="">+ Add support agent</option>
-                        {available.map(a => (
-                          <option key={a.id} value={a.id}>{a.name}</option>
-                        ))}
-                      </select>
-                    ) : null;
+                        onAdd={agentId => { addSupport({ id, agent_id: agentId }); flashSaved('agent'); }}
+                      />
+                    );
                   })()}
                 </div>
               </div>
@@ -522,12 +629,35 @@ export default function BookingDetailPage() {
               {(b.da_number || b.da_description) && (
                 <div className="bg-emerald-50/60 border border-emerald-100 rounded-xl px-3 py-3 space-y-2">
                   <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Completion Details</p>
-                  {b.da_number && (
-                    <div>
-                      <p className="text-[10px] text-gray-400 font-semibold">DA Number</p>
-                      <p className="text-xs font-bold text-gray-800 font-mono">{b.da_number}</p>
-                    </div>
-                  )}
+                  {b.da_number && (() => {
+                    const all = b.da_number!.split(',').map(s => s.trim()).filter(Boolean);
+                    const shown = all.slice(0, 3);
+                    const rest = all.slice(3);
+                    return (
+                      <div>
+                        <p className="text-[10px] text-gray-400 font-semibold mb-1.5">DA Number</p>
+                        <div className="flex flex-wrap gap-1 items-center">
+                          {shown.map(da => (
+                            <span key={da} className="inline-flex items-center px-2 py-0.5 rounded-md bg-white border border-emerald-200 text-emerald-700 text-[11px] font-mono font-bold shadow-sm whitespace-nowrap">
+                              {da}
+                            </span>
+                          ))}
+                          {rest.length > 0 && (
+                            <span className="relative group/da inline-flex">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-100 border border-emerald-300 text-emerald-700 text-[11px] font-mono font-bold cursor-default whitespace-nowrap">
+                                +{rest.length} more
+                              </span>
+                              <div className="absolute left-0 top-full mt-1.5 z-[100] hidden group-hover/da:block bg-gray-900 text-white rounded-xl p-2.5 shadow-xl min-w-max space-y-1">
+                                {all.map(da => (
+                                  <div key={da} className="text-[10px] font-mono font-semibold tracking-tight">{da}</div>
+                                ))}
+                              </div>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   {b.da_description && (
                     <div>
                       <p className="text-[10px] text-gray-400 font-semibold">Description</p>
@@ -613,14 +743,8 @@ export default function BookingDetailPage() {
                   <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">
                     DA Number <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    autoFocus
-                    type="text"
-                    value={daNumber}
-                    onChange={e => setDaNumber(e.target.value)}
-                    placeholder="e.g. DA-2026-00123"
-                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-emerald-400 transition-all"
-                  />
+                  <DaTagInput value={daNumber} onChange={setDaNumber} />
+                  <p className="text-[10px] text-gray-400 mt-1">Press Enter or Tab after each number to add it</p>
                 </div>
                 <div>
                   <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">
@@ -645,7 +769,7 @@ export default function BookingDetailPage() {
                 </button>
                 <button
                   onClick={handleDaConfirm}
-                  disabled={!daNumber.trim() || patching}
+                  disabled={!daNumber.split(',').some(s => s.trim()) || patching}
                   className="flex items-center gap-1.5 px-5 py-2 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm">
                   {patching
                     ? <><span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />Saving…</>
