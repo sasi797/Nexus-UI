@@ -466,16 +466,20 @@ function BookingRow({ booking, agents, myUserEmail }: {
         {/* Support agents */}
         <div className="flex items-center gap-1 px-2.5 py-0.5 w-full justify-end" onClick={e => e.stopPropagation()}>
           {booking.support_agents.map(a => (
-            <button key={a.id} title={`${a.name} — click to remove`}
+            <button key={a.id}
+              title={booking.status === 'Completed' ? a.name : `${a.name} — click to remove`}
+              disabled={booking.status === 'Completed'}
               onClick={() => removeSupport({ id: booking.id, agent_id: a.id })}
-              className="relative group/sa shrink-0">
+              className="relative group/sa shrink-0 disabled:cursor-default">
               <div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[8px] font-bold ring-1 ring-white`}>
                 {a.name.charAt(0).toUpperCase()}
               </div>
-              <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-400 rounded-full hidden group-hover/sa:flex items-center justify-center text-white text-[7px] font-bold leading-none">×</div>
+              {booking.status !== 'Completed' && (
+                <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-400 rounded-full hidden group-hover/sa:flex items-center justify-center text-white text-[7px] font-bold leading-none">×</div>
+              )}
             </button>
           ))}
-          {availableForSupport.length > 0 && (
+          {availableForSupport.length > 0 && booking.status !== 'Completed' && (
             <InlineDropdown align="right"
               trigger={(open, toggle) => (
                 <button onClick={toggle} title="Add support agent"
