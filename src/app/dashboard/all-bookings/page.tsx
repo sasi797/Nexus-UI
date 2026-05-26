@@ -510,7 +510,7 @@ function BookingRow({ booking, agents, myUserEmail }: {
               <div>
                 <label className="block text-[11px] font-semibold text-gray-500 mb-1">DA Number</label>
                 <DaTagInput value={daNumber} onChange={setDaNumber} />
-                <p className="text-[10px] text-gray-300 mt-1">Press Enter or Tab after each number to add it</p>
+                <p className="text-[10px] text-gray-400 mt-1">Press Enter or Tab after each number to add it</p>
               </div>
               <div>
                 <label className="block text-[11px] font-semibold text-gray-500 mb-1">DA Description</label>
