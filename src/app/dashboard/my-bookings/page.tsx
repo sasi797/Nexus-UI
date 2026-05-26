@@ -90,6 +90,33 @@ function ElapsedBadge({ booking }: { booking: BookingListItem }) {
   );
 }
 
+function DaBadges({ daNumber }: { daNumber: string }) {
+  const all = daNumber.split(',').map(s => s.trim()).filter(Boolean);
+  const shown = all.slice(0, 3);
+  const rest = all.slice(3);
+  return (
+    <>
+      {shown.map(da => (
+        <span key={da} className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-mono leading-none border border-emerald-200 whitespace-nowrap">
+          {da}
+        </span>
+      ))}
+      {rest.length > 0 && (
+        <span className="relative group/da inline-flex">
+          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-mono leading-none border border-emerald-300 cursor-default whitespace-nowrap">
+            +{rest.length} more
+          </span>
+          <div className="absolute left-0 top-full mt-1.5 z-[100] hidden group-hover/da:block bg-gray-900 text-white rounded-xl p-2.5 shadow-xl min-w-max space-y-1">
+            {all.map(da => (
+              <div key={da} className="text-[10px] font-mono font-semibold tracking-tight">{da}</div>
+            ))}
+          </div>
+        </span>
+      )}
+    </>
+  );
+}
+
 const SLA: Record<string, number> = { 'Very Urgent': 4, Urgent: 8, 'Not Urgent': 24 };
 function dueIn(b: BookingListItem) {
   const dueAt = new Date(b.received_at).getTime() + (SLA[b.priority] ?? 8) * 3_600_000;
@@ -291,9 +318,7 @@ function BookingRow({ booking, agents, myUserEmail }: { booking: BookingListItem
           <div className="flex items-center gap-1.5 mb-0.5">
             <span className="text-[10px] font-bold text-gray-400 font-mono tracking-tight">{booking.id}</span>
             {booking.status === 'Completed' && booking.da_number && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-mono leading-none border border-emerald-200">
-                {booking.da_number}
-              </span>
+              <DaBadges daNumber={booking.da_number} />
             )}
             <ElapsedBadge booking={booking} />
           </div>
