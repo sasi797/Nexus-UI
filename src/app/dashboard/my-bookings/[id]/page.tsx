@@ -498,12 +498,12 @@ export default function BookingDetailPage() {
               <div>
                 <p className={labelCls}>From</p>
                 <div className="flex items-center gap-2.5">
-                  <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${avatarColor(b.sender_email)} flex items-center justify-center text-white text-[12px] font-bold shrink-0`}>
+                  <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${avatarColor(b.sender_email)} flex items-center justify-center text-white text-[13px] font-bold shrink-0`}>
                     {b.sender_email.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold text-gray-800 truncate">{extractName(b.sender_email)}</p>
-                    <p className="text-[10px] text-gray-400 truncate">{b.sender_email}</p>
+                    <p className="text-sm font-semibold text-gray-800 truncate">{extractName(b.sender_email)}</p>
+                    <p className="text-[11px] text-gray-400 truncate">{b.sender_email}</p>
                   </div>
                 </div>
               </div>
@@ -557,12 +557,12 @@ export default function BookingDetailPage() {
                 <p className={labelCls}>Assigned Agent</p>
                 {b.agent ? (
                   <div className="flex items-center gap-2 mb-2 px-3 py-2 bg-indigo-50/60 border border-indigo-100 rounded-lg">
-                    <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${avatarColor(b.agent.email)} flex items-center justify-center text-white text-[10px] font-bold shrink-0`}>
+                    <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${avatarColor(b.agent.email)} flex items-center justify-center text-white text-[12px] font-bold shrink-0`}>
                       {b.agent.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-gray-800 truncate">{b.agent.name}</p>
-                      <p className="text-[10px] text-gray-400 truncate">{b.agent.email}</p>
+                      <p className="text-sm font-semibold text-gray-800 truncate">{b.agent.name}</p>
+                      <p className="text-xs text-gray-400 truncate">{b.agent.email}</p>
                     </div>
                   </div>
                 ) : (
@@ -589,12 +589,12 @@ export default function BookingDetailPage() {
                 <div className="space-y-2">
                   {(b.support_agents ?? []).map(a => (
                     <div key={a.id} className="flex items-center gap-2 px-3 py-2 bg-violet-50/60 border border-violet-100 rounded-lg">
-                      <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[10px] font-bold shrink-0`}>
+                      <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[12px] font-bold shrink-0`}>
                         {a.name.charAt(0).toUpperCase()}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-semibold text-gray-800 truncate">{a.name}</p>
-                        <p className="text-[10px] text-gray-400 truncate">{a.email}</p>
+                        <p className="text-sm font-semibold text-gray-800 truncate">{a.name}</p>
+                        <p className="text-xs text-gray-400 truncate">{a.email}</p>
                       </div>
                       <button
                         disabled={!isOpen || saving}
