@@ -170,17 +170,13 @@ export default function ReportsPage() {
           <h2 className="text-xs font-bold text-gray-900 mb-3">Bookings Trend</h2>
           <ResponsiveContainer width="100%" height={185}>
             <LineChart data={trend} margin={{ top: 5, right: 16, left: -14, bottom: 5 }}>
-              <defs>
-                <linearGradient id="cR" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#6366f1"/><stop offset="100%" stopColor="#8b5cf6"/></linearGradient>
-                <linearGradient id="cC" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#10b981"/><stop offset="100%" stopColor="#14b8a6"/></linearGradient>
-              </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false}/>
               <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false}/>
               <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false}/>
               <Tooltip contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 11, boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }} cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '4 4' }}/>
               <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: 11 }}/>
-              <Line type="monotone" dataKey="received" name="Received" stroke="url(#cR)" strokeWidth={2.5} dot={{ r: 3.5, fill: '#6366f1', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }}/>
-              <Line type="monotone" dataKey="completed" name="Completed" stroke="url(#cC)" strokeWidth={2.5} dot={{ r: 3.5, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }}/>
+              <Line type="monotone" dataKey="received" name="Received" stroke="#6366f1" strokeWidth={2.5} dot={{ r: 3.5, fill: '#6366f1', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }}/>
+              <Line type="monotone" dataKey="completed" name="Completed" stroke="#10b981" strokeWidth={2.5} dot={{ r: 3.5, fill: '#10b981', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }}/>
             </LineChart>
           </ResponsiveContainer>
         </motion.div>
