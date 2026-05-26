@@ -8,6 +8,7 @@ import { pageTransition, staggerItem, fadeIn } from '@/lib/animations';
 import {
   useGetBookingQuery, usePatchBookingStatusMutation,
   useUpdateBookingMutation, useGetBookingEventsQuery,
+  useAddSupportAgentMutation, useRemoveSupportAgentMutation,
 } from '@/services/bookingsApi';
 
 import { useGetAgentsQuery } from '@/services/agentsApi';
@@ -76,9 +77,11 @@ export default function BookingDetailPage() {
 
   const { data: b, isLoading }                   = useGetBookingQuery(id);
   const { data: bookingEvents = [] }             = useGetBookingEventsQuery(id);
-  const [patchStatus,   { isLoading: patching }] = usePatchBookingStatusMutation();
-  const [updateBooking, { isLoading: saving }]   = useUpdateBookingMutation();
-  const { data: agents = [] }                    = useGetAgentsQuery();
+  const [patchStatus,    { isLoading: patching }] = usePatchBookingStatusMutation();
+  const [updateBooking,  { isLoading: saving }]   = useUpdateBookingMutation();
+  const [addSupport]                              = useAddSupportAgentMutation();
+  const [removeSupport]                           = useRemoveSupportAgentMutation();
+  const { data: agents = [] }                     = useGetAgentsQuery();
 
   const bookingIds  = typeof window !== 'undefined'
     ? JSON.parse(sessionStorage.getItem('bts:booking-nav') ?? '[]') as string[]
@@ -310,8 +313,10 @@ export default function BookingDetailPage() {
                   priority_changed:    { icon: '⚡', color: 'bg-amber-50',    label: e => `Priority → ${e.new_value}` },
                   agent_assigned:      { icon: '👤', color: 'bg-indigo-50',   label: e => `Assigned to ${e.new_value ?? 'agent'}${e.old_value ? ` (${e.old_value})` : ''}` },
                   agent_unassigned:    { icon: '↩️', color: 'bg-gray-50',     label: () => 'Agent removed' },
-                  no_agents_available: { icon: '⚠️', color: 'bg-amber-50',    label: () => 'No present agents — stays Open' },
-                  reply_received:      { icon: '💬', color: 'bg-sky-50',      label: e => `${e.new_value ?? 'Reply received'} — booking reopened` },
+                  no_agents_available:   { icon: '⚠️', color: 'bg-amber-50',   label: () => 'No present agents — stays Open' },
+                  reply_received:        { icon: '💬', color: 'bg-sky-50',     label: e => `${e.new_value ?? 'Reply received'} — booking reopened` },
+                  support_agent_added:   { icon: '👥', color: 'bg-violet-50',  label: e => `Support agent added: ${e.new_value ?? ''}` },
+                  support_agent_removed: { icon: '👤', color: 'bg-gray-50',    label: e => `Support agent removed: ${e.old_value ?? ''}` },
                 };
                 return (
                   <div className="relative">
@@ -463,6 +468,54 @@ export default function BookingDetailPage() {
                     <option key={a.id} value={a.id}>{a.name}{a.shift ? ` · ${a.shift.name}` : ''}</option>
                   ))}
                 </select>
+              </div>
+
+              {/* Support Agents */}
+              <div>
+                <p className={labelCls}>Support Agents</p>
+                <div className="space-y-2">
+                  {(b.support_agents ?? []).map(a => (
+                    <div key={a.id} className="flex items-center gap-2 px-3 py-2 bg-violet-50/60 border border-violet-100 rounded-lg">
+                      <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[10px] font-bold shrink-0`}>
+                        {a.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold text-gray-800 truncate">{a.name}</p>
+                        <p className="text-[10px] text-gray-400 truncate">{a.email}</p>
+                      </div>
+                      <button
+                        disabled={!isOpen || saving}
+                        onClick={() => { removeSupport({ id, agent_id: a.id }); flashSaved('agent'); }}
+                        className="shrink-0 w-5 h-5 flex items-center justify-center rounded-md text-violet-300 hover:text-red-400 hover:bg-red-50 transition-colors disabled:opacity-30">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                  {(b.support_agents ?? []).length === 0 && (
+                    <div className="px-3 py-2 bg-gray-50 border border-dashed border-gray-200 rounded-lg text-center">
+                      <p className="text-[11px] text-gray-400">No support agents yet</p>
+                    </div>
+                  )}
+                  {isOpen && (() => {
+                    const supportIds = new Set((b.support_agents ?? []).map(a => a.id));
+                    const available = agents.filter(a => a.id !== b.agent_id && !supportIds.has(a.id));
+                    return available.length > 0 ? (
+                      <select
+                        value=""
+                        onChange={e => { if (e.target.value) { addSupport({ id, agent_id: e.target.value }); flashSaved('agent'); } }}
+                        disabled={saving}
+                        className="w-full px-3 py-2 border border-gray-200 border-dashed rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-violet-300 bg-white appearance-none cursor-pointer disabled:opacity-60 text-gray-500"
+                      >
+                        <option value="">+ Add support agent</option>
+                        {available.map(a => (
+                          <option key={a.id} value={a.id}>{a.name}</option>
+                        ))}
+                      </select>
+                    ) : null;
+                  })()}
+                </div>
               </div>
 
               {/* DA details (shown when completed) */}

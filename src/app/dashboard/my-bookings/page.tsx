@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { pageTransition, staggerItem } from '@/lib/animations';
 import {
   useGetBookingsQuery, useUpdateBookingMutation, usePatchBookingStatusMutation,
+  useAddSupportAgentMutation, useRemoveSupportAgentMutation,
   BookingListItem,
 } from '@/services/bookingsApi';
 import { useGetAgentsQuery, Agent } from '@/services/agentsApi';
@@ -331,12 +332,16 @@ function FilterSelect({ label, value, options, onChange }: {
 function BookingRow({ booking, agents, myUserEmail }: { booking: BookingListItem; agents: Agent[]; myUserEmail: string | undefined }) {
   const [updateBooking, { isLoading: upd }] = useUpdateBookingMutation();
   const [patchStatus, { isLoading: pat }] = usePatchBookingStatusMutation();
+  const [addSupport] = useAddSupportAgentMutation();
+  const [removeSupport] = useRemoveSupportAgentMutation();
   const [showDa, setShowDa] = useState(false);
   const [daNumber, setDaNumber] = useState('');
   const [daDesc, setDaDesc] = useState('');
   const busy = upd || pat;
   const sc = S_CFG[booking.status] ?? S_CFG.Pending;
   const isMine = !!myUserEmail && booking.agent?.email === myUserEmail;
+  const supportIds = new Set(booking.support_agents.map(a => a.id));
+  const availableForSupport = agents.filter(a => a.id !== booking.agent?.id && !supportIds.has(a.id));
 
   function handleStatusClick(s: string, close: () => void) {
     close();
@@ -447,6 +452,37 @@ function BookingRow({ booking, agents, myUserEmail }: { booking: BookingListItem
             )}
           </InlineDropdown>
         )}
+
+        {/* Support agents */}
+        <div className="flex items-center gap-1 px-2.5 py-0.5 w-full justify-end" onClick={e => e.stopPropagation()}>
+          {booking.support_agents.map(a => (
+            <button key={a.id} title={`${a.name} — click to remove`}
+              onClick={() => removeSupport({ id: booking.id, agent_id: a.id })}
+              className="relative group/sa shrink-0">
+              <div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[8px] font-bold ring-1 ring-white`}>
+                {a.name.charAt(0).toUpperCase()}
+              </div>
+              <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-400 rounded-full hidden group-hover/sa:flex items-center justify-center text-white text-[7px] font-bold leading-none">×</div>
+            </button>
+          ))}
+          {availableForSupport.length > 0 && (
+            <InlineDropdown align="right"
+              trigger={(open, toggle) => (
+                <button onClick={toggle} title="Add support agent"
+                  className={`w-5 h-5 rounded-full border border-dashed flex items-center justify-center transition-colors shrink-0 ${open ? 'border-violet-400 text-violet-500 bg-violet-50' : 'border-gray-300 text-gray-400 hover:border-violet-400 hover:text-violet-500'}`}>
+                  <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                  </svg>
+                </button>
+              )}>
+              {close => availableForSupport.map(a => (
+                <DdItem key={a.id} label={a.name}
+                  left={<div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[9px] font-bold shrink-0`}>{a.name.charAt(0).toUpperCase()}</div>}
+                  onClick={() => { addSupport({ id: booking.id, agent_id: a.id }); close(); }} />
+              ))}
+            </InlineDropdown>
+          )}
+        </div>
 
         {/* Status */}
         <InlineDropdown

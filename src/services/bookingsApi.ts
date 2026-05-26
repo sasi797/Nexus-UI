@@ -8,6 +8,7 @@ export interface BookingListItem {
   priority: string;
   status: string;
   agent: AgentBrief | null;
+  support_agents: AgentBrief[];
   sender_email: string;
   da_number: string | null;
   da_description: string | null;
@@ -26,8 +27,8 @@ export interface PaginatedBookings {
 
 export interface Booking {
   id: string; subject: string; priority: string; status: string;
-  agent_id: string | null; agent: AgentBrief | null; sender_email: string;
-  da_number: string | null; da_description: string | null;
+  agent_id: string | null; agent: AgentBrief | null; support_agents: AgentBrief[];
+  sender_email: string; da_number: string | null; da_description: string | null;
   received_at: string; assigned_at: string | null; completed_at: string | null;
   created_at: string; updated_at: string;
 }
@@ -96,6 +97,14 @@ export const bookingsApi = api.injectEndpoints({
       query: (id) => `/bookings/${id}/events`,
       providesTags: (_r, _e, id) => [{ type: 'Booking', id }],
     }),
+    addSupportAgent: build.mutation<Booking, { id: string; agent_id: string }>({
+      query: ({ id, agent_id }) => ({ url: `/bookings/${id}/support-agents`, method: 'POST', body: { agent_id } }),
+      invalidatesTags: (_r, _e, { id }) => [{ type: 'Booking', id }, 'Booking'],
+    }),
+    removeSupportAgent: build.mutation<Booking, { id: string; agent_id: string }>({
+      query: ({ id, agent_id }) => ({ url: `/bookings/${id}/support-agents/${agent_id}`, method: 'DELETE' }),
+      invalidatesTags: (_r, _e, { id }) => [{ type: 'Booking', id }, 'Booking'],
+    }),
   }),
   overrideExisting: false,
 });
@@ -103,5 +112,5 @@ export const bookingsApi = api.injectEndpoints({
 export const {
   useGetBookingsQuery, useGetBookingQuery, useCreateBookingMutation,
   useUpdateBookingMutation, usePatchBookingStatusMutation, useDeleteBookingMutation,
-  useGetBookingEventsQuery,
+  useGetBookingEventsQuery, useAddSupportAgentMutation, useRemoveSupportAgentMutation,
 } = bookingsApi;
