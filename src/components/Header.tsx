@@ -11,17 +11,17 @@ import {
   NotificationItem,
 } from '@/services/notificationsApi';
 
-const PATH_TITLES: { match: (p: string) => boolean; title: string }[] = [
-  { match: p => /^\/dashboard\/my-bookings\/.+/.test(p), title: 'Booking Detail' },
-  { match: p => p.startsWith('/dashboard/my-bookings'),   title: 'My Bookings' },
-  { match: p => p.startsWith('/dashboard/all-bookings'),  title: 'All Bookings' },
-  { match: p => p.startsWith('/dashboard/attendance'),    title: 'Attendance' },
-  { match: p => p.startsWith('/dashboard/allocations'),   title: 'Allocations' },
-  { match: p => p.startsWith('/dashboard/agents'),        title: 'Agents' },
-  { match: p => p.startsWith('/dashboard/notifications'), title: 'Notifications' },
-  { match: p => p.startsWith('/dashboard/reports'),       title: 'Reports' },
-  { match: p => p.startsWith('/dashboard/settings'),      title: 'Settings' },
-  { match: p => p === '/dashboard',                       title: 'Dashboard' },
+const PATH_TITLES: { match: (p: string) => boolean; title: string; sub: string }[] = [
+  { match: p => /^\/dashboard\/my-bookings\/.+/.test(p), title: 'Booking Detail',  sub: 'Full booking context'      },
+  { match: p => p.startsWith('/dashboard/my-bookings'),  title: 'My Bookings',     sub: 'Manage your queue'         },
+  { match: p => p.startsWith('/dashboard/all-bookings'), title: 'All Bookings',    sub: 'Every booking, unified'    },
+  { match: p => p.startsWith('/dashboard/attendance'),   title: 'Attendance',      sub: 'Track daily presence'      },
+  { match: p => p.startsWith('/dashboard/allocations'),  title: 'Allocations',     sub: 'Smart agent dispatch'      },
+  { match: p => p.startsWith('/dashboard/agents'),       title: 'Agents',          sub: 'Your team roster'          },
+  { match: p => p.startsWith('/dashboard/notifications'),title: 'Notifications',   sub: 'Stay in the loop'          },
+  { match: p => p.startsWith('/dashboard/reports'),      title: 'Reports',         sub: 'Data-driven insights'      },
+  { match: p => p.startsWith('/dashboard/settings'),     title: 'Settings',        sub: 'Configure your workspace'  },
+  { match: p => p === '/dashboard',                      title: 'Dashboard',       sub: 'Live ops overview'         },
 ];
 
 const TYPE_ICON: Record<string, { bg: string; icon: string }> = {
@@ -42,7 +42,8 @@ function timeAgo(iso: string) {
 export default function Header() {
   const user = useAppSelector(state => state.auth.user);
   const pathname = usePathname();
-  const title = PATH_TITLES.find(t => t.match(pathname))?.title ?? 'Dashboard';
+  const page  = PATH_TITLES.find(t => t.match(pathname)) ?? { title: 'Dashboard', sub: 'Live ops overview' };
+  const { title, sub } = page;
 
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -67,33 +68,23 @@ export default function Header() {
     if (!n.is_read) await markRead(n.id);
   };
 
-  const dateLabel = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
-
   return (
     <motion.header
       initial={{ opacity: 0, y: -16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className="h-14 bg-white/90 backdrop-blur-md border-b border-gray-200/60 flex items-center justify-between px-6 sticky top-0 z-10"
+      className="h-14 bg-white/95 backdrop-blur-md border-b border-gray-200/60 flex items-center gap-4 px-6 sticky top-0 z-10 shadow-sm"
     >
-      {/* Left: accent bar + breadcrumb + title */}
-      <div className="flex items-center gap-3">
-        <div className="w-[3px] h-5 rounded-full bg-gradient-to-b from-indigo-500 to-violet-500" />
+      {/* Left: accent + title + tagline */}
+      <div className="flex items-center gap-3 flex-1">
+        <div className="w-[3px] h-9 rounded-full bg-gradient-to-b from-indigo-500 to-violet-500" />
         <div>
-          <p className="text-[9.5px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-0.5">Nexus</p>
           <h1 className="text-[15px] font-bold text-gray-900 leading-tight">{title}</h1>
+          <p className="text-[11px] font-medium bg-gradient-to-r from-indigo-500 to-violet-500 bg-clip-text text-transparent leading-tight">{sub}</p>
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-
-        {/* Date pill */}
-        <div className="hidden md:flex items-center gap-1.5 text-[11px] text-gray-400 font-medium bg-gray-50 border border-gray-100 px-2.5 py-1.5 rounded-lg select-none">
-          <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-          </svg>
-          {dateLabel}
-        </div>
+      <div className="flex items-center gap-1.5 shrink-0">
 
         {/* Bell + dropdown */}
         <div ref={ref} className="relative">
@@ -202,22 +193,26 @@ export default function Header() {
         </div>
 
         {/* Divider */}
-        <div className="w-px h-6 bg-gray-100 mx-1" />
+        <div className="w-px h-6 bg-gray-200 mx-1" />
 
-        {/* User profile */}
-        <div className="flex items-center gap-2.5">
-          <div className="text-right hidden sm:block">
+        {/* User profile pill */}
+        <motion.button
+          whileHover={{ backgroundColor: '#f8fafc' }}
+          whileTap={{ scale: 0.97 }}
+          transition={{ duration: 0.15 }}
+          className="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-xl border border-transparent hover:border-gray-200 cursor-default select-none"
+        >
+          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold shadow-sm shadow-indigo-200 shrink-0">
+            {user?.name?.charAt(0)?.toUpperCase() ?? '?'}
+          </div>
+          <div className="text-left hidden sm:block">
             <p className="text-[12px] font-bold text-gray-700 leading-tight">{user?.name ?? '—'}</p>
             <p className="text-[10px] text-gray-400 capitalize leading-tight">{user?.role ?? ''}</p>
           </div>
-          <motion.div
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.93 }}
-            className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white text-sm font-bold shadow-md shadow-indigo-200 cursor-default select-none"
-          >
-            {user?.name?.charAt(0)?.toUpperCase() ?? '?'}
-          </motion.div>
-        </div>
+          <svg className="w-3 h-3 text-gray-300 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+          </svg>
+        </motion.button>
       </div>
     </motion.header>
   );
