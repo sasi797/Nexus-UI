@@ -25,7 +25,7 @@ export const attendanceApi = api.injectEndpoints({
     }),
     upsertAttendance: build.mutation<AttendanceRecord[], AttendanceBulkUpdate>({
       query: (body) => ({ url: '/attendance', method: 'POST', body }),
-      invalidatesTags: ['Attendance'],
+      invalidatesTags: ['Attendance', 'AllocationLog'],
     }),
     getAttendanceSummary: build.query<AttendanceSummary, { date: string }>({
       query: (params) => ({ url: '/attendance/summary', params }),
