@@ -49,17 +49,23 @@ export default function LoginPage() {
         className="w-full flex"
       >
 
-        {/* ── LEFT: white branding panel ── */}
+        {/* ── LEFT: branding panel ── */}
         <motion.div
           initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
-          className="flex-1 bg-white px-16 py-10 flex flex-col justify-between"
+          className="flex-1 flex flex-col justify-between px-14 py-10 relative overflow-hidden"
+          style={{ background: 'linear-gradient(145deg, #f8f7ff 0%, #eef2ff 50%, #f3f0ff 100%)' }}
         >
+          {/* Subtle blobs */}
+          <div className="absolute top-0 right-0 w-72 h-72 bg-indigo-100/40 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/3" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-violet-100/40 rounded-full blur-3xl pointer-events-none translate-y-1/2 -translate-x-1/3" />
+
           {/* Logo */}
-          <div className="flex items-center gap-3">
+          <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+            className="flex items-center gap-3 relative z-10">
             <motion.div whileHover={{ rotate: 12, scale: 1.1 }} transition={{ type: 'spring', stiffness: 400 }}
-              className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              className="w-11 h-11 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200">
+              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <line x1="12" y1="11" x2="12" y2="4" strokeWidth="2" strokeLinecap="round" stroke="currentColor" />
                 <line x1="12" y1="11" x2="4.5" y2="18.5" strokeWidth="2" strokeLinecap="round" stroke="currentColor" />
                 <line x1="12" y1="11" x2="19.5" y2="18.5" strokeWidth="2" strokeLinecap="round" stroke="currentColor" />
@@ -70,66 +76,63 @@ export default function LoginPage() {
               </svg>
             </motion.div>
             <div>
-              <p className="font-bold text-gray-900 text-base leading-tight">Nexus</p>
-              <p className="text-xs text-gray-400 font-medium">BookOps AI</p>
+              <p className="font-bold text-gray-900 text-[15px] leading-tight">Nexus</p>
+              <p className="text-[11px] text-gray-400 font-medium">BookOps AI</p>
             </div>
+          </motion.div>
+
+          {/* Hero brand block */}
+          <div className="flex flex-col items-center text-center relative z-10">
+            {/* Layered orb */}
+            <div className="relative w-44 h-44 mb-7">
+              <motion.div animate={{ scale: [1, 1.06, 1] }} transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute inset-0 rounded-full bg-gradient-to-br from-indigo-100 to-violet-100 shadow-xl shadow-indigo-200/60" />
+              <motion.div animate={{ scale: [1.06, 1, 1.06] }} transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute inset-5 rounded-full bg-gradient-to-br from-indigo-200 to-violet-200" />
+              <motion.div animate={{ rotate: [0, 5, -5, 0] }} transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+                className="absolute inset-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-400/40">
+                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <line x1="12" y1="11" x2="12" y2="4" strokeWidth="1.8" strokeLinecap="round" stroke="currentColor" />
+                  <line x1="12" y1="11" x2="4.5" y2="18.5" strokeWidth="1.8" strokeLinecap="round" stroke="currentColor" />
+                  <line x1="12" y1="11" x2="19.5" y2="18.5" strokeWidth="1.8" strokeLinecap="round" stroke="currentColor" />
+                  <circle cx="12" cy="3.5" r="1.6" fill="currentColor" stroke="none" />
+                  <circle cx="4" cy="19.5" r="1.6" fill="currentColor" stroke="none" />
+                  <circle cx="20" cy="19.5" r="1.6" fill="currentColor" stroke="none" />
+                  <circle cx="12" cy="11" r="2" fill="currentColor" stroke="none" opacity="0.4" />
+                </svg>
+              </motion.div>
+            </div>
+
+            <motion.h2 initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+              className="text-[26px] font-black text-gray-900 leading-tight mb-2">
+              Power your{' '}
+              <span className="bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+                booking ops
+              </span>
+              <br />with AI
+            </motion.h2>
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }}
+              className="text-[13px] text-gray-500 max-w-[260px] leading-relaxed">
+              From email intake to agent dispatch — fully automated and real-time.
+            </motion.p>
           </div>
 
-          {/* Illustration + headline */}
-          <div className="flex flex-col items-center text-center py-4">
-            {/* Abstract network SVG illustration */}
-            <div className="relative w-52 h-52 mb-6">
-              <motion.div animate={{ rotate: 360 }} transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
-                className="absolute inset-0 rounded-full border border-dashed border-indigo-100" />
-              <motion.div animate={{ rotate: -360 }} transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-                className="absolute inset-6 rounded-full border border-dashed border-violet-100" />
-              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 200 200" fill="none">
-                {/* Connecting lines */}
-                <line x1="100" y1="100" x2="40"  y2="40"  stroke="#6366f1" strokeWidth="1.5" strokeOpacity="0.3" />
-                <line x1="100" y1="100" x2="160" y2="40"  stroke="#6366f1" strokeWidth="1.5" strokeOpacity="0.3" />
-                <line x1="100" y1="100" x2="160" y2="160" stroke="#6366f1" strokeWidth="1.5" strokeOpacity="0.3" />
-                <line x1="100" y1="100" x2="40"  y2="160" stroke="#6366f1" strokeWidth="1.5" strokeOpacity="0.3" />
-                <line x1="100" y1="100" x2="100" y2="20"  stroke="#7c3aed" strokeWidth="1.5" strokeOpacity="0.3" />
-                <line x1="100" y1="100" x2="180" y2="100" stroke="#7c3aed" strokeWidth="1.5" strokeOpacity="0.3" />
-                <line x1="100" y1="100" x2="100" y2="180" stroke="#7c3aed" strokeWidth="1.5" strokeOpacity="0.3" />
-                <line x1="100" y1="100" x2="20"  y2="100" stroke="#7c3aed" strokeWidth="1.5" strokeOpacity="0.3" />
-                {/* Outer nodes */}
-                <circle cx="40"  cy="40"  r="7" fill="#6366f1" opacity="0.7" />
-                <circle cx="160" cy="40"  r="5" fill="#8b5cf6" opacity="0.6" />
-                <circle cx="160" cy="160" r="7" fill="#6366f1" opacity="0.7" />
-                <circle cx="40"  cy="160" r="5" fill="#8b5cf6" opacity="0.6" />
-                <circle cx="100" cy="20"  r="5" fill="#a78bfa" opacity="0.5" />
-                <circle cx="180" cy="100" r="5" fill="#a78bfa" opacity="0.5" />
-                <circle cx="100" cy="180" r="5" fill="#a78bfa" opacity="0.5" />
-                <circle cx="20"  cy="100" r="5" fill="#a78bfa" opacity="0.5" />
-                {/* Center hub */}
-                <circle cx="100" cy="100" r="20" fill="url(#hubGrad)" />
-                <circle cx="100" cy="100" r="14" fill="white" opacity="0.9" />
-                <defs>
-                  <radialGradient id="hubGrad" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" stopColor="#6366f1" />
-                    <stop offset="100%" stopColor="#7c3aed" />
-                  </radialGradient>
-                </defs>
-              </svg>
-            </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Intelligent Booking Ops</h2>
-            <p className="text-sm text-gray-500 max-w-xs">Automate, allocate and track every booking with AI-powered precision.</p>
-          </div>
-
-          {/* Features */}
-          <motion.ul variants={staggerContainer} initial="hidden" animate="visible" className="space-y-2.5">
-            {features.map(f => (
-              <motion.li key={f.label} variants={staggerItem}
-                className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-indigo-50/60 transition-colors group">
-                <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center text-sm shrink-0">{f.icon}</div>
+          {/* Features 2-column grid */}
+          <div className="grid grid-cols-2 gap-2.5 relative z-10">
+            {features.map((f, i) => (
+              <motion.div key={f.label}
+                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 + i * 0.07 }}
+                className="flex items-start gap-2.5 bg-white/70 backdrop-blur-sm border border-white/80 rounded-xl px-3 py-2.5 shadow-sm hover:shadow-md hover:bg-white/90 transition-all cursor-default"
+              >
+                <span className="text-base mt-0.5 shrink-0">{f.icon}</span>
                 <div>
-                  <p className="text-xs font-bold text-gray-700 leading-tight">{f.label}</p>
-                  <p className="text-[10.5px] text-gray-400 leading-tight">{f.desc}</p>
+                  <p className="text-[11.5px] font-bold text-gray-800 leading-tight">{f.label}</p>
+                  <p className="text-[10px] text-gray-400 leading-tight mt-0.5">{f.desc}</p>
                 </div>
-              </motion.li>
+              </motion.div>
             ))}
-          </motion.ul>
+          </div>
         </motion.div>
 
         {/* ── RIGHT: colored form panel ── */}
