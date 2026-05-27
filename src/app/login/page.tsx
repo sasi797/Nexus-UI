@@ -12,7 +12,6 @@ const features = [
   { label: 'Email Intake',           desc: 'Auto booking ingestion from email',        icon: '📩' },
   { label: 'Agent Analysis',          desc: 'Smart cargo analysis & classification',     icon: '🔍' },
   { label: 'Round Robin Allocation',  desc: 'Fair and automatic agent assignment',       icon: '🔄' },
-  { label: 'Transport Submission',    desc: 'One-click submission to transport API',     icon: '🚚' },
   { label: 'Real-time Notifications', desc: 'Instant alerts on booking updates',         icon: '🔔' },
 ];
 
@@ -54,7 +53,7 @@ export default function LoginPage() {
           initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
           className="flex-1 flex flex-col justify-between px-14 py-10 relative overflow-hidden"
-          style={{ background: 'linear-gradient(145deg, #f8f7ff 0%, #eef2ff 50%, #f3f0ff 100%)' }}
+          style={{ background: 'linear-gradient(145deg, #ffffff 0%, #ffffff 50%, #f3f0ff 100%)' }}
         >
           {/* Subtle blobs */}
           <div className="absolute top-0 right-0 w-72 h-72 bg-indigo-100/40 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/3" />
