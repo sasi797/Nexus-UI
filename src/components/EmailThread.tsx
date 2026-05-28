@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/store';
@@ -8,6 +8,7 @@ import { useGetMessagesQuery, useReplyMessageMutation } from '@/services/emailAp
 import type { EmailMessage, EmailAttachment } from '@/services/emailApi';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+const MAILBOX_EMAIL = (process.env.NEXT_PUBLIC_MAILBOX_EMAIL ?? '').toLowerCase();
 
 type ComposeTab = 'Reply' | 'Reply All' | 'Forward';
 
@@ -294,25 +295,58 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
   const [replyText, setReplyText] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [sent, setSent] = useState(false);
-  const [showAllRecipients, setShowAllRecipients] = useState(false);
   const [forwardTo, setForwardTo] = useState('');
+  const [toInput, setToInput] = useState('');
+  const [extraToChips, setExtraToChips] = useState<string[]>([]);
+  const [removedBaseEmails, setRemovedBaseEmails] = useState<Set<string>>(new Set());
+  const [ccChips, setCcChips] = useState<string[]>([]);
+  const [ccInput, setCcInput] = useState('');
 
-  const replyOnlyEmails = (() => {
-    const firstInbound = messages.find(m => m.direction === 'inbound');
-    return [firstInbound ? firstInbound.from_email : senderEmail];
-  })();
+  const firstInbound = messages.find(m => m.direction === 'inbound');
+  const isMailbox = (e: string) => e.toLowerCase() === MAILBOX_EMAIL;
 
-  const replyAllEmails = (() => {
-    const firstInbound = messages.find(m => m.direction === 'inbound');
+  // Reply: just the sender
+  const replyToEmails = firstInbound
+    ? [firstInbound.from_email]
+    : [senderEmail];
+
+  // Reply All: sender + original To addresses (excluding our mailbox)
+  const replyAllToEmails = (() => {
     if (!firstInbound) return [senderEmail];
     const all = new Set<string>();
     all.add(firstInbound.from_email);
-    firstInbound.to_email?.split(',').map(e => e.trim()).filter(Boolean).forEach(e => all.add(e));
-    firstInbound.cc_emails?.split(',').map(e => e.trim()).filter(Boolean).forEach(e => all.add(e));
+    firstInbound.to_email?.split(',').map(e => e.trim()).filter(e => e && !isMailbox(e)).forEach(e => all.add(e));
     return [...all];
   })();
 
-  const currentRecipients = composeTab === 'Reply All' ? replyAllEmails : replyOnlyEmails;
+  const baseToEmails = composeTab === 'Reply All' ? replyAllToEmails : replyToEmails;
+
+  // Reset chip state and pre-fill CC on tab switch
+  useEffect(() => {
+    setToInput('');
+    setExtraToChips([]);
+    setRemovedBaseEmails(new Set());
+    setCcInput('');
+    if (composeTab === 'Reply All') {
+      const fi = messages.find(m => m.direction === 'inbound');
+      const initialCc = fi?.cc_emails?.split(',').map(e => e.trim()).filter(Boolean) ?? [];
+      setCcChips(initialCc);
+    } else {
+      setCcChips([]);
+    }
+  }, [composeTab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const commitToInput = () => {
+    if (!toInput.trim()) return;
+    setExtraToChips(prev => [...prev, ...toInput.split(',').map(s => s.trim()).filter(Boolean)]);
+    setToInput('');
+  };
+
+  const commitCcInput = () => {
+    if (!ccInput.trim()) return;
+    setCcChips(prev => [...prev, ...ccInput.split(',').map(s => s.trim()).filter(Boolean)]);
+    setCcInput('');
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -330,16 +364,27 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
     const fd = new FormData();
     fd.append('body_text', replyText.trim() || ' ');
     selectedFiles.forEach(f => fd.append('files', f));
-    if (composeTab === 'Reply') {
-      fd.append('to_emails', replyOnlyEmails.join(', '));
-    } else if (composeTab === 'Reply All') {
-      fd.append('to_emails', replyAllEmails.join(', '));
-    } else {
+
+    if (composeTab === 'Forward') {
       fd.append('to_emails', forwardTo.trim());
+    } else {
+      // Commit any half-typed email, then combine all To recipients
+      const pending = toInput.trim() ? toInput.split(',').map(s => s.trim()).filter(Boolean) : [];
+      const filteredBase = baseToEmails.filter(e => !removedBaseEmails.has(e));
+      fd.append('to_emails', [...filteredBase, ...extraToChips, ...pending].join(', '));
     }
+    const pendingCc = ccInput.trim() ? ccInput.split(',').map(s => s.trim()).filter(Boolean) : [];
+    const allCc = [...ccChips, ...pendingCc];
+    if (allCc.length > 0) fd.append('cc_emails', allCc.join(', '));
+
     await replyMessage({ bookingId, formData: fd });
     setReplyText('');
     setSelectedFiles([]);
+    setToInput('');
+    setExtraToChips([]);
+    setRemovedBaseEmails(new Set());
+    setCcChips([]);
+    setCcInput('');
     if (composeTab === 'Forward') setForwardTo('');
     setSent(true);
     setTimeout(() => setSent(false), 2000);
@@ -450,8 +495,8 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
 
         <div className="p-4 space-y-3">
           {/* To: row */}
-          <div className="flex items-center gap-1.5 flex-wrap border-b border-gray-50 pb-2">
-            <span className="text-[11px] font-semibold text-gray-400 shrink-0">To:</span>
+          <div className="flex items-start gap-1.5 flex-wrap border-b border-gray-50 pb-2 min-h-[28px]">
+            <span className="text-[11px] font-semibold text-gray-400 shrink-0 mt-[3px]">To:</span>
             {composeTab === 'Forward' ? (
               <input
                 type="text"
@@ -462,24 +507,77 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
               />
             ) : (
               <>
-                {(showAllRecipients ? currentRecipients : currentRecipients.slice(0, 3)).map((email, i) => (
-                  <span key={i} className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100 font-medium">
-                    <svg className="w-2.5 h-2.5 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
+                {baseToEmails.filter(e => !removedBaseEmails.has(e)).map((email, i) => (
+                  <span key={`base-${i}`} className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100 font-medium shrink-0">
                     {email}
+                    <button
+                      type="button"
+                      onClick={() => setRemovedBaseEmails(prev => new Set([...prev, email]))}
+                      className="ml-0.5 w-3.5 h-3.5 flex items-center justify-center rounded-full hover:bg-indigo-200 text-indigo-400 hover:text-indigo-700 transition-colors leading-none text-[10px]"
+                    >✕</button>
                   </span>
                 ))}
-                {currentRecipients.length > 3 && (
-                  <button
-                    onClick={() => setShowAllRecipients(v => !v)}
-                    className="text-[11px] font-bold text-indigo-500 hover:text-indigo-700 px-2 py-0.5 rounded-full hover:bg-indigo-50 transition-colors"
-                  >
-                    {showAllRecipients ? '▲ less' : `+${currentRecipients.length - 3} more`}
-                  </button>
-                )}
+                {extraToChips.map((email, i) => (
+                  <span key={`extra-${i}`} className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-100 font-medium shrink-0">
+                    {email}
+                    <button
+                      type="button"
+                      onClick={() => setExtraToChips(prev => prev.filter((_, j) => j !== i))}
+                      className="ml-0.5 w-3.5 h-3.5 flex items-center justify-center rounded-full hover:bg-indigo-200 text-indigo-400 hover:text-indigo-700 transition-colors leading-none text-[10px]"
+                    >✕</button>
+                  </span>
+                ))}
+                <input
+                  type="text"
+                  value={toInput}
+                  onChange={e => setToInput(e.target.value)}
+                  onKeyDown={e => {
+                    if ((e.key === 'Enter' || e.key === ',' || e.key === 'Tab') && toInput.trim()) {
+                      e.preventDefault();
+                      commitToInput();
+                    }
+                    if (e.key === 'Backspace' && !toInput && extraToChips.length > 0) {
+                      setExtraToChips(prev => prev.slice(0, -1));
+                    }
+                  }}
+                  onBlur={commitToInput}
+                  placeholder={baseToEmails.filter(e => !removedBaseEmails.has(e)).length === 0 && extraToChips.length === 0 ? 'Add recipient...' : 'Add more...'}
+                  className="flex-1 min-w-[100px] text-[12px] text-gray-700 bg-transparent focus:outline-none placeholder:text-gray-300"
+                />
               </>
             )}
+          </div>
+
+          {/* CC: row — always visible, chip input */}
+          <div className="flex items-start gap-1.5 flex-wrap border-b border-gray-50 pb-2 min-h-[28px]">
+            <span className="text-[11px] font-semibold text-gray-400 shrink-0 mt-[3px]">CC:</span>
+            {ccChips.map((email, i) => (
+              <span key={i} className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full border border-gray-200 font-medium shrink-0">
+                {email}
+                <button
+                  type="button"
+                  onClick={() => setCcChips(prev => prev.filter((_, j) => j !== i))}
+                  className="ml-0.5 w-3.5 h-3.5 flex items-center justify-center rounded-full hover:bg-gray-300 text-gray-400 hover:text-gray-700 transition-colors leading-none text-[10px]"
+                >✕</button>
+              </span>
+            ))}
+            <input
+              type="text"
+              value={ccInput}
+              onChange={e => setCcInput(e.target.value)}
+              onKeyDown={e => {
+                if ((e.key === 'Enter' || e.key === ',' || e.key === 'Tab') && ccInput.trim()) {
+                  e.preventDefault();
+                  commitCcInput();
+                }
+                if (e.key === 'Backspace' && !ccInput && ccChips.length > 0) {
+                  setCcChips(prev => prev.slice(0, -1));
+                }
+              }}
+              onBlur={commitCcInput}
+              placeholder={ccChips.length === 0 ? 'cc@example.com, another@example.com' : 'Add more...'}
+              className="flex-1 min-w-[120px] text-[12px] text-gray-700 bg-transparent focus:outline-none placeholder:text-gray-300"
+            />
           </div>
 
           {/* Textarea — transparent, no border */}
