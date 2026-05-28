@@ -74,19 +74,19 @@ function ElapsedBadge({ booking }: { booking: BookingListItem }) {
 
   if (done) {
     return (
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-gray-100 ring-1 ring-gray-200 text-[10px] font-mono font-semibold text-gray-500">
-        <svg className="w-2.5 h-2.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        {formatDuration(ms)}
+      <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-gray-100 ring-1 ring-gray-200 text-[12px] font-mono font-semibold text-gray-500">
+        <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        {formatHMS(ms)}
       </span>
     );
   }
 
   const cfg = elapsedCfg(ms);
   return (
-    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md ring-1 text-[10px] font-mono font-bold ${cfg.bg} ${cfg.text}`}>
-      <span className={`w-1.5 h-1.5 rounded-full shrink-0 animate-pulse ${cfg.dot}`} />
+    <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md ring-1 text-[12px] font-mono font-bold ${cfg.bg} ${cfg.text}`}>
+      <span className={`w-2 h-2 rounded-full shrink-0 animate-pulse ${cfg.dot}`} />
       {formatHMS(ms)}
-      <span className="text-[9px] font-semibold opacity-60">{cfg.label}</span>
+      <span className="text-[10px] font-semibold opacity-60">{cfg.label}</span>
     </span>
   );
 }
@@ -355,9 +355,11 @@ function BookingRow({ booking, agents, myUserEmail }: { booking: BookingListItem
     setShowDa(false);
   }
 
+  const isCompleted = booking.status === 'Completed';
+
   return (
     <>
-    <div className={`flex items-center gap-3 px-4 py-3.5 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''}`}>
+    <div className={`flex items-center gap-3 px-4 py-3.5 rounded-xl border shadow-sm hover:shadow-md transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${isCompleted ? 'bg-orange-100 border-orange-200 hover:border-orange-300' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
 
       {/* Checkbox */}
       <input type="checkbox" onClick={e => e.stopPropagation()}
@@ -374,10 +376,9 @@ function BookingRow({ booking, agents, myUserEmail }: { booking: BookingListItem
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-0.5">
             <span className="text-[10px] font-bold text-gray-400 font-mono tracking-tight">{booking.id}</span>
-            {booking.status === 'Completed' && booking.da_number && (
+            {isCompleted && booking.da_number && (
               <DaBadges daNumber={booking.da_number} />
             )}
-            <ElapsedBadge booking={booking} />
           </div>
           <p className="text-[13.5px] font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors leading-snug truncate">
             {booking.subject}
@@ -390,6 +391,11 @@ function BookingRow({ booking, agents, myUserEmail }: { booking: BookingListItem
           </div>
         </div>
       </Link>
+
+      {/* Timer — center "empty white space" between content and meta */}
+      <div className="flex items-center justify-center shrink-0 px-4">
+        <ElapsedBadge booking={booking} />
+      </div>
 
       {/* Right meta — 3 stacked rows */}
       <div className="flex flex-col items-end gap-0.5 shrink-0 min-w-[148px]">
