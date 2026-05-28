@@ -118,7 +118,7 @@ function AttachmentChip({ att, token }: { att: EmailAttachment; token: string | 
     <button
       onClick={handleDownload}
       disabled={loading}
-      className="flex items-center gap-3 px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-indigo-300 hover:shadow-md transition-all disabled:opacity-60 group min-w-[200px] max-w-[260px]"
+      className="flex items-center gap-3 px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-indigo-300 hover:shadow-md transition-all disabled:opacity-60 group w-full sm:w-auto sm:min-w-[200px] sm:max-w-[260px]"
     >
       {/* File type icon */}
       <div className={`w-9 h-9 rounded-lg ${iconBg} ${iconClr} flex items-center justify-center shrink-0`}>
@@ -207,7 +207,7 @@ function MessageCard({ msg, token, defaultOpen }: { msg: EmailMessage; token: st
             transition={{ duration: 0.18, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
-            <div className="px-5 pb-4 border-t border-gray-50">
+            <div className="px-3 sm:px-5 pb-4 border-t border-gray-50">
               {/* To / CC rows */}
               {(msg.to_email || msg.cc_emails) && (
                 <div className="pt-3 pb-2 space-y-1">

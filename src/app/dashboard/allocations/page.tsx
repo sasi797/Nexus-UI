@@ -103,7 +103,7 @@ export default function AllocationsPage() {
 
       <motion.div variants={staggerItem} className="bg-white rounded-xl shadow-sm border border-gray-100/80">
         {/* Header */}
-        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-2">
+        <div className="px-4 py-3 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h2 className="font-bold text-gray-900 text-sm">Round Robin Allocation</h2>
             <p className="text-[11px] text-gray-400 mt-0.5">
@@ -128,7 +128,7 @@ export default function AllocationsPage() {
         </div>
 
         {/* Stats */}
-        <div className="px-4 py-3 grid grid-cols-4 gap-3 border-b border-gray-100">
+        <div className="px-4 py-3 grid grid-cols-2 sm:grid-cols-4 gap-3 border-b border-gray-100">
           {statusLoading
             ? Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-16 bg-gray-100 rounded-xl animate-pulse" />)
             : statCards.map(s => (

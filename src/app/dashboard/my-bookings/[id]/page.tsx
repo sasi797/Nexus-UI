@@ -330,13 +330,13 @@ export default function BookingDetailPage() {
     <motion.div variants={pageTransition} initial="hidden" animate="visible" className="space-y-4">
 
       {/* Two-column layout */}
-      <div className="flex gap-5 items-start">
+      <div className="flex flex-col lg:flex-row gap-5 items-start">
 
         {/* ── Left main panel ── */}
         <motion.div variants={staggerItem} className={`flex-1 min-w-0 bg-white rounded-xl shadow-sm border border-gray-100 border-l-4 ${PRIORITY_LEFT[b.priority] ?? 'border-l-gray-200'} overflow-hidden`}>
 
           {/* Subject header */}
-          <div className="px-6 py-4 border-b border-gray-100">
+          <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100">
             <div className="flex items-center justify-between mb-3">
               <Link href={listOrigin}
                 className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-400 hover:text-indigo-600 transition-colors">
@@ -402,7 +402,7 @@ export default function BookingDetailPage() {
           </div>
 
           {/* Action bar */}
-          <div className="px-4 py-2.5 border-b border-gray-100 flex items-center gap-1.5">
+          <div className="px-4 py-2 border-b border-gray-100 flex flex-wrap items-center gap-1.5">
             <motion.button whileHover={isOpen ? { scale: 1.02 } : {}} whileTap={isOpen ? { scale: 0.97 } : {}}
               disabled={!isOpen}
               onClick={isOpen ? () => focusCompose('Reply') : undefined}
@@ -453,7 +453,7 @@ export default function BookingDetailPage() {
           </div>
 
           {/* Tabs */}
-          <div className="px-5 border-b border-gray-100 flex items-center gap-1">
+          <div className="px-3 sm:px-5 border-b border-gray-100 flex items-center gap-1">
             {(['Conversation', 'History'] as Tab[]).map(tab => (
               <button key={tab} onClick={() => setActiveTab(tab)}
                 className={`relative px-3 py-2.5 text-xs font-bold transition-colors ${activeTab === tab ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}>
@@ -467,7 +467,7 @@ export default function BookingDetailPage() {
 
           {/* Tab content */}
           <AnimatePresence mode="wait">
-            <motion.div key={activeTab} variants={fadeIn} initial="hidden" animate="visible" exit="hidden" className="p-5">
+            <motion.div key={activeTab} variants={fadeIn} initial="hidden" animate="visible" exit="hidden" className="p-3 sm:p-5">
 
               {activeTab === 'Conversation' && (
                 <EmailThread
@@ -526,7 +526,7 @@ export default function BookingDetailPage() {
         </motion.div>
 
         {/* ── Right sidebar ── */}
-        <motion.div variants={staggerItem} className="w-80 shrink-0">
+        <motion.div variants={staggerItem} className="w-full lg:w-80 lg:shrink-0">
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
 
             {/* Sidebar header */}

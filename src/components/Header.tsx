@@ -39,7 +39,7 @@ function timeAgo(iso: string) {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
-export default function Header() {
+export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) {
   const user     = useAppSelector(state => state.auth.user);
   const pathname = usePathname();
   const page     = PATH_TITLES.find(t => t.match(pathname)) ?? { title: 'Dashboard', sub: 'Live ops overview' };
@@ -86,8 +86,19 @@ export default function Header() {
       initial={{ opacity: 0, y: -16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className="h-14 bg-gradient-to-r from-indigo-50/40 via-white to-white backdrop-blur-md border-b border-gray-200/60 flex items-center gap-4 px-6 sticky top-0 z-10 shadow-sm"
+      className="h-14 bg-gradient-to-r from-indigo-50/40 via-white to-white backdrop-blur-md border-b border-gray-200/60 flex items-center gap-2 px-3 md:px-6 sticky top-0 z-10 shadow-sm"
     >
+      {/* Hamburger — shown below lg breakpoint */}
+      <button
+        onClick={onMenuToggle}
+        className="lg:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors shrink-0"
+        aria-label="Open menu"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
       {/* Left: accent bar + animated title */}
       <div className="flex items-center gap-3 flex-1 min-w-0">
         <div className="w-[3px] h-6 rounded-full bg-gradient-to-b from-indigo-500 to-violet-500 shrink-0" />

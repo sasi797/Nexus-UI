@@ -63,7 +63,7 @@ export default function DashboardPage() {
     <motion.div variants={pageTransition} initial="hidden" animate="visible" className="space-y-4">
 {statsError && <ApiErrorState title="Failed to load stats" onRetry={refetchStats} />}
 
-      <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="grid grid-cols-4 gap-3">
+      <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {statsLoading
           ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24" />)
           : statCards.map(s => (

@@ -50,7 +50,7 @@ function AgentBookingsPanel({ agent, idx }: { agent: Agent; idx: number }) {
             <p className="text-xs text-gray-400 truncate">{agent.email}{agent.shift ? ` · ${agent.shift.name}` : ''}</p>
           </div>
           {/* Mini stats */}
-          <div className="flex items-center gap-2 mr-2">
+          <div className="hidden sm:flex items-center gap-2 mr-2">
             <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">{inProgress > 0 || open ? inProgress : '—'} In Progress</span>
             <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{completed > 0 || open ? completed : '—'} Done</span>
             {pending > 0 && <span className="text-[11px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">{pending} Open</span>}
@@ -79,13 +79,13 @@ function AgentBookingsPanel({ agent, idx }: { agent: Agent; idx: number }) {
                   {bookings.map(b => (
                     <motion.div key={b.id} variants={popIn} initial="hidden" animate="visible"
                       className="flex items-center gap-3 px-3 py-2 rounded-lg bg-gray-50/70 hover:bg-indigo-50/40 transition-colors">
-                      <span className="font-bold text-indigo-600 text-xs w-32 shrink-0">{b.id}</span>
-                      <span className="text-xs text-gray-700 flex-1 truncate">{b.subject}</span>
-                      <span className={`text-[11px] font-semibold px-2 py-0.5 rounded ${priorityStyle[b.priority] ?? ''}`}>{b.priority}</span>
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ring-1 ${statusStyle[b.status] ?? ''}`}>
+                      <span className="font-bold text-indigo-600 text-[10px] w-20 sm:w-32 shrink-0 truncate">{b.id}</span>
+                      <span className="text-xs text-gray-700 flex-1 truncate min-w-0">{b.subject}</span>
+                      <span className={`hidden sm:inline-flex text-[11px] font-semibold px-2 py-0.5 rounded shrink-0 ${priorityStyle[b.priority] ?? ''}`}>{b.priority}</span>
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ring-1 shrink-0 ${statusStyle[b.status] ?? ''}`}>
                         {b.status === 'Pending' ? 'Open' : b.status}
                       </span>
-                      <span className="text-[11px] text-gray-400 shrink-0">
+                      <span className="hidden sm:block text-[11px] text-gray-400 shrink-0">
                         {new Date(b.received_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                       </span>
                     </motion.div>
@@ -113,7 +113,7 @@ export default function AgentsPage() {
       {/* <motion.h1 variants={staggerItem} className="text-lg font-bold text-gray-900">Agents</motion.h1> */}
 
       {/* Summary row */}
-      <motion.div variants={staggerItem} className="grid grid-cols-3 gap-3">
+      <motion.div variants={staggerItem} className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {[
           { label: 'Total Agents', value: agents.length, bg: 'from-indigo-50 to-violet-50', text: 'text-indigo-700' },
           { label: 'Assigned Bookings', value: totalAssigned, bg: 'from-emerald-50 to-teal-50', text: 'text-emerald-700' },

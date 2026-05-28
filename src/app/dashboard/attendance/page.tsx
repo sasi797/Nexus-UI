@@ -324,7 +324,7 @@ export default function AttendancePage() {
           <h2 className="text-sm font-bold text-gray-900 mb-3">
             Attendance — <span className="text-indigo-600">{new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
           </h2>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <input type="date" value={date} onChange={e => setDate(e.target.value)}
               className="px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white transition-all" />
             <select value={shiftId} onChange={e => setShiftId(e.target.value)}

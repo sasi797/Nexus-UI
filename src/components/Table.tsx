@@ -121,6 +121,7 @@ export default function Table<T extends object>({
       </AnimatePresence>
 
       {/* Table */}
+      <div className="overflow-x-auto">
       <table className="w-full">
         <thead>
           <tr className="border-b border-gray-100 bg-gray-50/70">
@@ -132,7 +133,7 @@ export default function Table<T extends object>({
                 <th
                   key={`${col.key}-${colIdx}`}
                   style={col.width ? { width: col.width } : undefined}
-                  className="text-left px-4 py-2.5"
+                  className="text-left px-2 sm:px-4 py-2.5"
                 >
                   <div className="flex items-center gap-1">
                     {/* Sort trigger */}
@@ -235,7 +236,7 @@ export default function Table<T extends object>({
                 {columns.map((col, colIdx) => {
                   const value = (row as Record<string, unknown>)[col.key];
                   return (
-                    <td key={`${col.key}-${colIdx}`} className="px-4 py-2.5 text-sm text-gray-700">
+                    <td key={`${col.key}-${colIdx}`} className="px-2 sm:px-4 py-2.5 text-sm text-gray-700">
                       {col.render ? col.render(value, row) : String(value ?? '—')}
                     </td>
                   );
@@ -245,6 +246,7 @@ export default function Table<T extends object>({
           </AnimatePresence>
         </tbody>
       </table>
+      </div>
 
       {processed.length === 0 && (
         <motion.div

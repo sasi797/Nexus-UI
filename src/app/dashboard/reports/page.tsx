@@ -186,7 +186,7 @@ export default function ReportsPage() {
         </motion.div>
       </motion.div>
 
-      <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="grid grid-cols-4 gap-3">
+      <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {statCards.map(s => (
           <motion.div key={s.label} variants={popIn} initial="rest" whileHover="hover" animate="rest">
             <motion.div variants={cardHover} className={`bg-gradient-to-br ${s.bg} rounded-xl p-4 border border-white shadow-sm cursor-default`}>
@@ -206,12 +206,12 @@ export default function ReportsPage() {
         ))}
       </motion.div>
 
-      <div className="grid grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
         <motion.div variants={staggerItem} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
-          className="col-span-3 bg-white rounded-xl shadow-sm border border-gray-100/80 p-4">
-          <div className="flex items-center justify-between mb-3">
+          className="col-span-1 lg:col-span-3 bg-white rounded-xl shadow-sm border border-gray-100/80 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h2 className="text-xs font-bold text-gray-900">Booking Status by Priority</h2>
-            <div className="flex items-center gap-3 text-[10px] font-semibold">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[10px] font-semibold">
               <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" />Pending</span>
               <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-blue-400 inline-block" />In Progress</span>
               <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" />Completed</span>
@@ -239,7 +239,7 @@ export default function ReportsPage() {
         </motion.div>
 
         <motion.div variants={staggerItem} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-          className="col-span-2 bg-white rounded-xl shadow-sm border border-gray-100/80 p-4">
+          className="col-span-1 lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100/80 p-4">
           <h2 className="text-xs font-bold text-gray-900 mb-1">Bookings by Priority</h2>
           <div className="flex flex-col items-center">
             <div className="relative">
@@ -274,9 +274,9 @@ export default function ReportsPage() {
       </div>
 
       {/* Hourly Activity + Avg Completion */}
-      <div className="grid grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-3">
         <motion.div variants={staggerItem} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
-          className="col-span-3 bg-white rounded-xl shadow-sm border border-gray-100/80 p-4">
+          className="col-span-1 lg:col-span-3 bg-white rounded-xl shadow-sm border border-gray-100/80 p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <h2 className="text-xs font-bold text-gray-900">Hourly Activity</h2>
@@ -355,7 +355,7 @@ export default function ReportsPage() {
         </motion.div>
 
         <motion.div variants={staggerItem} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}
-          className="col-span-2 bg-white rounded-xl shadow-sm border border-gray-100/80 p-4 flex flex-col gap-3">
+          className="col-span-1 lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100/80 p-4 flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="text-xs font-bold text-gray-900">Avg Completion Time</h2>
             <div className="flex items-center gap-2">

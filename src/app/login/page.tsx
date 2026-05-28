@@ -52,7 +52,7 @@ export default function LoginPage() {
         <motion.div
           initial={{ opacity: 0, x: -40 }} animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
-          className="flex-1 flex flex-col justify-between px-14 py-10 relative overflow-hidden"
+          className="hidden md:flex flex-1 flex-col justify-between px-14 py-10 relative overflow-hidden"
           style={{ background: 'linear-gradient(145deg, #ffffff 0%, #ffffff 50%, #f3f0ff 100%)' }}
         >
           {/* Subtle blobs */}
@@ -138,7 +138,7 @@ export default function LoginPage() {
         <motion.div
           initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
-          className="w-[42%] shrink-0 bg-gradient-to-b from-indigo-600 via-indigo-700 to-violet-800 px-16 py-10 flex flex-col justify-center relative overflow-hidden"
+          className="w-full md:w-[42%] md:shrink-0 bg-gradient-to-b from-indigo-600 via-indigo-700 to-violet-800 px-8 md:px-16 py-10 flex flex-col justify-center relative overflow-hidden min-h-screen md:min-h-0"
         >
           {/* Decorative circles */}
           <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.12, 0.2, 0.12] }} transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}

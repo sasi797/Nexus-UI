@@ -190,10 +190,10 @@ export default function NotificationsPage() {
 
   return (
     <motion.div variants={pageTransition} initial="hidden" animate="visible"
-      className="flex gap-5 items-start">
+      className="flex flex-col md:flex-row gap-4 md:gap-5 items-start">
 
       {/* ── Left Sidebar ── */}
-      <div className="w-52 shrink-0 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="w-full md:w-52 md:shrink-0 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         {/* Header */}
         <div className="px-4 pt-4 pb-3 border-b border-gray-100">
           {/* <h1 className="text-[15px] font-bold text-gray-900 leading-tight">Notifications</h1> */}

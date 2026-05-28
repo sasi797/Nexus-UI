@@ -207,10 +207,10 @@ export default function SettingsPage() {
 
   return (
     <motion.div variants={pageTransition} initial="hidden" animate="visible" className="h-full">
-      <motion.div variants={staggerItem} className="flex bg-white rounded-xl shadow-sm border border-gray-100/80 min-h-[calc(100vh-7rem)]">
+      <motion.div variants={staggerItem} className="flex flex-col md:flex-row bg-white rounded-xl shadow-sm border border-gray-100/80 min-h-[calc(100vh-7rem)]">
 
         {/* ── Sidebar ── */}
-        <aside className="w-56 shrink-0 border-r border-gray-100 py-6 flex flex-col">
+        <aside className="w-full md:w-56 md:shrink-0 border-b md:border-b-0 md:border-r border-gray-100 py-4 md:py-6 flex flex-col">
           {/* Brand mark */}
           <div className="px-5 mb-6 flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center shadow-sm">
@@ -222,7 +222,7 @@ export default function SettingsPage() {
             <span className="text-sm font-bold text-gray-800">Settings</span>
           </div>
 
-          <div className="flex flex-col gap-5 px-3">
+          <div className="flex flex-col gap-3 md:gap-5 px-3 overflow-x-auto md:overflow-visible">
             {sidebarNav.map(group => (
               <div key={group.group}>
                 <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5 px-2">{group.group}</p>
@@ -252,7 +252,7 @@ export default function SettingsPage() {
         {/* ── Content ── */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Section header */}
-          <div className="px-8 pt-7 pb-5 border-b border-gray-100">
+          <div className="px-4 md:px-8 pt-5 md:pt-7 pb-4 md:pb-5 border-b border-gray-100">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500">
                 {Icons[activeSection]}
@@ -270,7 +270,7 @@ export default function SettingsPage() {
               {/* ── USERS ── */}
               {activeSection === 'Users' && (
                 <div>
-                  <div className="px-8 py-4 border-b border-gray-100 flex items-center justify-between">
+                  <div className="px-4 md:px-8 py-4 border-b border-gray-100 flex items-center justify-between">
                     <p className="text-sm text-gray-500 font-medium">
                       {agents.length} member{agents.length !== 1 ? 's' : ''}
                     </p>
@@ -283,9 +283,9 @@ export default function SettingsPage() {
                   <AnimatePresence>
                     {showAddUser && (
                       <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.15 }}
-                        className="px-8 py-5 border-b border-gray-100 bg-gray-50/60">
+                        className="px-4 md:px-8 py-5 border-b border-gray-100 bg-gray-50/60">
                         <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">New Employee</p>
-                        <div className="grid grid-cols-3 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           <input type="text" placeholder="Full Name" value={newAgent.name}
                             onChange={e => setNewAgent(p => ({ ...p, name: e.target.value }))}
                             className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white" />
@@ -324,14 +324,14 @@ export default function SettingsPage() {
                   {(agentsLoading || agentsFetching) ? (
                     <div className="px-8 py-4 space-y-3">{Array.from({ length: 5 }).map((_, i) => <div key={i} className="h-12 bg-gray-100 rounded animate-pulse" />)}</div>
                   ) : (
-                    <div className="divide-y divide-gray-50">
-                      <div className="grid grid-cols-[2.5fr_2fr_1.5fr_1fr_auto] gap-4 px-8 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                    <div className="divide-y divide-gray-50 overflow-x-auto">
+                      <div className="grid grid-cols-[2.5fr_2fr_1.5fr_1fr_auto] gap-4 px-4 md:px-8 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider min-w-[560px]">
                         <span>Name</span><span>Email</span><span>Shift</span><span>Status</span><span className="w-20" />
                       </div>
                       <AnimatePresence>
                         {agents.map((a, i) => (
                           <motion.div key={a.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="grid grid-cols-[2.5fr_2fr_1.5fr_1fr_auto] gap-4 items-center px-8 py-3.5 hover:bg-gray-50/60 transition-colors">
+                            className="grid grid-cols-[2.5fr_2fr_1.5fr_1fr_auto] gap-4 items-center px-4 md:px-8 py-3.5 hover:bg-gray-50/60 transition-colors min-w-[560px]">
                             {editingAgentId === a.id ? (
                               <>
                                 <input value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} className={inputSm} placeholder="Full Name" />
@@ -421,7 +421,7 @@ export default function SettingsPage() {
               {/* ── SHIFTS ── */}
               {activeSection === 'Shifts' && (
                 <div>
-                  <div className="px-8 py-4 border-b border-gray-100 flex items-center justify-between">
+                  <div className="px-4 md:px-8 py-4 border-b border-gray-100 flex items-center justify-between">
                     <p className="text-sm text-gray-500 font-medium">{shifts.length} shift{shifts.length !== 1 ? 's' : ''} configured</p>
                     <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} onClick={() => setShowAdd(p => !p)}
                       className="text-sm font-semibold text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg hover:bg-indigo-50 transition-colors flex items-center gap-1.5">
@@ -432,9 +432,9 @@ export default function SettingsPage() {
                   <AnimatePresence>
                     {showAdd && (
                       <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.15 }}
-                        className="px-8 py-5 border-b border-gray-100 bg-gray-50/60">
+                        className="px-4 md:px-8 py-5 border-b border-gray-100 bg-gray-50/60">
                         <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">New Shift</p>
-                        <div className="grid grid-cols-4 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                           {[
                             { key: 'name', placeholder: 'Shift Name' },
                             { key: 'code', placeholder: 'Code (e.g. MOR)' },
@@ -465,7 +465,7 @@ export default function SettingsPage() {
 
               {/* ── GENERAL ── */}
               {activeSection === 'General' && (
-                <div className="px-8 py-7 max-w-lg space-y-6">
+                <div className="px-4 md:px-8 py-5 md:py-7 max-w-lg space-y-6">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">System Name</label>
                     <input defaultValue="Bookings to Ticket System"
@@ -493,7 +493,7 @@ export default function SettingsPage() {
 
               {/* ── TRANSPORT API ── */}
               {activeSection === 'Transport API' && (
-                <div className="px-8 py-7 max-w-lg space-y-6">
+                <div className="px-4 md:px-8 py-5 md:py-7 max-w-lg space-y-6">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">API Endpoint</label>
                     <input value={apiUrl} onChange={e => setApiUrl(e.target.value)}

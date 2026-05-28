@@ -48,7 +48,7 @@ const navItems = [
   },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useAppDispatch();
@@ -71,7 +71,7 @@ export default function Sidebar() {
       variants={slideLeft}
       initial="hidden"
       animate="visible"
-      className="w-56 min-h-screen bg-white border-r border-gray-200/70 flex flex-col shadow-sm"
+      className="w-56 h-full min-h-screen bg-white border-r border-gray-200/70 flex flex-col shadow-sm"
     >
       {/* Logo */}
       <motion.div
@@ -115,7 +115,7 @@ export default function Sidebar() {
           const active = isActive(item.href);
           return (
             <motion.div key={item.href} variants={staggerItem}>
-              <Link href={item.href}>
+              <Link href={item.href} onClick={onClose}>
                 <motion.div
                   whileHover={{ x: 3 }}
                   whileTap={{ scale: 0.97 }}
@@ -172,7 +172,7 @@ export default function Sidebar() {
           </div>
         </div>
         <motion.button
-          onClick={handleLogout}
+          onClick={() => { handleLogout(); onClose?.(); }}
           whileHover={{ x: 3 }}
           whileTap={{ scale: 0.97 }}
           className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors cursor-pointer"
