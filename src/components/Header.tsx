@@ -47,6 +47,7 @@ export default function Header() {
 
   const [open, setOpen]   = useState(false);
   const [clock, setClock] = useState(() => new Date());
+  const [tz, setTz]       = useState<'Asia/Kolkata' | 'Europe/London'>('Asia/Kolkata');
   const ref = useRef<HTMLDivElement>(null);
 
   const { data }      = useGetNotificationsQuery(undefined, { pollingInterval: 30_000 });
@@ -76,8 +77,9 @@ export default function Header() {
     if (!n.is_read) await markRead(n.id);
   };
 
-  const timeStr = clock.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-  const dateStr = clock.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  const tzLabel = tz === 'Asia/Kolkata' ? 'IST' : 'UK';
+  const timeStr = clock.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: tz });
+  const dateStr = clock.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: tz });
 
   return (
     <motion.header
@@ -114,11 +116,18 @@ export default function Header() {
           Live
         </div>
 
-        {/* Clock */}
-        <div className="hidden lg:flex flex-col items-end leading-none bg-gray-50 border border-gray-100 px-2.5 py-1.5 rounded-lg select-none">
-          <span className="text-[12.5px] font-bold text-gray-700 tabular-nums">{timeStr}</span>
+        {/* Clock — click to toggle IST / UK */}
+        <button
+          onClick={() => setTz(z => z === 'Asia/Kolkata' ? 'Europe/London' : 'Asia/Kolkata')}
+          title="Click to switch timezone"
+          className="hidden lg:flex flex-col items-end leading-none bg-gray-50 border border-gray-100 px-2.5 py-1.5 rounded-lg select-none hover:bg-indigo-50 hover:border-indigo-200 transition-colors cursor-pointer"
+        >
+          <div className="flex items-center gap-1">
+            <span className="text-[9px] font-bold text-indigo-400 uppercase">{tzLabel}</span>
+            <span className="text-[12.5px] font-bold text-gray-700 tabular-nums">{timeStr}</span>
+          </div>
           <span className="text-[9.5px] text-gray-400 font-medium mt-0.5">{dateStr}</span>
-        </div>
+        </button>
 
         {/* Bell + dropdown */}
         <div ref={ref} className="relative">
