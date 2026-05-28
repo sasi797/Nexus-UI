@@ -74,11 +74,13 @@ function AttachmentChip({ att, token }: { att: EmailAttachment; token: string | 
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!res.ok) throw new Error('Download failed');
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = Object.assign(document.createElement('a'), { href: url, download: att.filename });
+      // Backend returns a presigned S3 URL — open it directly so the browser
+      // downloads from S3 without forwarding the Authorization header.
+      const { url } = await res.json();
+      const a = Object.assign(document.createElement('a'), { href: url, download: att.filename, target: '_blank', rel: 'noreferrer' });
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
     } finally {
       setLoading(false);
     }
@@ -174,9 +176,11 @@ function MessageCard({ msg, token, defaultOpen }: { msg: EmailMessage; token: st
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-600 leading-none">replied</span>
             )}
           </div>
-          {collapsed && msg.body_text && (
+          {collapsed && (msg.body_text || msg.body_html) && (
             <p className="text-[11px] text-gray-400 truncate mt-0.5">
-              {splitQuotedContent(msg.body_text).main.slice(0, 80)}
+              {msg.body_text
+                ? splitQuotedContent(msg.body_text).main.slice(0, 80)
+                : (msg.body_html ?? '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').slice(0, 80)}
             </p>
           )}
         </div>
@@ -255,7 +259,12 @@ function MessageCard({ msg, token, defaultOpen }: { msg: EmailMessage; token: st
                       )}
                     </>
                   );
-                })() : <span className="text-[12px] italic text-gray-400">(No text content)</span>}
+                })() : msg.body_html ? (
+                  <div
+                    className="prose prose-sm max-w-none text-gray-700 [&_*]:max-w-full [&_img]:max-w-full"
+                    dangerouslySetInnerHTML={{ __html: msg.body_html }}
+                  />
+                ) : <span className="text-[12px] italic text-gray-400">(No text content)</span>}
               </div>
             </div>
           </motion.div>
@@ -399,7 +408,7 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
               key={msg.id}
               msg={msg}
               token={accessToken}
-              defaultOpen={i === messages.length - 1}
+              defaultOpen={i === 0}
             />
           ))}
         </div>
