@@ -77,7 +77,11 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
     if (!n.is_read) await markRead(n.id);
   };
 
-  const tzLabel = tz === 'Asia/Kolkata' ? 'IST' : 'UK';
+  const tzLabel = tz === 'Asia/Kolkata'
+    ? 'IST'
+    : new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', timeZoneName: 'short' })
+        .formatToParts(clock)
+        .find(p => p.type === 'timeZoneName')?.value ?? 'UK';
   const timeStr = clock.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: tz });
   const dateStr = clock.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: tz });
 
