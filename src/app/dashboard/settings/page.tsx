@@ -6,7 +6,7 @@ import Table, { ColumnDef } from '@/components/Table';
 import { pageTransition, staggerItem } from '@/lib/animations';
 import { useGetShiftsQuery, useCreateShiftMutation, useDeleteShiftMutation, Shift } from '@/services/shiftsApi';
 import { useGetAgentsQuery, useCreateAgentMutation, useDeleteAgentMutation, useUpdateAgentMutation } from '@/services/agentsApi';
-import { useGetRolesQuery } from '@/services/rolesApi';
+import { useGetRolesQuery, useCreateRoleMutation, useUpdateRoleMutation, useDeleteRoleMutation } from '@/services/rolesApi';
 
 type SettingsSection = 'Shifts' | 'Users' | 'Roles' | 'Email Templates';
 
@@ -137,10 +137,18 @@ export default function SettingsPage() {
   const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: '', email: '', shift_id: '', role: 'agent' });
   const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
+  const [showAddRole, setShowAddRole] = useState(false);
+  const [newRole, setNewRole] = useState({ name: '', key: '', permissions: '' });
+  const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
+  const [editRoleForm, setEditRoleForm] = useState({ name: '', key: '', permissions: '' });
+  const [deletingRoleId, setDeletingRoleId] = useState<string | null>(null);
 
   const { data: shifts = [], isLoading: shiftsLoading } = useGetShiftsQuery();
   const { data: agents = [], isLoading: agentsLoading, isFetching: agentsFetching } = useGetAgentsQuery();
   const { data: roles = [] } = useGetRolesQuery();
+  const [createRole, { isLoading: creatingRole }] = useCreateRoleMutation();
+  const [updateRole, { isLoading: updatingRole }] = useUpdateRoleMutation();
+  const [deleteRole] = useDeleteRoleMutation();
   const [createShift, { isLoading: creating }] = useCreateShiftMutation();
   const [deleteShift] = useDeleteShiftMutation();
   const [createAgent, { isLoading: creatingAgent }] = useCreateAgentMutation();
@@ -453,36 +461,154 @@ export default function SettingsPage() {
 
               {/* ── ROLES ── */}
               {activeSection === 'Roles' && (
-                <div className="px-8 py-7">
-                  <div className="grid grid-cols-2 gap-4">
-                    {roles.map(r => {
-                      const { color, badge } = roleColors[r.key] ?? defaultRoleColor;
-                      const count = r.user_count;
-                      return (
-                        <motion.div key={r.id} whileHover={{ y: -2 }} transition={{ duration: 0.15 }}
-                          className="border border-gray-100 rounded-xl p-5 bg-white shadow-sm hover:shadow-md transition-shadow">
-                          <div className="flex items-start gap-3">
-                            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center shadow-sm shrink-0`}>
-                              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-                                  d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-                              </svg>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between gap-2">
-                                <p className="text-sm font-bold text-gray-800">{r.name}</p>
-                                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ring-1 ${badge}`}>
-                                  {count} user{count !== 1 ? 's' : ''}
-                                </span>
-                              </div>
-                              <p className="text-xs text-gray-400 mt-1">{r.permissions}</p>
-                            </div>
-                          </div>
-                        </motion.div>
-                      );
-                    })}
+                <div>
+                  {/* Header */}
+                  <div className="px-4 md:px-8 py-4 border-b border-gray-100 flex items-center justify-between">
+                    <p className="text-sm text-gray-500 font-medium">{roles.length} role{roles.length !== 1 ? 's' : ''} defined</p>
+                    <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                      onClick={() => { setShowAddRole(p => !p); setEditingRoleId(null); }}
+                      className="text-sm font-semibold text-indigo-600 border border-indigo-200 px-4 py-2 rounded-lg hover:bg-indigo-50 transition-colors flex items-center gap-1.5">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4"/></svg>
+                      Add Role
+                    </motion.button>
                   </div>
-                  <p className="text-xs text-gray-400 mt-5">Role permissions are fixed. Contact your system administrator to request changes.</p>
+
+                  {/* Add form */}
+                  <AnimatePresence>
+                    {showAddRole && (
+                      <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.15 }}
+                        className="px-4 md:px-8 py-5 border-b border-gray-100 bg-gray-50/60">
+                        <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">New Role</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div>
+                            <input type="text" placeholder="Role Name (e.g. Manager)"
+                              value={newRole.name}
+                              onChange={e => {
+                                const name = e.target.value;
+                                setNewRole(p => ({ ...p, name, key: name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') }));
+                              }}
+                              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white w-full" />
+                          </div>
+                          <div>
+                            <input type="text" placeholder="Key (e.g. manager)"
+                              value={newRole.key}
+                              onChange={e => setNewRole(p => ({ ...p, key: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') }))}
+                              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white w-full font-mono" />
+                          </div>
+                          <div>
+                            <input type="text" placeholder="Permissions description"
+                              value={newRole.permissions}
+                              onChange={e => setNewRole(p => ({ ...p, permissions: e.target.value }))}
+                              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white w-full" />
+                          </div>
+                        </div>
+                        <div className="flex gap-2 mt-4">
+                          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                            onClick={async () => {
+                              if (!newRole.name || !newRole.key || !newRole.permissions) return;
+                              await createRole(newRole);
+                              setNewRole({ name: '', key: '', permissions: '' });
+                              setShowAddRole(false);
+                            }}
+                            disabled={creatingRole || !newRole.name || !newRole.key || !newRole.permissions}
+                            className="text-sm font-semibold bg-indigo-600 text-white px-5 py-2 rounded-lg disabled:opacity-50 flex items-center gap-1.5">
+                            {creatingRole
+                              ? <><svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>Adding…</>
+                              : 'Add Role'}
+                          </motion.button>
+                          <button onClick={() => setShowAddRole(false)} className="text-sm text-gray-400 hover:text-gray-600 px-3">Cancel</button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Cards grid */}
+                  <div className="px-4 md:px-8 py-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      <AnimatePresence>
+                        {roles.map(r => {
+                          const { color, badge } = roleColors[r.key] ?? defaultRoleColor;
+
+                          if (editingRoleId === r.id) {
+                            return (
+                              <motion.div key={r.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                className="border border-indigo-200 rounded-xl p-5 bg-indigo-50/30 shadow-sm">
+                                <p className="text-xs font-bold uppercase tracking-widest text-indigo-400 mb-3">Editing role</p>
+                                <div className="space-y-2">
+                                  <input type="text" placeholder="Role Name" value={editRoleForm.name}
+                                    onChange={e => setEditRoleForm(p => ({ ...p, name: e.target.value }))}
+                                    className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white w-full" />
+                                  <input type="text" placeholder="Key" value={editRoleForm.key}
+                                    onChange={e => setEditRoleForm(p => ({ ...p, key: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') }))}
+                                    className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white w-full font-mono" />
+                                  <input type="text" placeholder="Permissions description" value={editRoleForm.permissions}
+                                    onChange={e => setEditRoleForm(p => ({ ...p, permissions: e.target.value }))}
+                                    className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white w-full" />
+                                </div>
+                                <div className="flex gap-2 mt-3">
+                                  <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                                    onClick={async () => {
+                                      await updateRole({ id: r.id, body: editRoleForm });
+                                      setEditingRoleId(null);
+                                    }}
+                                    disabled={updatingRole}
+                                    className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg disabled:opacity-60 transition-colors">
+                                    {updatingRole
+                                      ? <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                                      : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/></svg>
+                                    }
+                                    Save
+                                  </motion.button>
+                                  <button onClick={() => setEditingRoleId(null)}
+                                    className="text-sm text-gray-400 hover:text-gray-600 px-3">Cancel</button>
+                                </div>
+                              </motion.div>
+                            );
+                          }
+
+                          return (
+                            <motion.div key={r.id} layout whileHover={{ y: -2 }} transition={{ duration: 0.15 }}
+                              className="border border-gray-100 rounded-xl p-5 bg-white shadow-sm hover:shadow-md transition-shadow group">
+                              <div className="flex items-start gap-3">
+                                <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center shadow-sm shrink-0`}>
+                                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+                                      d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                  </svg>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <p className="text-sm font-bold text-gray-800">{r.name}</p>
+                                    <div className="flex items-center gap-1.5">
+                                      <span className={`px-2 py-0.5 rounded-full text-xs font-bold ring-1 ${badge}`}>
+                                        {r.user_count} user{r.user_count !== 1 ? 's' : ''}
+                                      </span>
+                                      <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                                        onClick={() => { setEditingRoleId(r.id); setEditRoleForm({ name: r.name, key: r.key, permissions: r.permissions }); setShowAddRole(false); }}
+                                        className="w-7 h-7 flex items-center justify-center rounded-md text-gray-300 hover:text-indigo-600 hover:bg-indigo-50 transition-colors opacity-0 group-hover:opacity-100">
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                      </motion.button>
+                                      <motion.button whileHover={{ scale: deletingRoleId === r.id ? 1 : 1.1 }} whileTap={{ scale: 0.9 }}
+                                        disabled={deletingRoleId === r.id}
+                                        onClick={async () => { setDeletingRoleId(r.id); await deleteRole(r.id); setDeletingRoleId(null); }}
+                                        className="w-7 h-7 flex items-center justify-center rounded-md text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-60 opacity-0 group-hover:opacity-100">
+                                        {deletingRoleId === r.id
+                                          ? <svg className="w-3.5 h-3.5 animate-spin text-red-400" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                                          : <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                        }
+                                      </motion.button>
+                                    </div>
+                                  </div>
+                                  <p className="text-xs text-gray-400 mt-1">{r.permissions}</p>
+                                  <p className="text-[10px] font-mono text-gray-300 mt-1">{r.key}</p>
+                                </div>
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </AnimatePresence>
+                    </div>
+                  </div>
                 </div>
               )}
 
