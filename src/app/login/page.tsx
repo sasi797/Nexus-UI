@@ -60,7 +60,7 @@ export default function LoginPage() {
       } else {
         localStorage.removeItem('bts_remember_email');
       }
-      router.push('/dashboard');
+      router.push('/dashboard/all-bookings');
     } catch {
       setErrorMsg('Invalid email or password');
     }
