@@ -728,25 +728,6 @@ export default function AllBookingsPage() {
 
         {/* Sort bar */}
         <motion.div variants={staggerItem} className="flex items-center gap-3 text-sm text-gray-500 flex-wrap">
-          <div className="flex items-center gap-1.5">
-            <span className="text-gray-400">Sort by:</span>
-            <InlineDropdown align="left"
-              trigger={(open, toggle) => (
-                <button onClick={toggle}
-                  className="flex items-center gap-1 font-semibold text-indigo-600 hover:text-indigo-700 transition-colors">
-                  {sortBy} <Chevron cls="text-indigo-400" />
-                </button>
-              )}>
-              {close => ['Date created', 'Priority', 'Due date'].map(s => (
-                <DdItem key={s} label={s} active={sortBy === s} onClick={() => { setSortBy(s); close(); }} />
-              ))}
-            </InlineDropdown>
-          </div>
-          <span className="text-gray-200">|</span>
-          <div className="flex items-center gap-1.5">
-            <span className="text-gray-400">Layout:</span>
-            <span className="font-semibold text-gray-700">Card view</span>
-          </div>
           {/* Mobile: pagination + filter toggle (replaces sidebar controls on small screens) */}
           <div className="lg:hidden ml-auto flex items-center gap-1.5">
             {isFetching && <div className="w-2.5 h-2.5 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin" />}
