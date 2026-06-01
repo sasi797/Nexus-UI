@@ -15,12 +15,8 @@ const navItems = [
     icon: <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>,
   },
   {
-    label: 'All Bookings', href: '/dashboard/all-bookings', adminOnly: false,
+    label: 'Bookings', href: '/dashboard/all-bookings', adminOnly: false,
     icon: <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>,
-  },
-  {
-    label: 'My Bookings', href: '/dashboard/my-bookings', adminOnly: false,
-    icon: <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>,
   },
   {
     label: 'Attendance', href: '/dashboard/attendance', adminOnly: true,
@@ -49,14 +45,14 @@ const navItems = [
 ];
 
 export default function Sidebar({ onClose }: { onClose?: () => void }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const dispatch = useAppDispatch();
-  const user = useAppSelector(state => state.auth.user);
+  const pathname  = usePathname();
+  const router    = useRouter();
+  const dispatch  = useAppDispatch();
+  const user      = useAppSelector(state => state.auth.user);
   const [logoutApi] = useLogoutMutation();
   const { data: notifData } = useGetNotificationsQuery(undefined, { pollingInterval: 30_000 });
   const unreadCount = notifData?.unread_count ?? 0;
-  const badgeLabel = unreadCount > 99 ? '99+' : String(unreadCount);
+  const badgeLabel  = unreadCount > 99 ? '99+' : String(unreadCount);
 
   const handleLogout = async () => {
     try { await logoutApi().unwrap(); } catch { /* ignore */ }
@@ -64,7 +60,11 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
     router.push('/login');
   };
 
-  const isActive = (href: string) => href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href);
+  const isActive = (href: string) => {
+    if (href === '/dashboard') return pathname === '/dashboard';
+    if (href === '/dashboard/all-bookings') return pathname.startsWith('/dashboard/all-bookings') || pathname.startsWith('/dashboard/my-bookings');
+    return pathname.startsWith(href);
+  };
 
   return (
     <motion.aside
@@ -117,13 +117,10 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
             <motion.div key={item.href} variants={staggerItem}>
               <Link href={item.href} onClick={onClose}>
                 <motion.div
-                  whileHover={{ x: 3 }}
-                  whileTap={{ scale: 0.97 }}
+                  whileHover={{ x: 3 }} whileTap={{ scale: 0.97 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 20 }}
                   className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer ${
-                    active
-                      ? 'bg-gradient-to-r from-indigo-50 to-violet-50 text-indigo-700'
-                      : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+                    active ? 'bg-gradient-to-r from-indigo-50 to-violet-50 text-indigo-700' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
                   }`}
                 >
                   {active && (
@@ -133,18 +130,12 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
                       transition={{ type: 'spring', stiffness: 380, damping: 28 }}
                     />
                   )}
-                  <span className={active ? 'text-indigo-600' : 'text-gray-400'}>
-                    {item.icon}
-                  </span>
+                  <span className={active ? 'text-indigo-600' : 'text-gray-400'}>{item.icon}</span>
                   {item.label}
                   {item.label === 'Notifications' && unreadCount > 0 && (
-                    <motion.span
-                      key={unreadCount}
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
+                    <motion.span key={unreadCount} initial={{ scale: 0 }} animate={{ scale: 1 }}
                       transition={{ type: 'spring', stiffness: 500 }}
-                      className="ml-auto min-w-[20px] h-5 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center"
-                    >
+                      className="ml-auto min-w-[20px] h-5 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                       {badgeLabel}
                     </motion.span>
                   )}

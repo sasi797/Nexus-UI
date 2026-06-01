@@ -715,6 +715,17 @@ export default function AllBookingsPage() {
       {/* ── Main ── */}
       <div className="flex-1 min-w-0 flex flex-col gap-3 order-2 lg:order-1">
 
+        {/* Bookings tab switcher */}
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+          <span className="px-4 py-1.5 rounded-lg text-sm font-semibold bg-white text-indigo-700 shadow-sm">
+            All Bookings
+          </span>
+          <Link href="/dashboard/my-bookings"
+            className="px-4 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors">
+            My Bookings
+          </Link>
+        </div>
+
         {/* Sort bar */}
         <motion.div variants={staggerItem} className="flex items-center gap-3 text-sm text-gray-500 flex-wrap">
           <div className="flex items-center gap-1.5">

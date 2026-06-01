@@ -711,10 +711,16 @@ export default function MyBookingsPage() {
       {/* ── Main ── */}
       <div className="flex-1 min-w-0 flex flex-col gap-3 order-2 lg:order-1">
 
-        {/* Page header */}
-        {/* <motion.div variants={staggerItem}>
-          <h1 className="text-xl font-bold text-gray-900">All tickets</h1>
-        </motion.div> */}
+        {/* Bookings tab switcher */}
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+          <Link href="/dashboard/all-bookings"
+            className="px-4 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors">
+            All Bookings
+          </Link>
+          <span className="px-4 py-1.5 rounded-lg text-sm font-semibold bg-white text-indigo-700 shadow-sm">
+            My Bookings
+          </span>
+        </div>
 
         {/* Sort / Layout bar */}
         <motion.div variants={staggerItem} className="flex items-center gap-3 text-sm text-gray-500 flex-wrap">
