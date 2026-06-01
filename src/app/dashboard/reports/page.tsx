@@ -339,7 +339,7 @@ export default function ReportsPage() {
             <ResponsiveContainer width="100%" height={185}>
               <BarChart data={hourly} margin={{ top: 5, right: 16, left: -14, bottom: 5 }} barGap={2}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                <XAxis dataKey="hour" tick={<HourlyTick />} axisLine={false} tickLine={false} interval={0} height={55} />
+                <XAxis dataKey="hour" tick={<HourlyTick />} axisLine={false} tickLine={false} interval={3} height={48} />
                 <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip content={<HourlyTooltip />} cursor={{ fill: '#f8fafc' }} />
                 <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: 11 }} />
