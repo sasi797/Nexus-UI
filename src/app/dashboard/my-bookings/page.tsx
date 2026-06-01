@@ -366,7 +366,7 @@ function BookingRow({ booking, agents, myUserEmail }: { booking: BookingListItem
     >
       <div className="px-4 py-3.5">
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[10px] font-bold font-mono text-gray-400 tracking-tight">{booking.id}</span>
+          <span className="text-[12px] font-bold font-mono text-gray-400 tracking-tight">{booking.id}</span>
           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold ${P_BG[booking.priority]?.replace(/\s*hover:\S+/g, '')} ${P_TEXT[booking.priority]}`}>
             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${P_DOT[booking.priority]}`} />
             {booking.priority}
