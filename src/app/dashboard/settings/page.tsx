@@ -6,6 +6,7 @@ import Table, { ColumnDef } from '@/components/Table';
 import { pageTransition, staggerItem } from '@/lib/animations';
 import { useGetShiftsQuery, useCreateShiftMutation, useDeleteShiftMutation, Shift } from '@/services/shiftsApi';
 import { useGetAgentsQuery, useCreateAgentMutation, useDeleteAgentMutation, useUpdateAgentMutation } from '@/services/agentsApi';
+import { useGetRolesQuery } from '@/services/rolesApi';
 
 type SettingsSection = 'Shifts' | 'Users' | 'Roles' | 'Email Templates';
 
@@ -68,12 +69,13 @@ const sectionMeta: Record<SettingsSection, { title: string; description: string 
   'Email Templates': { title: 'Email Templates',    description: 'Customise automated email notifications sent to customers.' },
 };
 
-const roleDefs = [
-  { name: 'Admin',      roleKey: 'admin',      permissions: 'Full access to all modules',        color: 'from-violet-500 to-indigo-500',  badge: 'bg-violet-50 text-violet-700 ring-violet-200' },
-  { name: 'Agent',      roleKey: 'agent',      permissions: 'Bookings, Attendance, Reports',     color: 'from-sky-500 to-blue-500',       badge: 'bg-sky-50 text-sky-700 ring-sky-200' },
-  { name: 'Supervisor', roleKey: 'supervisor', permissions: 'All agent access + team management',color: 'from-emerald-500 to-teal-500',   badge: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
-  { name: 'Viewer',     roleKey: 'viewer',     permissions: 'Reports & dashboards only',         color: 'from-amber-500 to-orange-500',   badge: 'bg-amber-50 text-amber-700 ring-amber-200' },
-];
+const roleColors: Record<string, { color: string; badge: string }> = {
+  admin:      { color: 'from-violet-500 to-indigo-500', badge: 'bg-violet-50 text-violet-700 ring-violet-200' },
+  agent:      { color: 'from-sky-500 to-blue-500',      badge: 'bg-sky-50 text-sky-700 ring-sky-200' },
+  supervisor: { color: 'from-emerald-500 to-teal-500',  badge: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
+  viewer:     { color: 'from-amber-500 to-orange-500',  badge: 'bg-amber-50 text-amber-700 ring-amber-200' },
+};
+const defaultRoleColor = { color: 'from-gray-400 to-gray-500', badge: 'bg-gray-50 text-gray-700 ring-gray-200' };
 const avatarGrads = ['from-indigo-500 to-violet-500','from-sky-500 to-blue-500','from-emerald-500 to-teal-500','from-rose-400 to-pink-400','from-amber-500 to-orange-500'];
 
 // ── Custom Dropdown ──────────────────────────────────────────────────────────
@@ -138,6 +140,7 @@ export default function SettingsPage() {
 
   const { data: shifts = [], isLoading: shiftsLoading } = useGetShiftsQuery();
   const { data: agents = [], isLoading: agentsLoading, isFetching: agentsFetching } = useGetAgentsQuery();
+  const { data: roles = [] } = useGetRolesQuery();
   const [createShift, { isLoading: creating }] = useCreateShiftMutation();
   const [deleteShift] = useDeleteShiftMutation();
   const [createAgent, { isLoading: creatingAgent }] = useCreateAgentMutation();
@@ -284,7 +287,7 @@ export default function SettingsPage() {
                         <div className="grid grid-cols-2 gap-3 mt-3">
                           <SettingsDropdown
                             value={newAgent.role}
-                            options={[{ label: 'Agent', value: 'agent' }, { label: 'Supervisor', value: 'supervisor' }, { label: 'Admin', value: 'admin' }]}
+                            options={roles.map(r => ({ label: r.name, value: r.key }))}
                             onChange={v => setNewAgent(p => ({ ...p, role: v }))}
                           />
                           <SettingsDropdown
@@ -329,7 +332,7 @@ export default function SettingsPage() {
                                 />
                                 <SettingsDropdown
                                   value={editForm.role}
-                                  options={[{ label: 'Agent', value: 'agent' }, { label: 'Supervisor', value: 'supervisor' }, { label: 'Admin', value: 'admin' }]}
+                                  options={roles.map(r => ({ label: r.name, value: r.key }))}
                                   onChange={v => setEditForm(p => ({ ...p, role: v }))}
                                 />
                                 <div className="flex items-center gap-2">
@@ -452,13 +455,14 @@ export default function SettingsPage() {
               {activeSection === 'Roles' && (
                 <div className="px-8 py-7">
                   <div className="grid grid-cols-2 gap-4">
-                    {roleDefs.map(r => {
-                      const count = agents.filter(a => a.role === r.roleKey).length;
+                    {roles.map(r => {
+                      const { color, badge } = roleColors[r.key] ?? defaultRoleColor;
+                      const count = r.user_count;
                       return (
-                        <motion.div key={r.name} whileHover={{ y: -2 }} transition={{ duration: 0.15 }}
+                        <motion.div key={r.id} whileHover={{ y: -2 }} transition={{ duration: 0.15 }}
                           className="border border-gray-100 rounded-xl p-5 bg-white shadow-sm hover:shadow-md transition-shadow">
                           <div className="flex items-start gap-3">
-                            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${r.color} flex items-center justify-center shadow-sm shrink-0`}>
+                            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center shadow-sm shrink-0`}>
                               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
                                   d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
@@ -467,7 +471,7 @@ export default function SettingsPage() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between gap-2">
                                 <p className="text-sm font-bold text-gray-800">{r.name}</p>
-                                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ring-1 ${r.badge}`}>
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ring-1 ${badge}`}>
                                   {count} user{count !== 1 ? 's' : ''}
                                 </span>
                               </div>
