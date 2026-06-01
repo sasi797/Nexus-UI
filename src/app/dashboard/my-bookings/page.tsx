@@ -631,13 +631,14 @@ export default function MyBookingsPage() {
   const [priorityFilter, setPriorityFilter] = useState('Any priority');
   const [createdFilter, setCreatedFilter] = useState('Anytime');
   const [closedAtFilter, setClosedAtFilter] = useState('Anytime');
+  const [fromFilter, setFromFilter] = useState('Any');
   const [pageSize, setPageSize] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
 
   /* Reset to page 1 whenever filters/tab/sort/pageSize change */
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab, priorityFilter, createdFilter, closedAtFilter, sortBy, pageSize]);
+  }, [activeTab, priorityFilter, fromFilter, createdFilter, closedAtFilter, sortBy, pageSize]);
 
   const status = activeTab === 'All' ? undefined : activeTab;
   const { data: agents = [], isLoading: agentsLoading } = useGetAgentsQuery();
@@ -659,6 +660,7 @@ export default function MyBookingsPage() {
   const { data, isLoading, isFetching, isError, refetch } = useGetBookingsQuery({
     status,
     priority,
+    sender_email: fromFilter === 'Any' ? undefined : fromFilter,
     agent_id: myAgentId,
     created_after: CREATED_MAP[createdFilter],
     closed_after: CLOSED_MAP[closedAtFilter],
@@ -666,7 +668,7 @@ export default function MyBookingsPage() {
     page_size: pageSize,
   }, { skip: agentsLoading || hasNoAgentProfile });
 
-  const countBase = { agent_id: myAgentId, priority, created_after: CREATED_MAP[createdFilter], closed_after: CLOSED_MAP[closedAtFilter], page_size: 1 };
+  const countBase = { agent_id: myAgentId, priority, sender_email: fromFilter === 'Any' ? undefined : fromFilter, created_after: CREATED_MAP[createdFilter], closed_after: CLOSED_MAP[closedAtFilter], page_size: 1 };
   const skipCount = agentsLoading || hasNoAgentProfile;
   const { data: cAll }  = useGetBookingsQuery({ ...countBase },                          { skip: skipCount });
   const { data: cPend } = useGetBookingsQuery({ ...countBase, status: 'Pending' },       { skip: skipCount });
@@ -680,17 +682,29 @@ export default function MyBookingsPage() {
     Completed:     hasNoAgentProfile ? 0 : cDone?.total,
   };
 
-  const sorted = [...(data?.items ?? [])].sort((a, b) => {
-    if (sortBy === 'Priority') {
-      const ord: Record<string, number> = { 'Very Urgent': 0, Urgent: 1, 'Not Urgent': 2 };
-      return (ord[a.priority] ?? 3) - (ord[b.priority] ?? 3);
+  const allItems = data?.items ?? [];
+
+  const [senderOptions, setSenderOptions] = useState<string[]>([]);
+  useEffect(() => {
+    if (fromFilter === 'Any' && allItems.length > 0) {
+      setSenderOptions(prev =>
+        Array.from(new Set([...prev, ...allItems.map(b => b.sender_email)])).sort()
+      );
     }
-    if (sortBy === 'Due date') {
-      const due = (x: BookingListItem) => new Date(x.received_at).getTime() + (SLA[x.priority] ?? 8) * 3_600_000;
-      return due(a) - due(b);
-    }
-    return new Date(b.received_at).getTime() - new Date(a.received_at).getTime();
-  });
+  }, [allItems]);
+  const uniqueSenders = ['Any', ...senderOptions];
+
+  const sorted = [...allItems].sort((a, b) => {
+      if (sortBy === 'Priority') {
+        const ord: Record<string, number> = { 'Very Urgent': 0, Urgent: 1, 'Not Urgent': 2 };
+        return (ord[a.priority] ?? 3) - (ord[b.priority] ?? 3);
+      }
+      if (sortBy === 'Due date') {
+        const due = (x: BookingListItem) => new Date(x.received_at).getTime() + (SLA[x.priority] ?? 8) * 3_600_000;
+        return due(a) - due(b);
+      }
+      return new Date(b.received_at).getTime() - new Date(a.received_at).getTime();
+    });
 
   /* Persist the current visible list + origin so the detail page's Back/Prev/Next work from this context */
   useEffect(() => {
@@ -878,6 +892,16 @@ export default function MyBookingsPage() {
               </svg>
             </button>
           </div>
+
+          <FilterSelect label="From" value={fromFilter} options={uniqueSenders} onChange={setFromFilter} />
+
+          <div className="border-t border-gray-100" />
+
+          <FilterSelect label="Status" value={activeTab}
+            options={['All', 'Pending', 'In Progress', 'Completed']}
+            onChange={(v) => handleTabChange(v as typeof activeTab)} />
+
+          <div className="border-t border-gray-100" />
 
           <FilterSelect label="Priority" value={priorityFilter}
             options={['Any priority', 'Very Urgent', 'Urgent', 'Not Urgent']} onChange={setPriorityFilter} />

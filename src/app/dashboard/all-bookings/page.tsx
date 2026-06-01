@@ -643,12 +643,13 @@ export default function AllBookingsPage() {
   const [priorityFilter, setPriorityFilter] = useState('Any priority');
   const [createdFilter, setCreatedFilter] = useState('Anytime');
   const [closedAtFilter, setClosedAtFilter] = useState('Anytime');
+  const [fromFilter, setFromFilter] = useState('Any');
   const [pageSize, setPageSize] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab, agentFilter, priorityFilter, createdFilter, closedAtFilter, sortBy, pageSize]);
+  }, [activeTab, agentFilter, priorityFilter, fromFilter, createdFilter, closedAtFilter, sortBy, pageSize]);
 
   const status = activeTab === 'All' ? undefined : activeTab;
   const { data: agents = [] } = useGetAgentsQuery();
@@ -667,6 +668,7 @@ export default function AllBookingsPage() {
   const { data, isLoading, isFetching, isError, refetch } = useGetBookingsQuery({
     status,
     priority,
+    sender_email: fromFilter === 'Any' ? undefined : fromFilter,
     agent_id: agentId,
     created_after: CREATED_MAP[createdFilter],
     closed_after: CLOSED_MAP[closedAtFilter],
@@ -674,7 +676,6 @@ export default function AllBookingsPage() {
     page_size: pageSize,
   });
 
-  // Active tab uses live query total so badge matches list. Inactive tabs fall back to cached stats.
   const TAB_COUNTS: Record<Tab, number | undefined> = {
     All:           activeTab === 'All'         ? data?.total : stats?.total_bookings,
     Pending:       activeTab === 'Pending'     ? data?.total : stats?.pending,
@@ -682,17 +683,30 @@ export default function AllBookingsPage() {
     Completed:     activeTab === 'Completed'   ? data?.total : stats?.completed,
   };
 
-  const sorted = [...(data?.items ?? [])].sort((a, b) => {
-    if (sortBy === 'Priority') {
-      const ord: Record<string, number> = { 'Very Urgent': 0, Urgent: 1, 'Not Urgent': 2 };
-      return (ord[a.priority] ?? 3) - (ord[b.priority] ?? 3);
+  const allItems = data?.items ?? [];
+
+  // Accumulate sender options only from unfiltered loads so the dropdown never shrinks
+  const [senderOptions, setSenderOptions] = useState<string[]>([]);
+  useEffect(() => {
+    if (fromFilter === 'Any' && allItems.length > 0) {
+      setSenderOptions(prev =>
+        Array.from(new Set([...prev, ...allItems.map(b => b.sender_email)])).sort()
+      );
     }
-    if (sortBy === 'Due date') {
-      const due = (x: BookingListItem) => new Date(x.received_at).getTime() + (SLA[x.priority] ?? 8) * 3_600_000;
-      return due(a) - due(b);
-    }
-    return new Date(b.received_at).getTime() - new Date(a.received_at).getTime();
-  });
+  }, [allItems]);
+  const uniqueSenders = ['Any', ...senderOptions];
+
+  const sorted = [...allItems].sort((a, b) => {
+      if (sortBy === 'Priority') {
+        const ord: Record<string, number> = { 'Very Urgent': 0, Urgent: 1, 'Not Urgent': 2 };
+        return (ord[a.priority] ?? 3) - (ord[b.priority] ?? 3);
+      }
+      if (sortBy === 'Due date') {
+        const due = (x: BookingListItem) => new Date(x.received_at).getTime() + (SLA[x.priority] ?? 8) * 3_600_000;
+        return due(a) - due(b);
+      }
+      return new Date(b.received_at).getTime() - new Date(a.received_at).getTime();
+    });
 
   /* Persist nav list + origin so the detail page's Back/Prev/Next work from this context */
   useEffect(() => {
@@ -867,6 +881,16 @@ export default function AllBookingsPage() {
               </svg>
             </button>
           </div>
+
+          <FilterSelect label="From" value={fromFilter} options={uniqueSenders} onChange={setFromFilter} />
+
+          <div className="border-t border-gray-100" />
+
+          <FilterSelect label="Status" value={activeTab}
+            options={['All', 'Pending', 'In Progress', 'Completed']}
+            onChange={(v) => handleTabChange(v as typeof activeTab)} />
+
+          <div className="border-t border-gray-100" />
 
           <FilterSection label="Agents">
             <FilterDropdown value={agentFilter} options={agentOpts} onChange={setAgentFilter} />
