@@ -7,7 +7,7 @@ import { pageTransition, staggerItem } from '@/lib/animations';
 import { useGetShiftsQuery, useCreateShiftMutation, useDeleteShiftMutation, Shift } from '@/services/shiftsApi';
 import { useGetAgentsQuery, useCreateAgentMutation, useDeleteAgentMutation, useUpdateAgentMutation } from '@/services/agentsApi';
 
-type SettingsSection = 'General' | 'Shifts' | 'Users' | 'Roles' | 'Transport API' | 'Email Templates';
+type SettingsSection = 'Shifts' | 'Users' | 'Roles' | 'Email Templates';
 
 // ── Icons ───────────────────────────────────────────────────────────────────
 const Icons: Record<string, React.ReactNode> = {
@@ -36,12 +36,6 @@ const Icons: Record<string, React.ReactNode> = {
         d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
     </svg>
   ),
-  'Transport API': (
-    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
-        d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-    </svg>
-  ),
   'Email Templates': (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
@@ -51,10 +45,6 @@ const Icons: Record<string, React.ReactNode> = {
 };
 
 const sidebarNav: { group: string; items: { id: SettingsSection; label: string }[] }[] = [
-  {
-    group: 'System',
-    items: [{ id: 'General', label: 'General' }],
-  },
   {
     group: 'Team',
     items: [
@@ -66,18 +56,15 @@ const sidebarNav: { group: string; items: { id: SettingsSection; label: string }
   {
     group: 'Integrations',
     items: [
-      { id: 'Transport API', label: 'Transport API' },
       { id: 'Email Templates', label: 'Email Templates' },
     ],
   },
 ];
 
 const sectionMeta: Record<SettingsSection, { title: string; description: string }> = {
-  General:           { title: 'General',           description: 'Configure your system name, timezone and basic preferences.' },
   Shifts:            { title: 'Shifts',             description: 'Define work shifts and assign agents to them.' },
   Users:             { title: 'Users',              description: 'Manage your team members, roles and account access.' },
   Roles:             { title: 'Roles & Permissions',description: 'View role definitions and their associated permissions.' },
-  'Transport API':   { title: 'Transport API',      description: 'Configure the external transport API endpoint and credentials.' },
   'Email Templates': { title: 'Email Templates',    description: 'Customise automated email notifications sent to customers.' },
 };
 
@@ -145,8 +132,6 @@ export default function SettingsPage() {
   const [newShift, setNewShift] = useState({ name: '', code: '', start_time: '', end_time: '' });
   const [showAddUser, setShowAddUser] = useState(false);
   const [newAgent, setNewAgent] = useState({ name: '', email: '', password: '', role: 'agent', shift_id: '' });
-  const [apiUrl, setApiUrl] = useState('https://api.transport.example.com/v2');
-  const [savedGeneral, setSavedGeneral] = useState(false);
   const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: '', email: '', shift_id: '', role: 'agent' });
   const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
@@ -460,63 +445,6 @@ export default function SettingsPage() {
                   {shiftsLoading
                     ? <div className="px-8 py-4 space-y-2">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />)}</div>
                     : <Table columns={shiftColumns} data={shifts} rowKey={r => r.id} />}
-                </div>
-              )}
-
-              {/* ── GENERAL ── */}
-              {activeSection === 'General' && (
-                <div className="px-4 md:px-8 py-5 md:py-7 max-w-lg space-y-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">System Name</label>
-                    <input defaultValue="Bookings to Ticket System"
-                      className="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-                    <p className="text-xs text-gray-400 mt-1">This name appears in notifications and reports.</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Timezone</label>
-                    <select className="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white">
-                      <option>Asia/Kolkata (IST)</option>
-                      <option>UTC</option>
-                      <option>America/New_York</option>
-                    </select>
-                    <p className="text-xs text-gray-400 mt-1">All timestamps and SLA calculations use this timezone.</p>
-                  </div>
-                  <div className="pt-2 border-t border-gray-100">
-                    <motion.button whileHover={{ scale: 1.02 }}
-                      onClick={() => { setSavedGeneral(true); setTimeout(() => setSavedGeneral(false), 2000); }}
-                      className={`text-sm font-semibold px-6 py-2.5 rounded-lg transition-colors ${savedGeneral ? 'bg-emerald-600 text-white' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}>
-                      {savedGeneral ? '✓ Saved!' : 'Save changes'}
-                    </motion.button>
-                  </div>
-                </div>
-              )}
-
-              {/* ── TRANSPORT API ── */}
-              {activeSection === 'Transport API' && (
-                <div className="px-4 md:px-8 py-5 md:py-7 max-w-lg space-y-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">API Endpoint</label>
-                    <input value={apiUrl} onChange={e => setApiUrl(e.target.value)}
-                      className="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-                    <p className="text-xs text-gray-400 mt-1">The base URL for outbound transport API calls.</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">API Key</label>
-                    <input type="password" defaultValue="sk-••••••••••••••••"
-                      className="w-full px-3.5 py-2.5 border border-gray-200 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-                    <p className="text-xs text-gray-400 mt-1">Stored encrypted. Leave blank to keep the current key.</p>
-                  </div>
-                  <div className="flex items-center gap-3 p-3.5 rounded-lg bg-amber-50 border border-amber-200">
-                    <svg className="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-                    </svg>
-                    <p className="text-xs text-amber-700 font-medium">Changing the API key will affect all active booking integrations.</p>
-                  </div>
-                  <div className="pt-2 border-t border-gray-100">
-                    <motion.button whileHover={{ scale: 1.02 }} className="text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg transition-colors">
-                      Save changes
-                    </motion.button>
-                  </div>
                 </div>
               )}
 
