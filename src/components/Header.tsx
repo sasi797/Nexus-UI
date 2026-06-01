@@ -103,24 +103,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
         </svg>
       </button>
 
-      {/* Left: accent bar + animated title */}
-      <div className="flex items-center gap-3 flex-1 min-w-0">
-        <div className="w-[3px] h-6 rounded-full bg-gradient-to-b from-indigo-500 to-violet-500 shrink-0" />
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={pathname}
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 6 }}
-            transition={{ duration: 0.18, ease: 'easeOut' }}
-          >
-            <h1 className="text-[15px] font-bold text-gray-900 leading-tight">{title}</h1>
-            <p className="text-[11px] font-semibold bg-gradient-to-r from-indigo-500 to-violet-500 bg-clip-text text-transparent leading-tight">
-              {sub}
-            </p>
-          </motion.div>
-        </AnimatePresence>
-      </div>
+      <div className="flex-1 min-w-0" />
 
       {/* Right */}
       <div className="flex items-center gap-2 shrink-0">
