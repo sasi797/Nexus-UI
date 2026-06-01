@@ -637,7 +637,7 @@ export default function AllBookingsPage() {
     setActiveTab(tab);
   }
 
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(true);
   const [sortBy, setSortBy] = useState('Date created');
   const [agentFilter, setAgentFilter] = useState('Any agent');
   const [priorityFilter, setPriorityFilter] = useState('Any priority');
@@ -726,36 +726,7 @@ export default function AllBookingsPage() {
           </Link>
         </div>
 
-        {/* Sort bar */}
-        <motion.div variants={staggerItem} className="flex items-center gap-3 text-sm text-gray-500 flex-wrap">
-          {/* Mobile: pagination + filter toggle (replaces sidebar controls on small screens) */}
-          <div className="lg:hidden ml-auto flex items-center gap-1.5">
-            {isFetching && <div className="w-2.5 h-2.5 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin" />}
-            <span className="text-[12px] text-gray-400 tabular-nums whitespace-nowrap">
-              {totalCount === 0 ? '0' : `${startIdx}–${endIdx}`} / {totalCount}
-            </span>
-            <button disabled={currentPage <= 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              className="p-1 rounded hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-            </button>
-            <button disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              className="p-1 rounded hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-            </button>
-            <div className="w-px h-4 bg-gray-200 mx-0.5" />
-            <button
-              onClick={() => setFiltersOpen(v => !v)}
-              className="flex items-center gap-1 px-2 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors shadow-sm"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-              </svg>
-              Filters
-            </button>
-          </div>
-        </motion.div>
-
-        {/* Tab bar */}
+        {/* Tab bar + filter toggle */}
         <motion.div variants={staggerItem} className="flex items-center gap-0.5 border-b border-gray-200 overflow-x-auto">
           {TABS.map(tab => (
             <button key={tab} onClick={() => handleTabChange(tab)}
@@ -782,6 +753,18 @@ export default function AllBookingsPage() {
               )}
             </button>
           ))}
+          {/* Filter toggle — always visible */}
+          <button
+            onClick={() => setFiltersOpen(v => !v)}
+            className={`ml-auto shrink-0 flex items-center gap-1.5 px-3 py-1.5 mb-1 rounded-lg border text-xs font-semibold transition-colors ${
+              filtersOpen ? 'bg-indigo-50 border-indigo-200 text-indigo-600 hover:bg-indigo-100' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
+            }`}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+            {filtersOpen ? 'Hide Filters' : 'Filters'}
+          </button>
         </motion.div>
 
         {/* Ticket list */}
@@ -838,7 +821,7 @@ export default function AllBookingsPage() {
       </div>
 
       {/* ── Filters sidebar ── */}
-      <motion.div variants={staggerItem} className={`order-1 lg:order-2 w-full lg:w-80 lg:shrink-0 flex-col gap-3 ${filtersOpen ? 'flex' : 'hidden'} lg:flex`}>
+      <motion.div variants={staggerItem} className={`order-1 lg:order-2 w-full lg:w-80 lg:shrink-0 flex-col gap-3 ${filtersOpen ? 'flex' : 'hidden'}`}>
 
         {/* Export + pagination bar */}
         <div className="flex items-center justify-end gap-1.5 text-sm text-gray-500 lg:mt-6">
