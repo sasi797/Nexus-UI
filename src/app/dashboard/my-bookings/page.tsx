@@ -206,6 +206,36 @@ const S_CFG: Record<string, { dot: string; text: string; label: string; path: st
   },
 };
 
+/* ── Tags ── */
+const BOOKING_TAGS = ['Manifest', 'Customs', 'Hold'] as const;
+type BookingTag = typeof BOOKING_TAGS[number];
+const TAG_CFG: Record<BookingTag, { bg: string; text: string; border: string; dot: string }> = {
+  Manifest: { bg: 'bg-sky-50',    text: 'text-sky-700',    border: 'border-sky-200',    dot: 'bg-sky-400' },
+  Customs:  { bg: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200', dot: 'bg-violet-400' },
+  Hold:     { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-400' },
+};
+function parseTags(raw: string | null | undefined): BookingTag[] {
+  if (!raw) return [];
+  return raw.split(',').map(s => s.trim()).filter((s): s is BookingTag => BOOKING_TAGS.includes(s as BookingTag));
+}
+function serializeTags(tags: BookingTag[]): string { return tags.join(','); }
+function TagBadges({ tags }: { tags: BookingTag[] }) {
+  if (tags.length === 0) return null;
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      {tags.map(t => {
+        const c = TAG_CFG[t];
+        return (
+          <span key={t} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[10px] font-bold ${c.bg} ${c.text} ${c.border}`}>
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${c.dot}`} />
+            {t}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ── InlineDropdown ── */
 function InlineDropdown({ trigger, children, align = 'right' }: {
   trigger: (open: boolean, toggle: () => void) => React.ReactNode;
@@ -408,11 +438,12 @@ function BookingRow({ booking, agents, myUserEmail }: { booking: BookingListItem
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-0.5">
+          <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
             <span className="text-[10px] font-bold text-gray-400 font-mono tracking-tight">{booking.id}</span>
             {isCompleted && booking.da_number && (
               <DaBadges daNumber={booking.da_number} />
             )}
+            <TagBadges tags={parseTags(booking.tags)} />
           </div>
           <p className="text-[13.5px] font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors leading-snug truncate">
             {booking.subject}
@@ -545,6 +576,44 @@ function BookingRow({ booking, agents, myUserEmail }: { booking: BookingListItem
               left={<span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${S_CFG[s].dot}`} />}
               onClick={() => handleStatusClick(s, close)} />
           ))}
+        </InlineDropdown>
+
+        {/* Tags — multi-select */}
+        <InlineDropdown align="right"
+          trigger={(open, toggle) => {
+            const activeTags = parseTags(booking.tags);
+            return (
+              <button onClick={toggle}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg w-full justify-end text-xs font-semibold transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'} text-gray-500`}>
+                <svg className="w-3 h-3 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+                {activeTags.length === 0 ? <span className="text-gray-300">Tags</span> : <TagBadges tags={activeTags} />}
+                <Chevron cls="text-gray-300 ml-0.5" />
+              </button>
+            );
+          }}>
+          {_close => (
+            <div className="py-1 min-w-[140px]">
+              {BOOKING_TAGS.map(tag => {
+                const activeTags = parseTags(booking.tags);
+                const active = activeTags.includes(tag);
+                const c = TAG_CFG[tag];
+                return (
+                  <button key={tag}
+                    onClick={() => {
+                      const next = active ? activeTags.filter(t => t !== tag) : [...activeTags, tag];
+                      updateBooking({ id: booking.id, body: { tags: serializeTags(next) } });
+                    }}
+                    className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-medium transition-colors ${active ? `${c.bg} ${c.text}` : 'text-gray-600 hover:bg-gray-50'}`}>
+                    <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${active ? c.dot : 'bg-gray-200'}`} />
+                    {tag}
+                    {active && <svg className="w-3 h-3 ml-auto text-current shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </InlineDropdown>
 
       </div>

@@ -613,6 +613,43 @@ export default function BookingDetailPage() {
                 </div>
               </div>
 
+              {/* Tags — instant-save multi-select pills */}
+              {(() => {
+                const BOOKING_TAGS = ['Manifest', 'Customs', 'Hold'] as const;
+                type BTag = typeof BOOKING_TAGS[number];
+                const TAG_CFG: Record<BTag, { on: string; dot: string; offDot: string }> = {
+                  Manifest: { on: 'bg-sky-50 text-sky-700 border-sky-300',    dot: 'bg-sky-500',    offDot: 'bg-gray-300' },
+                  Customs:  { on: 'bg-violet-50 text-violet-700 border-violet-300', dot: 'bg-violet-500', offDot: 'bg-gray-300' },
+                  Hold:     { on: 'bg-orange-50 text-orange-700 border-orange-300', dot: 'bg-orange-500', offDot: 'bg-gray-300' },
+                };
+                const activeTags: BTag[] = (b.tags ?? '').split(',').map(s => s.trim()).filter((s): s is BTag => BOOKING_TAGS.includes(s as BTag));
+                const handleTagToggle = async (tag: BTag) => {
+                  const next = activeTags.includes(tag) ? activeTags.filter(t => t !== tag) : [...activeTags, tag];
+                  await updateBooking({ id, body: { tags: next.join(',') } });
+                  flashSaved('tags');
+                };
+                return (
+                  <div>
+                    <p className={labelCls}>Tags</p>
+                    <div className="flex gap-1.5">
+                      {BOOKING_TAGS.map(tag => {
+                        const active = activeTags.includes(tag);
+                        const c = TAG_CFG[tag];
+                        return (
+                          <button key={tag}
+                            disabled={saving || patching}
+                            onClick={() => handleTagToggle(tag)}
+                            className={`flex-1 flex items-center justify-center gap-1 text-[10px] font-bold py-1.5 rounded-lg border transition-all disabled:opacity-50 ${active ? c.on : 'border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600 hover:bg-gray-50'}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${active ? c.dot : c.offDot}`} />
+                            {tag}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Agent — instant-save select */}
               <div>
                 <p className={labelCls}>Assigned Agent</p>

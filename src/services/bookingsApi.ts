@@ -12,6 +12,7 @@ export interface BookingListItem {
   sender_email: string;
   da_number: string | null;
   da_description: string | null;
+  tags: string | null;
   received_at: string;
   assigned_at: string | null;
   completed_at: string | null;
@@ -29,6 +30,7 @@ export interface Booking {
   id: string; subject: string; priority: string; status: string;
   agent_id: string | null; agent: AgentBrief | null; support_agents: AgentBrief[];
   sender_email: string; da_number: string | null; da_description: string | null;
+  tags: string | null;
   received_at: string; assigned_at: string | null; completed_at: string | null;
   created_at: string; updated_at: string;
 }
@@ -38,7 +40,7 @@ export interface BookingCreate {
 }
 
 export interface BookingUpdate extends Partial<BookingCreate> {
-  status?: string; agent_id?: string;
+  status?: string; agent_id?: string; tags?: string;
 }
 
 export interface BookingEvent {
