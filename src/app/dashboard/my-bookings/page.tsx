@@ -11,7 +11,7 @@ import {
 } from '@/services/bookingsApi';
 import { useGetAgentsQuery, Agent } from '@/services/agentsApi';
 import { useGetDashboardStatsQuery } from '@/services/dashboardApi';
-import { useGetBookingConfigQuery, getColor } from '@/services/bookingConfigApi';
+import { useGetBookingConfigQuery, getColor, BookingConfigItem } from '@/services/bookingConfigApi';
 import { useAppSelector } from '@/store/hooks';
 import ApiErrorState from '@/components/ApiErrorState';
 
@@ -346,11 +346,11 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: { booking: 
   const busy = upd || pat;
 
   const cfgItems = bookingConfig ?? [];
-  const statusCfg = cfgItems.filter(c => c.type === 'status');
-  const priorityCfg = cfgItems.filter(c => c.type === 'priority');
-  const tagCfg = cfgItems.filter(c => c.type === 'tag');
-  const tagValues = tagCfg.map(t => t.value);
-  const statusItem = statusCfg.find(s => s.value === booking.status);
+  const statusCfg = cfgItems.filter((c: BookingConfigItem) => c.type === 'status');
+  const priorityCfg = cfgItems.filter((c: BookingConfigItem) => c.type === 'priority');
+  const tagCfg = cfgItems.filter((c: BookingConfigItem) => c.type === 'tag');
+  const tagValues = tagCfg.map((t: BookingConfigItem) => t.value);
+  const statusItem = statusCfg.find((s: BookingConfigItem) => s.value === booking.status);
   const sc = statusItem ? { dot: getColor(statusItem.color).dot, text: getColor(statusItem.color).text, label: statusItem.label, path: S_PATH[statusItem.value] ?? S_PATH.Completed } : { dot: 'bg-gray-400', text: 'text-gray-500', label: booking.status, path: S_PATH.Completed };
 
   const isMine = !!myUserEmail && booking.agent?.email === myUserEmail;
@@ -381,7 +381,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: { booking: 
       <div className="px-4 py-3.5">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[12px] font-bold font-mono text-gray-400 tracking-tight">{booking.id}</span>
-          {(() => { const pi = priorityCfg.find(p => p.value === booking.priority); const pc = getColor(pi?.color ?? 'gray'); return (
+          {(() => { const pi = priorityCfg.find((p: BookingConfigItem) => p.value === booking.priority); const pc = getColor(pi?.color ?? 'gray'); return (
             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold ${pc.bg} ${pc.text}`}>
               <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${pc.dot}`} />
               {pi?.label ?? booking.priority}
@@ -454,7 +454,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: { booking: 
         {/* Priority */}
         <InlineDropdown
           trigger={(open, toggle) => {
-            const pi = priorityCfg.find(p => p.value === booking.priority);
+            const pi = priorityCfg.find((p: BookingConfigItem) => p.value === booking.priority);
             const pc = getColor(pi?.color ?? 'gray');
             return (
               <button onClick={toggle}
@@ -465,7 +465,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: { booking: 
               </button>
             );
           }}>
-          {close => priorityCfg.map(p => {
+          {close => priorityCfg.map((p: BookingConfigItem) => {
             const cc = getColor(p.color);
             return (
               <DdItem key={p.value} label={p.label} active={booking.priority === p.value}
@@ -564,7 +564,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: { booking: 
               <Chevron cls="text-current opacity-40" />
             </button>
           )}>
-          {close => statusCfg.map(s => {
+          {close => statusCfg.map((s: BookingConfigItem) => {
             const cc = getColor(s.color);
             return (
               <DdItem key={s.value} label={s.label} active={booking.status === s.value}
@@ -591,7 +591,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: { booking: 
           }}>
           {_close => (
             <div className="py-1 min-w-[140px]">
-              {tagCfg.map(tag => {
+              {tagCfg.map((tag: BookingConfigItem) => {
                 const activeTags = parseTags(booking.tags, tagValues);
                 const active = activeTags.includes(tag.value);
                 const c = getColor(tag.color);
@@ -715,6 +715,7 @@ export default function MyBookingsPage() {
   const status = activeTab === 'All' ? undefined : activeTab;
   const { data: agents = [], isLoading: agentsLoading } = useGetAgentsQuery();
   useGetDashboardStatsQuery(); // keep cache warm; not used for tab counts here
+  const { data: bookingConfig } = useGetBookingConfigQuery();
 
   // Always filter to the current user's own bookings.
   // agentsLoading guard prevents a flash of "all bookings" before agents resolve.
@@ -945,7 +946,7 @@ export default function MyBookingsPage() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {sorted.map(b => <BookingRow key={b.id} booking={b} agents={agents} myUserEmail={user?.email} />)}
+                  {sorted.map(b => <BookingRow key={b.id} booking={b} agents={agents} myUserEmail={user?.email} bookingConfig={bookingConfig} />)}
                 </div>
               )}
             </motion.div>
