@@ -37,12 +37,16 @@ function useDropdownPos(open: boolean, btnRef: React.RefObject<HTMLButtonElement
 function ShiftSelect({ value, shifts, onChange }: { value: string; shifts: Shift[]; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const pos = useDropdownPos(open, btnRef);
   const selected = shifts.find(s => s.id === value);
 
   useEffect(() => {
     if (!open) return;
-    const fn = (e: MouseEvent) => { if (!btnRef.current?.contains(e.target as Node)) setOpen(false); };
+    const fn = (e: MouseEvent) => {
+      if (!btnRef.current?.contains(e.target as Node) && !menuRef.current?.contains(e.target as Node))
+        setOpen(false);
+    };
     document.addEventListener('mousedown', fn);
     return () => document.removeEventListener('mousedown', fn);
   }, [open]);
@@ -57,7 +61,7 @@ function ShiftSelect({ value, shifts, onChange }: { value: string; shifts: Shift
         </svg>
       </button>
       {open && createPortal(
-        <div style={{ position: 'fixed', top: pos.top, left: pos.left, minWidth: Math.max(pos.width, 170), zIndex: 9999 }}
+        <div ref={menuRef} style={{ position: 'fixed', top: pos.top, left: pos.left, minWidth: Math.max(pos.width, 170), zIndex: 9999 }}
           className="bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 overflow-hidden">
           <div onClick={() => { onChange(''); setOpen(false); }}
             className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-gray-50 text-[12px] text-gray-400 font-medium transition-colors">
@@ -90,12 +94,16 @@ const STATUS_LIST: AttendanceStatus[] = ['Present', 'Absent', 'On Break', 'Late'
 function StatusSelect({ value, onChange }: { value: AttendanceStatus; onChange: (v: AttendanceStatus) => void }) {
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const pos = useDropdownPos(open, btnRef);
   const c = statusCfg[value];
 
   useEffect(() => {
     if (!open) return;
-    const fn = (e: MouseEvent) => { if (!btnRef.current?.contains(e.target as Node)) setOpen(false); };
+    const fn = (e: MouseEvent) => {
+      if (!btnRef.current?.contains(e.target as Node) && !menuRef.current?.contains(e.target as Node))
+        setOpen(false);
+    };
     document.addEventListener('mousedown', fn);
     return () => document.removeEventListener('mousedown', fn);
   }, [open]);
@@ -111,7 +119,7 @@ function StatusSelect({ value, onChange }: { value: AttendanceStatus; onChange: 
         </svg>
       </button>
       {open && createPortal(
-        <div style={{ position: 'fixed', top: pos.top, left: pos.left, minWidth: 160, zIndex: 9999 }}
+        <div ref={menuRef} style={{ position: 'fixed', top: pos.top, left: pos.left, minWidth: 160, zIndex: 9999 }}
           className="bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 overflow-hidden">
           {STATUS_LIST.map(s => {
             const sc = statusCfg[s];
@@ -269,7 +277,7 @@ export default function AttendancePage() {
     }
   };
 
-  const hasRecords = tableData.length > 0;
+  const hasRecords = initialized || filteredAttendance.length > 0;
 
   const columns: ColumnDef<AttendanceRow>[] = [
     {
