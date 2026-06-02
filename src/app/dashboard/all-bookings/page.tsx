@@ -11,6 +11,7 @@ import {
 } from '@/services/bookingsApi';
 import { useGetAgentsQuery, Agent } from '@/services/agentsApi';
 import { useGetDashboardStatsQuery } from '@/services/dashboardApi';
+import { useGetBookingConfigQuery, COLOR_MAP, getColor } from '@/services/bookingConfigApi';
 import { useAppSelector } from '@/store/hooks';
 import ApiErrorState from '@/components/ApiErrorState';
 
@@ -181,57 +182,39 @@ function dueIn(b: BookingListItem) {
   return `Due in ${Math.floor((ms % 3_600_000) / 60_000)} min`;
 }
 
-const P_DOT: Record<string, string> = { 'Very Urgent': 'bg-red-500', Urgent: 'bg-amber-500', 'Not Urgent': 'bg-green-500' };
-const P_TEXT: Record<string, string> = { 'Very Urgent': 'text-red-600', Urgent: 'text-amber-600', 'Not Urgent': 'text-green-600' };
-const P_BG: Record<string, string> = {
-  'Very Urgent': 'bg-red-50 hover:bg-red-100/60',
-  Urgent: 'bg-amber-50 hover:bg-amber-100/60',
-  'Not Urgent': 'bg-green-50 hover:bg-green-100/60',
+/* Status icon paths (fixed by value) */
+const S_PATH: Record<string, string> = {
+  Pending:      'M13 10V3L4 14h7v7l9-11h-7z',
+  'In Progress':'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15',
+  Completed:   'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
 };
 
-const S_CFG: Record<string, { dot: string; text: string; label: string; path: string }> = {
-  Pending: {
-    dot: 'bg-amber-400', text: 'text-amber-600', label: 'Open',
-    path: 'M13 10V3L4 14h7v7l9-11h-7z',
-  },
-  'In Progress': {
-    dot: 'bg-blue-400', text: 'text-blue-600', label: 'In Progress',
-    path: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15',
-  },
-  Completed: {
-    dot: 'bg-gray-400', text: 'text-gray-500', label: 'Completed',
-    path: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
-  },
-};
+/* Helpers that read from live config */
+function usePriorityCfg(config: ReturnType<typeof useGetBookingConfigQuery>['data']) {
+  const priorities = (config ?? []).filter(c => c.type === 'priority');
+  const dot = (v: string) => getColor((priorities.find(p => p.value === v)?.color) ?? 'gray').dot;
+  const text = (v: string) => getColor((priorities.find(p => p.value === v)?.color) ?? 'gray').text;
+  const bg = (v: string) => { const c = getColor((priorities.find(p => p.value === v)?.color) ?? 'gray'); return `${c.bg} hover:${c.bg}`; };
+  return { dot, text, bg, items: priorities };
+}
 
-/* ── Tags ── */
-export const BOOKING_TAGS = ['Manifest', 'Customs', 'Hold'] as const;
-export type BookingTag = typeof BOOKING_TAGS[number];
-
-const TAG_CFG: Record<BookingTag, { bg: string; text: string; border: string; dot: string }> = {
-  Manifest: { bg: 'bg-sky-50',    text: 'text-sky-700',    border: 'border-sky-200',    dot: 'bg-sky-400' },
-  Customs:  { bg: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200', dot: 'bg-violet-400' },
-  Hold:     { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', dot: 'bg-orange-400' },
-};
-
-function parseTags(raw: string | null | undefined): BookingTag[] {
+function parseTags(raw: string | null | undefined, tagValues: string[]): string[] {
   if (!raw) return [];
-  return raw.split(',').map(s => s.trim()).filter((s): s is BookingTag => BOOKING_TAGS.includes(s as BookingTag));
+  return raw.split(',').map(s => s.trim()).filter(s => tagValues.includes(s));
 }
-function serializeTags(tags: BookingTag[]): string {
-  return tags.join(',');
-}
+function serializeTags(tags: string[]): string { return tags.join(','); }
 
-function TagBadges({ tags }: { tags: BookingTag[] }) {
+function TagBadges({ tags, tagConfig }: { tags: string[]; tagConfig: { value: string; label: string; color: string }[] }) {
   if (tags.length === 0) return null;
   return (
     <div className="flex items-center gap-1 flex-wrap">
       {tags.map(t => {
-        const c = TAG_CFG[t];
+        const cfg = tagConfig.find(c => c.value === t);
+        const c = getColor(cfg?.color ?? 'gray');
         return (
           <span key={t} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[10px] font-bold ${c.bg} ${c.text} ${c.border}`}>
             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${c.dot}`} />
-            {t}
+            {cfg?.label ?? t}
           </span>
         );
       })}
@@ -375,8 +358,9 @@ function FilterSelect({ label, value, options, onChange }: {
 }
 
 /* ── Booking row ── */
-function BookingRow({ booking, agents, myUserEmail }: {
+function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
   booking: BookingListItem; agents: Agent[]; myUserEmail: string | undefined;
+  bookingConfig: ReturnType<typeof useGetBookingConfigQuery>['data'];
 }) {
   const [updateBooking, { isLoading: upd }] = useUpdateBookingMutation();
   const [patchStatus, { isLoading: pat }] = usePatchBookingStatusMutation();
@@ -386,7 +370,16 @@ function BookingRow({ booking, agents, myUserEmail }: {
   const [daNumber, setDaNumber] = useState('');
   const [daDesc, setDaDesc] = useState('');
   const busy = upd || pat;
-  const sc = S_CFG[booking.status] ?? S_CFG.Pending;
+
+  const cfgItems = bookingConfig ?? [];
+  const statusCfg = cfgItems.filter(c => c.type === 'status');
+  const priorityCfg = cfgItems.filter(c => c.type === 'priority');
+  const tagCfg = cfgItems.filter(c => c.type === 'tag');
+  const tagValues = tagCfg.map(t => t.value);
+
+  const statusItem = statusCfg.find(s => s.value === booking.status) ?? statusCfg[0];
+  const sc = statusItem ? { dot: getColor(statusItem.color).dot, text: getColor(statusItem.color).text, label: statusItem.label, path: S_PATH[statusItem.value] ?? S_PATH.Pending } : { dot: 'bg-gray-400', text: 'text-gray-500', label: booking.status, path: S_PATH.Completed };
+
   const isMine = !!myUserEmail && booking.agent?.email === myUserEmail;
   const supportIds = new Set(booking.support_agents.map(a => a.id));
   const availableForSupport = agents.filter(a => a.id !== booking.agent?.id && !supportIds.has(a.id));
@@ -415,10 +408,12 @@ function BookingRow({ booking, agents, myUserEmail }: {
       <div className="px-4 py-3.5">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[12px] font-bold font-mono text-gray-400 tracking-tight">{booking.id}</span>
-          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold ${P_BG[booking.priority]?.replace(/\s*hover:\S+/g, '')} ${P_TEXT[booking.priority]}`}>
-            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${P_DOT[booking.priority]}`} />
-            {booking.priority}
-          </span>
+          {(() => { const pi = priorityCfg.find(p => p.value === booking.priority); const pc = getColor(pi?.color ?? 'gray'); return (
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold ${pc.bg} ${pc.text}`}>
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${pc.dot}`} />
+              {pi?.label ?? booking.priority}
+            </span>
+          ); })()}
         </div>
         <p className="text-[13.5px] font-semibold text-gray-900 leading-snug line-clamp-2 mb-2">
           {booking.subject}
@@ -458,7 +453,7 @@ function BookingRow({ booking, agents, myUserEmail }: {
             {isCompleted && booking.da_number && (
               <DaBadges daNumber={booking.da_number} />
             )}
-            <TagBadges tags={parseTags(booking.tags)} />
+            <TagBadges tags={parseTags(booking.tags, tagValues)} tagConfig={tagCfg} />
           </div>
           <p className="text-[13.5px] font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors leading-snug truncate">
             {booking.subject}
@@ -481,21 +476,30 @@ function BookingRow({ booking, agents, myUserEmail }: {
       <div className="flex flex-col items-end gap-0.5 shrink-0 min-w-[120px] sm:min-w-[148px]">
 
         {/* Priority */}
-        <InlineDropdown
-          trigger={(open, toggle) => (
-            <button onClick={toggle}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-semibold w-full justify-end text-xs transition-colors ${open ? 'bg-gray-100' : P_BG[booking.priority]} ${P_TEXT[booking.priority] ?? 'text-gray-500'}`}>
-              <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${P_DOT[booking.priority] ?? 'bg-gray-300'}`} />
-              {booking.priority}
-              <Chevron cls="text-current opacity-40" />
-            </button>
-          )}>
-          {close => ['Very Urgent', 'Urgent', 'Not Urgent'].map(p => (
-            <DdItem key={p} label={p} active={booking.priority === p}
-              left={<span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${P_DOT[p] ?? 'bg-gray-300'}`} />}
-              onClick={() => { updateBooking({ id: booking.id, body: { priority: p } }); close(); }} />
-          ))}
-        </InlineDropdown>
+        {(() => {
+          const pItem = priorityCfg.find(p => p.value === booking.priority);
+          const pc = getColor(pItem?.color ?? 'gray');
+          return (
+            <InlineDropdown
+              trigger={(open, toggle) => (
+                <button onClick={toggle}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-semibold w-full justify-end text-xs transition-colors ${open ? 'bg-gray-100' : pc.bg} ${pc.text}`}>
+                  <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${pc.dot}`} />
+                  {pItem?.label ?? booking.priority}
+                  <Chevron cls="text-current opacity-40" />
+                </button>
+              )}>
+              {close => priorityCfg.map(p => {
+                const cc = getColor(p.color);
+                return (
+                  <DdItem key={p.value} label={p.label} active={booking.priority === p.value}
+                    left={<span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${cc.dot}`} />}
+                    onClick={() => { updateBooking({ id: booking.id, body: { priority: p.value } }); close(); }} />
+                );
+              })}
+            </InlineDropdown>
+          );
+        })()}
 
         {/* Agent — locked when booking belongs to current user */}
         {isMine ? (
@@ -586,44 +590,47 @@ function BookingRow({ booking, agents, myUserEmail }: {
               <Chevron cls="text-current opacity-40" />
             </button>
           )}>
-          {close => ['Pending', 'In Progress', 'Completed'].map(s => (
-            <DdItem key={s} label={S_CFG[s].label} active={booking.status === s}
-              left={<span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${S_CFG[s].dot}`} />}
-              onClick={() => handleStatusClick(s, close)} />
-          ))}
+          {close => statusCfg.map(s => {
+            const cc = getColor(s.color);
+            return (
+              <DdItem key={s.value} label={s.label} active={booking.status === s.value}
+                left={<span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${cc.dot}`} />}
+                onClick={() => handleStatusClick(s.value, close)} />
+            );
+          })}
         </InlineDropdown>
 
         {/* Tags — multi-select */}
         <InlineDropdown align="right"
           trigger={(open, toggle) => {
-            const activeTags = parseTags(booking.tags);
+            const activeTags = parseTags(booking.tags, tagValues);
             return (
               <button onClick={toggle}
                 className={`flex items-center gap-1 px-2.5 py-1 rounded-lg w-full justify-end text-xs font-semibold transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'} text-gray-500`}>
                 <svg className="w-3 h-3 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                 </svg>
-                {activeTags.length === 0 ? <span className="text-gray-300">Tags</span> : <TagBadges tags={activeTags} />}
+                {activeTags.length === 0 ? <span className="text-gray-300">Tags</span> : <TagBadges tags={activeTags} tagConfig={tagCfg} />}
                 <Chevron cls="text-gray-300 ml-0.5" />
               </button>
             );
           }}>
           {close => (
             <div className="py-1 min-w-[140px]">
-              {BOOKING_TAGS.map(tag => {
-                const activeTags = parseTags(booking.tags);
-                const active = activeTags.includes(tag);
-                const c = TAG_CFG[tag];
+              {tagCfg.map(tag => {
+                const activeTags = parseTags(booking.tags, tagValues);
+                const active = activeTags.includes(tag.value);
+                const c = getColor(tag.color);
                 return (
-                  <button key={tag}
+                  <button key={tag.value}
                     onClick={() => {
-                      const next = active ? activeTags.filter(t => t !== tag) : [...activeTags, tag];
+                      const next = active ? activeTags.filter(t => t !== tag.value) : [...activeTags, tag.value];
                       updateBooking({ id: booking.id, body: { tags: serializeTags(next) } });
                       close();
                     }}
                     className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-medium transition-colors ${active ? `${c.bg} ${c.text}` : 'text-gray-600 hover:bg-gray-50'}`}>
                     <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${active ? c.dot : 'bg-gray-200'}`} />
-                    {tag}
+                    {tag.label}
                     {active && <svg className="w-3 h-3 ml-auto text-current shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>}
                   </button>
                 );
@@ -735,6 +742,7 @@ export default function AllBookingsPage() {
   const status = activeTab === 'All' ? undefined : activeTab;
   const { data: agents = [] } = useGetAgentsQuery();
   const { data: stats } = useGetDashboardStatsQuery();
+  const { data: bookingConfig } = useGetBookingConfigQuery();
 
   const agentId = agentFilter === 'Any agent' ? undefined : agents.find(a => a.name === agentFilter)?.id;
   const priority = priorityFilter === 'Any priority' ? undefined : priorityFilter;
@@ -948,7 +956,7 @@ export default function AllBookingsPage() {
               ) : (
                 <div className="space-y-2">
                   {sorted.map(b => (
-                    <BookingRow key={b.id} booking={b} agents={agents} myUserEmail={user?.email} />
+                    <BookingRow key={b.id} booking={b} agents={agents} myUserEmail={user?.email} bookingConfig={bookingConfig} />
                   ))}
                 </div>
               )}

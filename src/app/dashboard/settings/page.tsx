@@ -8,11 +8,22 @@ import { useGetShiftsQuery, useCreateShiftMutation, useDeleteShiftMutation, Shif
 import { useGetAgentsQuery, useCreateAgentMutation, useDeleteAgentMutation, useUpdateAgentMutation } from '@/services/agentsApi';
 import { useGetRolesQuery, useCreateRoleMutation, useUpdateRoleMutation, useDeleteRoleMutation } from '@/services/rolesApi';
 import { useGetEmailTemplatesQuery, useCreateEmailTemplateMutation, useUpdateEmailTemplateMutation, useDeleteEmailTemplateMutation } from '@/services/emailTemplatesApi';
+import {
+  useGetBookingConfigQuery, useCreateBookingConfigMutation,
+  useUpdateBookingConfigMutation, useDeleteBookingConfigMutation,
+  AVAILABLE_COLORS, COLOR_MAP, BookingConfigItem,
+} from '@/services/bookingConfigApi';
 
-type SettingsSection = 'Shifts' | 'Users' | 'Roles' | 'Email Templates';
+type SettingsSection = 'Shifts' | 'Users' | 'Roles' | 'Email Templates' | 'Bookings';
 
 // ── Icons ───────────────────────────────────────────────────────────────────
 const Icons: Record<string, React.ReactNode> = {
+  Bookings: (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+        d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"/>
+    </svg>
+  ),
   General: (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
@@ -56,6 +67,12 @@ const sidebarNav: { group: string; items: { id: SettingsSection; label: string }
     ],
   },
   {
+    group: 'Configuration',
+    items: [
+      { id: 'Bookings', label: 'Bookings' },
+    ],
+  },
+  {
     group: 'Integrations',
     items: [
       { id: 'Email Templates', label: 'Email Templates' },
@@ -68,6 +85,7 @@ const sectionMeta: Record<SettingsSection, { title: string; description: string 
   Users:             { title: 'Users',              description: 'Manage your team members, roles and account access.' },
   Roles:             { title: 'Roles & Permissions',description: 'View role definitions and their associated permissions.' },
   'Email Templates': { title: 'Email Templates',    description: 'Customise automated email notifications sent to customers.' },
+  Bookings:          { title: 'Booking Options',    description: 'Configure available tags, statuses, and priorities for bookings.' },
 };
 
 const roleColors: Record<string, { color: string; badge: string }> = {
@@ -149,10 +167,19 @@ export default function SettingsPage() {
   const [editTemplateForm, setEditTemplateForm] = useState({ name: '', body: '' });
   const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(null);
 
+  const [bookingsTab, setBookingsTab] = useState<'tag' | 'status' | 'priority'>('tag');
+  const [newConfigItem, setNewConfigItem] = useState({ value: '', label: '', color: 'sky' });
+  const [editingConfigId, setEditingConfigId] = useState<string | null>(null);
+  const [editConfigForm, setEditConfigForm] = useState({ value: '', label: '', color: 'sky' });
+
   const { data: shifts = [], isLoading: shiftsLoading } = useGetShiftsQuery();
   const { data: agents = [], isLoading: agentsLoading, isFetching: agentsFetching } = useGetAgentsQuery();
   const { data: roles = [] } = useGetRolesQuery();
   const { data: templates = [] } = useGetEmailTemplatesQuery();
+  const { data: bookingConfig = [] } = useGetBookingConfigQuery();
+  const [createConfig, { isLoading: creatingConfig }] = useCreateBookingConfigMutation();
+  const [updateConfig, { isLoading: updatingConfig }] = useUpdateBookingConfigMutation();
+  const [deleteConfig] = useDeleteBookingConfigMutation();
   const [createRole, { isLoading: creatingRole }] = useCreateRoleMutation();
   const [updateRole, { isLoading: updatingRole }] = useUpdateRoleMutation();
   const [deleteRole] = useDeleteRoleMutation();
@@ -746,6 +773,136 @@ export default function SettingsPage() {
                   </div>
                 </div>
               )}
+
+              {/* ── BOOKINGS CONFIG ── */}
+              {activeSection === 'Bookings' && (() => {
+                const tabItems = bookingConfig.filter(c => c.type === bookingsTab).sort((a, b) => a.order_index - b.order_index);
+                const isTagTab = bookingsTab === 'tag';
+                return (
+                  <div>
+                    {/* Sub-tabs */}
+                    <div className="px-4 md:px-8 pt-4 flex items-center gap-1 border-b border-gray-100">
+                      {(['tag', 'status', 'priority'] as const).map(t => (
+                        <button key={t} onClick={() => { setBookingsTab(t); setEditingConfigId(null); }}
+                          className={`relative px-4 py-2 text-sm font-semibold transition-colors capitalize rounded-t-lg ${bookingsTab === t ? 'text-indigo-600 bg-indigo-50' : 'text-gray-400 hover:text-gray-700'}`}>
+                          {t === 'tag' ? 'Tags' : t === 'status' ? 'Statuses' : 'Priorities'}
+                          {bookingsTab === t && <motion.div layoutId="cfg-tab-line" className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 rounded-full" />}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Add form (tags only — status/priority values are fixed) */}
+                    {isTagTab && (
+                      <div className="px-4 md:px-8 py-4 border-b border-gray-100 bg-gray-50/60">
+                        <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Add New Tag</p>
+                        <div className="flex flex-wrap gap-3 items-end">
+                          <div className="flex-1 min-w-[140px]">
+                            <label className="block text-[11px] font-semibold text-gray-500 mb-1">Value &amp; Label</label>
+                            <input type="text" placeholder="e.g. Express"
+                              value={newConfigItem.value}
+                              onChange={e => setNewConfigItem(p => ({ ...p, value: e.target.value, label: e.target.value }))}
+                              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white w-full" />
+                          </div>
+                          <div className="flex-1 min-w-[160px]">
+                            <label className="block text-[11px] font-semibold text-gray-500 mb-1">Color</label>
+                            <div className="flex flex-wrap gap-1.5">
+                              {AVAILABLE_COLORS.map(c => {
+                                const cls = COLOR_MAP[c];
+                                return (
+                                  <button key={c} type="button" title={c}
+                                    onClick={() => setNewConfigItem(p => ({ ...p, color: c }))}
+                                    className={`w-6 h-6 rounded-full border-2 transition-all ${cls.dot} ${newConfigItem.color === c ? 'border-gray-800 scale-125' : 'border-transparent hover:scale-110'}`} />
+                                );
+                              })}
+                            </div>
+                          </div>
+                          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                            disabled={!newConfigItem.value || creatingConfig}
+                            onClick={async () => {
+                              if (!newConfigItem.value) return;
+                              await createConfig({ type: 'tag', value: newConfigItem.value, label: newConfigItem.label || newConfigItem.value, color: newConfigItem.color, order_index: tabItems.length });
+                              setNewConfigItem({ value: '', label: '', color: 'sky' });
+                            }}
+                            className="text-sm font-semibold bg-indigo-600 text-white px-5 py-2 rounded-lg disabled:opacity-50 flex items-center gap-1.5 self-end">
+                            {creatingConfig ? 'Adding…' : '+ Add Tag'}
+                          </motion.button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Items list */}
+                    <div className="px-4 md:px-8 py-5 space-y-2">
+                      {tabItems.length === 0 && (
+                        <p className="text-sm text-gray-400 text-center py-8">No {bookingsTab}s configured yet.</p>
+                      )}
+                      <AnimatePresence>
+                        {tabItems.map(item => {
+                          const c = COLOR_MAP[item.color] ?? COLOR_MAP['gray'];
+                          const isEditing = editingConfigId === item.id;
+                          return (
+                            <motion.div key={item.id} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
+                              className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all ${isEditing ? 'border-indigo-200 bg-indigo-50/30' : 'border-gray-100 bg-white hover:border-gray-200'}`}>
+                              {isEditing ? (
+                                <>
+                                  <input value={editConfigForm.label}
+                                    onChange={e => setEditConfigForm(p => ({ ...p, label: e.target.value, value: isTagTab ? e.target.value : p.value }))}
+                                    className="flex-1 px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white" />
+                                  <div className="flex gap-1">
+                                    {AVAILABLE_COLORS.map(col => {
+                                      const cc = COLOR_MAP[col];
+                                      return (
+                                        <button key={col} type="button" title={col}
+                                          onClick={() => setEditConfigForm(p => ({ ...p, color: col }))}
+                                          className={`w-5 h-5 rounded-full border-2 transition-all ${cc.dot} ${editConfigForm.color === col ? 'border-gray-700 scale-125' : 'border-transparent hover:scale-110'}`} />
+                                      );
+                                    })}
+                                  </div>
+                                  <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                                    disabled={updatingConfig}
+                                    onClick={async () => {
+                                      await updateConfig({ id: item.id, body: { label: editConfigForm.label, color: editConfigForm.color, ...(isTagTab ? { value: editConfigForm.label } : {}) } });
+                                      setEditingConfigId(null);
+                                    }}
+                                    className="flex items-center gap-1 text-xs font-bold px-3 py-1.5 bg-indigo-600 text-white rounded-lg disabled:opacity-60">
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/></svg>
+                                    Save
+                                  </motion.button>
+                                  <button onClick={() => setEditingConfigId(null)} className="text-xs text-gray-400 hover:text-gray-600 px-2">Cancel</button>
+                                </>
+                              ) : (
+                                <>
+                                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${c.bg} ${c.text} ${c.border}`}>
+                                    <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
+                                    {item.label}
+                                  </span>
+                                  {!isTagTab && <span className="text-xs text-gray-400 font-mono">{item.value}</span>}
+                                  <div className="ml-auto flex items-center gap-1.5">
+                                    <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                                      onClick={() => { setEditingConfigId(item.id); setEditConfigForm({ value: item.value, label: item.label, color: item.color }); }}
+                                      className="w-7 h-7 flex items-center justify-center rounded-md text-gray-300 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                    </motion.button>
+                                    {isTagTab && (
+                                      <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                                        onClick={() => deleteConfig(item.id)}
+                                        className="w-7 h-7 flex items-center justify-center rounded-md text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors">
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                      </motion.button>
+                                    )}
+                                  </div>
+                                </>
+                              )}
+                            </motion.div>
+                          );
+                        })}
+                      </AnimatePresence>
+                      {!isTagTab && (
+                        <p className="text-[11px] text-gray-400 mt-3 px-1">Status and priority values are fixed — only their label and color can be changed.</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
 
             </motion.div>
           </AnimatePresence>
