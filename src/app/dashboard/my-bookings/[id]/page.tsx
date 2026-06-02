@@ -349,7 +349,7 @@ export default function BookingDetailPage() {
               {/* Prev / Next navigation */}
               <div className="flex items-center gap-1">
                 <button
-                  onClick={() => prevId && router.push(`${listOrigin}/${prevId}`)}
+                  onClick={() => prevId && router.push(`/dashboard/my-bookings/${prevId}`)}
                   disabled={!prevId}
                   title="Previous booking"
                   className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
@@ -364,7 +364,7 @@ export default function BookingDetailPage() {
                   </span>
                 )}
                 <button
-                  onClick={() => nextId && router.push(`${listOrigin}/${nextId}`)}
+                  onClick={() => nextId && router.push(`/dashboard/my-bookings/${nextId}`)}
                   disabled={!nextId}
                   title="Next booking"
                   className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
