@@ -411,44 +411,131 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
     </Link>
 
     {/* ── Desktop row (≥ md) ── */}
-    <div className={`hidden md:flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 sm:py-3.5 rounded-xl border shadow-sm hover:shadow-md transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${isCompleted ? 'bg-orange-100 border-orange-200 hover:border-orange-300' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
+    <div className={`hidden md:flex items-center gap-2 px-3 py-2 rounded-xl border shadow-sm hover:shadow-md transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${isCompleted ? 'bg-orange-100 border-orange-200 hover:border-orange-300' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
 
       {/* Checkbox */}
       <input type="checkbox" onClick={e => e.stopPropagation()}
         className="w-4 h-4 rounded border-gray-300 text-indigo-600 cursor-pointer shrink-0 accent-indigo-600 opacity-30 group-hover:opacity-100 transition-opacity" />
 
-      {/* Clickable → detail */}
-      <Link href={`/dashboard/my-bookings/${booking.id}`} className="flex items-center gap-3 flex-1 min-w-0">
-        <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${avatarColor(booking.sender_email)} flex items-center justify-center text-white text-[13px] font-bold shrink-0 shadow-sm`}>
+      {/* Avatar */}
+      <Link href={`/dashboard/my-bookings/${booking.id}`} className="shrink-0">
+        <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${avatarColor(booking.sender_email)} flex items-center justify-center text-white text-[12px] font-bold shadow-sm`}>
           {booking.sender_email.charAt(0).toUpperCase()}
         </div>
-        <div className="flex-1 min-w-0">
+      </Link>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+
+        {/* Rows 1 + 2: linked to detail */}
+        <Link href={`/dashboard/my-bookings/${booking.id}`} className="block">
           <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+            <span className="text-gray-300 text-[10px] font-bold">#</span>
             <span className="text-[10px] font-bold text-gray-400 font-mono tracking-tight">{booking.id}</span>
-            {isCompleted && booking.da_number && (
-              <DaBadges daNumber={booking.da_number} />
-            )}
+            {isCompleted && booking.da_number && <DaBadges daNumber={booking.da_number} />}
             <TagBadges tags={parseTags(booking.tags, tagValues)} tagConfig={tagCfg} />
           </div>
-          <p className="text-[13.5px] font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors leading-snug truncate">
+          <p className="text-[13px] font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors leading-snug truncate">
             {booking.subject}
           </p>
-          <div className="flex items-center gap-1 mt-0.5">
+        </Link>
+
+        {/* Row 3: email + agent + support — not inside link */}
+        <div className="flex items-center gap-2 mt-0.5" onClick={e => e.stopPropagation()}>
+
+          {/* Sender */}
+          <div className="flex items-center gap-1 shrink-0">
             <svg className="w-3 h-3 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
             <span className="text-[11px] text-gray-400">{extractName(booking.sender_email)}</span>
           </div>
-        </div>
-      </Link>
 
-      {/* Timer — hidden on small screens to save space */}
-      <div className="hidden sm:flex items-center justify-center shrink-0 px-2 sm:px-4">
+          <div className="w-px h-3 bg-gray-200 shrink-0" />
+
+          {/* Agent */}
+          {isMine ? (
+            <div className="flex items-center gap-1 text-xs text-indigo-600 font-medium shrink-0">
+              <svg className="w-3 h-3 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              <span>You</span>
+              <svg className="w-2.5 h-2.5 text-indigo-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+              </svg>
+            </div>
+          ) : (
+            <InlineDropdown align="left"
+              trigger={(open, toggle) => (
+                <button onClick={toggle}
+                  className={`flex items-center gap-1 text-xs font-medium text-gray-500 shrink-0 rounded-md px-1.5 py-0.5 transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
+                  <svg className="w-3 h-3 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <span className="truncate max-w-[80px]">{booking.agent?.name ?? '—'}</span>
+                  <Chevron cls="text-gray-300" />
+                </button>
+              )}>
+              {close => (
+                <>
+                  <DdItem label="Unassign" active={!booking.agent}
+                    left={<span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-[9px] text-gray-400 font-bold shrink-0">—</span>}
+                    onClick={() => { updateBooking({ id: booking.id, body: { agent_id: undefined } }); close(); }} />
+                  {agents.map(a => (
+                    <DdItem key={a.id} label={a.name} active={booking.agent?.id === a.id}
+                      left={<div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[9px] font-bold shrink-0`}>{a.name.charAt(0).toUpperCase()}</div>}
+                      onClick={() => { updateBooking({ id: booking.id, body: { agent_id: a.id } }); close(); }} />
+                  ))}
+                </>
+              )}
+            </InlineDropdown>
+          )}
+
+          {/* Support agents */}
+          <div className="flex items-center gap-1">
+            {booking.support_agents.map(a => (
+              <button key={a.id}
+                title={booking.status === 'Completed' ? a.name : `${a.name} — click to remove`}
+                disabled={booking.status === 'Completed'}
+                onClick={() => removeSupport({ id: booking.id, agent_id: a.id })}
+                className="relative group/sa shrink-0 disabled:cursor-default">
+                <div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[8px] font-bold ring-1 ring-white`}>
+                  {a.name.charAt(0).toUpperCase()}
+                </div>
+                {booking.status !== 'Completed' && (
+                  <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-400 rounded-full hidden group-hover/sa:flex items-center justify-center text-white text-[7px] font-bold leading-none">×</div>
+                )}
+              </button>
+            ))}
+            {availableForSupport.length > 0 && booking.status !== 'Completed' && (
+              <InlineDropdown align="left"
+                trigger={(open, toggle) => (
+                  <button onClick={toggle} title="Add support agent"
+                    className={`w-5 h-5 rounded-full border border-dashed flex items-center justify-center transition-colors shrink-0 ${open ? 'border-violet-400 text-violet-500 bg-violet-50' : 'border-gray-300 text-gray-400 hover:border-violet-400 hover:text-violet-500'}`}>
+                    <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                    </svg>
+                  </button>
+                )}>
+                {close => availableForSupport.map(a => (
+                  <DdItem key={a.id} label={a.name}
+                    left={<div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[9px] font-bold shrink-0`}>{a.name.charAt(0).toUpperCase()}</div>}
+                    onClick={() => { addSupport({ id: booking.id, agent_id: a.id }); close(); }} />
+                ))}
+              </InlineDropdown>
+            )}
+          </div>
+
+        </div>
+      </div>
+
+      {/* Timer */}
+      <div className="hidden sm:flex items-center justify-center shrink-0 px-3">
         <ElapsedBadge booking={booking} />
       </div>
 
-      {/* Right meta — 3 stacked rows */}
-      <div className="flex flex-col items-end gap-0.5 shrink-0 min-w-[120px] sm:min-w-[148px]">
+      {/* Right meta — priority + status + tags only */}
+      <div className="flex flex-col items-end gap-0.5 shrink-0 min-w-[110px]">
 
         {/* Priority */}
         {(() => {
@@ -475,83 +562,6 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
             </InlineDropdown>
           );
         })()}
-
-        {/* Agent — locked when booking belongs to current user */}
-        {isMine ? (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg w-full justify-end text-xs text-indigo-600 font-medium">
-            <svg className="w-3.5 h-3.5 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            <span className="truncate">You</span>
-            <svg className="w-3 h-3 text-indigo-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-            </svg>
-          </div>
-        ) : (
-          <InlineDropdown
-            trigger={(open, toggle) => (
-              <button onClick={toggle}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-medium text-gray-500 w-full justify-end text-xs max-w-[160px] transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
-                <svg className="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                <span className="truncate">{booking.agent?.name ?? '—'}</span>
-                <Chevron cls="text-gray-300" />
-              </button>
-            )}>
-            {close => (
-              <>
-                <DdItem label="Unassign" active={!booking.agent}
-                  left={<span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-[9px] text-gray-400 font-bold shrink-0">—</span>}
-                  onClick={() => { updateBooking({ id: booking.id, body: { agent_id: undefined } }); close(); }} />
-                {agents.map(a => (
-                  <DdItem key={a.id} label={a.name} active={booking.agent?.id === a.id}
-                    left={
-                      <div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[9px] font-bold shrink-0`}>
-                        {a.name.charAt(0).toUpperCase()}
-                      </div>
-                    }
-                    onClick={() => { updateBooking({ id: booking.id, body: { agent_id: a.id } }); close(); }} />
-                ))}
-              </>
-            )}
-          </InlineDropdown>
-        )}
-
-        {/* Support agents */}
-        <div className="flex items-center gap-1 px-2.5 py-0.5 w-full justify-end" onClick={e => e.stopPropagation()}>
-          {booking.support_agents.map(a => (
-            <button key={a.id}
-              title={booking.status === 'Completed' ? a.name : `${a.name} — click to remove`}
-              disabled={booking.status === 'Completed'}
-              onClick={() => removeSupport({ id: booking.id, agent_id: a.id })}
-              className="relative group/sa shrink-0 disabled:cursor-default">
-              <div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[8px] font-bold ring-1 ring-white`}>
-                {a.name.charAt(0).toUpperCase()}
-              </div>
-              {booking.status !== 'Completed' && (
-                <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-400 rounded-full hidden group-hover/sa:flex items-center justify-center text-white text-[7px] font-bold leading-none">×</div>
-              )}
-            </button>
-          ))}
-          {availableForSupport.length > 0 && booking.status !== 'Completed' && (
-            <InlineDropdown align="right"
-              trigger={(open, toggle) => (
-                <button onClick={toggle} title="Add support agent"
-                  className={`w-5 h-5 rounded-full border border-dashed flex items-center justify-center transition-colors shrink-0 ${open ? 'border-violet-400 text-violet-500 bg-violet-50' : 'border-gray-300 text-gray-400 hover:border-violet-400 hover:text-violet-500'}`}>
-                  <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                  </svg>
-                </button>
-              )}>
-              {close => availableForSupport.map(a => (
-                <DdItem key={a.id} label={a.name}
-                  left={<div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[9px] font-bold shrink-0`}>{a.name.charAt(0).toUpperCase()}</div>}
-                  onClick={() => { addSupport({ id: booking.id, agent_id: a.id }); close(); }} />
-              ))}
-            </InlineDropdown>
-          )}
-        </div>
 
         {/* Status */}
         <InlineDropdown
