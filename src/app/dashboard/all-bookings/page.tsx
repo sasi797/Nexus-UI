@@ -430,8 +430,8 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
         {/* Rows 1 + 2: linked to detail */}
         <Link href={`/dashboard/my-bookings/${booking.id}`} className="block">
           <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-            <span className="text-gray-300 text-[10px] font-bold">#</span>
-            <span className="text-[10px] font-bold text-gray-400 font-mono tracking-tight">{booking.id}</span>
+            <span className="text-gray-400 text-[10px] font-bold">#</span>
+            <span className="text-[10px] font-bold text-gray-500 font-mono tracking-tight">{booking.id}</span>
             {isCompleted && booking.da_number && <DaBadges daNumber={booking.da_number} />}
             <TagBadges tags={parseTags(booking.tags, tagValues)} tagConfig={tagCfg} />
           </div>
@@ -445,13 +445,13 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
 
           {/* Sender */}
           <div className="flex items-center gap-1 shrink-0">
-            <svg className="w-3 h-3 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3 h-3 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
-            <span className="text-[11px] text-gray-400">{extractName(booking.sender_email)}</span>
+            <span className="text-[11px] text-gray-500">{extractName(booking.sender_email)}</span>
           </div>
 
-          <div className="w-px h-3 bg-gray-200 shrink-0" />
+          <div className="w-px h-3 bg-gray-300 shrink-0" />
 
           {/* Agent */}
           {isMine ? (
@@ -468,12 +468,12 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
             <InlineDropdown align="left"
               trigger={(open, toggle) => (
                 <button onClick={toggle}
-                  className={`flex items-center gap-1 text-xs font-medium text-gray-500 shrink-0 rounded-md px-1.5 py-0.5 transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
-                  <svg className="w-3 h-3 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  className={`flex items-center gap-1 text-xs font-medium text-gray-600 shrink-0 rounded-md px-1.5 py-0.5 transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
+                  <svg className="w-3 h-3 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
                   <span className="truncate max-w-[80px]">{booking.agent?.name ?? '—'}</span>
-                  <Chevron cls="text-gray-300" />
+                  <Chevron cls="text-gray-400" />
                 </button>
               )}>
               {close => (
@@ -591,12 +591,12 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
             const activeTags = parseTags(booking.tags, tagValues);
             return (
               <button onClick={toggle}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg w-full justify-end text-xs font-semibold transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'} text-gray-500`}>
-                <svg className="w-3 h-3 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg w-full justify-end text-xs font-semibold transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'} text-gray-600`}>
+                <svg className="w-3 h-3 shrink-0 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                 </svg>
-                {activeTags.length === 0 ? <span className="text-gray-300">Tags</span> : <TagBadges tags={activeTags} tagConfig={tagCfg} />}
-                <Chevron cls="text-gray-300 ml-0.5" />
+                {activeTags.length === 0 ? <span className="text-gray-400">Tags</span> : <TagBadges tags={activeTags} tagConfig={tagCfg} />}
+                <Chevron cls="text-gray-400 ml-0.5" />
               </button>
             );
           }}>
