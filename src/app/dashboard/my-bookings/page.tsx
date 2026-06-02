@@ -705,11 +705,16 @@ export default function MyBookingsPage() {
   const [pageSize, setPageSize] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
 
   /* Reset to page 1 whenever filters/tab/sort/pageSize change */
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab, priorityFilter, fromFilter, createdFilter, closedAtFilter, sortBy, pageSize, searchQuery]);
+  }, [activeTab, priorityFilter, fromFilter, createdFilter, closedAtFilter, sortBy, pageSize, debouncedSearch]);
 
   const status = activeTab === 'All' ? undefined : activeTab;
   const { data: agents = [], isLoading: agentsLoading } = useGetAgentsQuery();
@@ -733,6 +738,7 @@ export default function MyBookingsPage() {
     priority,
     sender_email: fromFilter === 'Any' ? undefined : fromFilter,
     agent_id: myAgentId,
+    search: debouncedSearch || undefined,
     created_after: CREATED_MAP[createdFilter],
     closed_after: CLOSED_MAP[closedAtFilter],
     page: currentPage,
@@ -748,25 +754,11 @@ export default function MyBookingsPage() {
 
   const allItems = data?.items ?? [];
 
-  function matchesSearch(b: BookingListItem) {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return [
-      b.id, b.subject, b.sender_email,
-      b.da_number ?? '', b.priority, b.status,
-      b.tags ?? '',
-      b.agent?.name ?? '', b.agent?.email ?? '',
-      ...b.support_agents.map(a => a.name),
-    ].some(v => v.toLowerCase().includes(q));
-  }
-
-  const searchFiltered = searchQuery ? allItems.filter(matchesSearch) : allItems;
-
-  const TAB_COUNTS: Record<Tab, number | undefined> = searchQuery ? {
-    All:           searchFiltered.length,
-    Pending:       searchFiltered.filter(b => b.status === 'Pending').length,
-    'In Progress': searchFiltered.filter(b => b.status === 'In Progress').length,
-    Completed:     searchFiltered.filter(b => b.status === 'Completed').length,
+  const TAB_COUNTS: Record<Tab, number | undefined> = debouncedSearch ? {
+    All:           activeTab === 'All'         ? data?.total : undefined,
+    Pending:       activeTab === 'Pending'     ? data?.total : undefined,
+    'In Progress': activeTab === 'In Progress' ? data?.total : undefined,
+    Completed:     activeTab === 'Completed'   ? data?.total : undefined,
   } : {
     All:           hasNoAgentProfile ? 0 : cAll?.total,
     Pending:       hasNoAgentProfile ? 0 : cPend?.total,
@@ -796,7 +788,7 @@ export default function MyBookingsPage() {
       }
       return new Date(b.received_at).getTime() - new Date(a.received_at).getTime();
     })
-    .filter(matchesSearch);
+;
 
   /* Persist the current visible list + origin so the detail page's Back/Prev/Next work from this context */
   useEffect(() => {
@@ -888,7 +880,7 @@ export default function MyBookingsPage() {
           {searchQuery && (
             <>
               <span className="absolute right-8 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-indigo-500 whitespace-nowrap pointer-events-none">
-                {sorted.length} result{sorted.length !== 1 ? 's' : ''}
+                {isFetching ? '…' : `${data?.total ?? 0} result${(data?.total ?? 0) !== 1 ? 's' : ''}`}
               </span>
               <button onClick={() => setSearchQuery('')}
                 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
