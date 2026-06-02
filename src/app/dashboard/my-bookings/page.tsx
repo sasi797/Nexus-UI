@@ -730,7 +730,7 @@ export default function MyBookingsPage() {
     'Today': 'today', 'This week': 'week', 'This month': 'month', 'Anytime': undefined,
   };
 
-  const { data, isLoading, isFetching, isError, refetch } = useGetBookingsQuery({
+  const { data, currentData, isLoading, isFetching, isError, refetch } = useGetBookingsQuery({
     status,
     priority,
     sender_email: fromFilter === 'Any' ? undefined : fromFilter,
@@ -752,10 +752,10 @@ export default function MyBookingsPage() {
   const allItems = data?.items ?? [];
 
   const TAB_COUNTS: Record<Tab, number | undefined> = debouncedSearch ? {
-    All:           activeTab === 'All'         ? data?.total : undefined,
-    Pending:       activeTab === 'Pending'     ? data?.total : undefined,
-    'In Progress': activeTab === 'In Progress' ? data?.total : undefined,
-    Completed:     activeTab === 'Completed'   ? data?.total : undefined,
+    All:           activeTab === 'All'         ? currentData?.total : undefined,
+    Pending:       activeTab === 'Pending'     ? currentData?.total : undefined,
+    'In Progress': activeTab === 'In Progress' ? currentData?.total : undefined,
+    Completed:     activeTab === 'Completed'   ? currentData?.total : undefined,
   } : {
     All:           hasNoAgentProfile ? 0 : cAll?.total,
     Pending:       hasNoAgentProfile ? 0 : cPend?.total,

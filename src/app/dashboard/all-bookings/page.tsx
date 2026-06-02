@@ -754,7 +754,7 @@ export default function AllBookingsPage() {
     'Today': 'today', 'This week': 'week', 'This month': 'month', 'Anytime': undefined,
   };
 
-  const { data, isLoading, isFetching, isError, refetch } = useGetBookingsQuery({
+  const { data, currentData, isLoading, isFetching, isError, refetch } = useGetBookingsQuery({
     status,
     priority,
     sender_email: fromFilter === 'Any' ? undefined : fromFilter,
@@ -768,16 +768,18 @@ export default function AllBookingsPage() {
 
   const allItems = data?.items ?? [];
 
+  // Use currentData (undefined while a new query is in-flight) so tab counts
+  // never flash a stale total from the previously-selected tab.
   const TAB_COUNTS: Record<Tab, number | undefined> = debouncedSearch ? {
-    All:           activeTab === 'All'         ? data?.total : undefined,
-    Pending:       activeTab === 'Pending'     ? data?.total : undefined,
-    'In Progress': activeTab === 'In Progress' ? data?.total : undefined,
-    Completed:     activeTab === 'Completed'   ? data?.total : undefined,
+    All:           activeTab === 'All'         ? currentData?.total : undefined,
+    Pending:       activeTab === 'Pending'     ? currentData?.total : undefined,
+    'In Progress': activeTab === 'In Progress' ? currentData?.total : undefined,
+    Completed:     activeTab === 'Completed'   ? currentData?.total : undefined,
   } : {
-    All:           activeTab === 'All'         ? data?.total : stats?.total_bookings,
-    Pending:       activeTab === 'Pending'     ? data?.total : stats?.pending,
-    'In Progress': activeTab === 'In Progress' ? data?.total : stats?.in_progress,
-    Completed:     activeTab === 'Completed'   ? data?.total : stats?.completed,
+    All:           activeTab === 'All'         ? (currentData?.total ?? stats?.total_bookings) : stats?.total_bookings,
+    Pending:       activeTab === 'Pending'     ? (currentData?.total ?? stats?.pending)        : stats?.pending,
+    'In Progress': activeTab === 'In Progress' ? (currentData?.total ?? stats?.in_progress)    : stats?.in_progress,
+    Completed:     activeTab === 'Completed'   ? (currentData?.total ?? stats?.completed)      : stats?.completed,
   };
 
   // Accumulate sender options only from unfiltered loads so the dropdown never shrinks
