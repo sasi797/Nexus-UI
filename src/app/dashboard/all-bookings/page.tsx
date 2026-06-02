@@ -510,12 +510,20 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
             {availableForSupport.length > 0 && booking.status !== 'Completed' && (
               <InlineDropdown align="left"
                 trigger={(open, toggle) => (
-                  <button onClick={toggle} title="Add support agent"
-                    className={`w-5 h-5 rounded-full border border-dashed flex items-center justify-center transition-colors shrink-0 ${open ? 'border-violet-400 text-violet-500 bg-violet-50' : 'border-gray-300 text-gray-400 hover:border-violet-400 hover:text-violet-500'}`}>
-                    <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                    </svg>
-                  </button>
+                  <div className="relative group/add shrink-0">
+                    <button onClick={toggle}
+                      className={`w-5 h-5 rounded-full border border-dashed flex items-center justify-center transition-colors ${open ? 'border-violet-400 text-violet-500 bg-violet-50' : 'border-gray-300 text-gray-400 hover:border-violet-400 hover:text-violet-500'}`}>
+                      <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                      </svg>
+                    </button>
+                    <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 opacity-0 translate-y-1 group-hover/add:opacity-100 group-hover/add:translate-y-0 transition-all duration-150">
+                      <div className="relative bg-gray-900 text-white text-[11px] font-medium px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap">
+                        Add support agent
+                        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45 rounded-sm" />
+                      </div>
+                    </div>
+                  </div>
                 )}>
                 {close => availableForSupport.map(a => (
                   <DdItem key={a.id} label={a.name}

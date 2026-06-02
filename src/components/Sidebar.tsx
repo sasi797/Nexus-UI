@@ -71,14 +71,14 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
       variants={slideLeft}
       initial="hidden"
       animate="visible"
-      className="w-56 h-full min-h-screen bg-white border-r border-gray-200/70 flex flex-col shadow-sm"
+      className="w-56 h-full min-h-screen bg-white flex flex-col shadow-[2px_0_12px_0_rgba(0,0,0,0.07)]"
     >
       {/* Logo */}
       <motion.div
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1, duration: 0.4 }}
-        className="px-5 h-14 flex items-center border-b border-gray-100"
+        className="px-5 h-14 flex items-center shadow-[0_2px_8px_0_rgba(0,0,0,0.06)] z-10 relative"
       >
         <div className="flex items-center gap-2.5">
           <motion.div
@@ -150,7 +150,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5, duration: 0.4 }}
-        className="px-3 pb-5 border-t border-gray-100 pt-4 space-y-1"
+        className="px-3 pb-5 pt-4 space-y-1 shadow-[0_-2px_8px_0_rgba(0,0,0,0.06)] relative z-10"
       >
         <div className="flex items-center gap-2.5 px-3 py-2 mb-1">
           <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white text-xs font-bold shadow">
