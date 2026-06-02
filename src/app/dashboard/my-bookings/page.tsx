@@ -604,6 +604,7 @@ function BookingRow({ booking, agents, myUserEmail }: { booking: BookingListItem
                     onClick={() => {
                       const next = active ? activeTags.filter(t => t !== tag) : [...activeTags, tag];
                       updateBooking({ id: booking.id, body: { tags: serializeTags(next) } });
+                      _close();
                     }}
                     className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-medium transition-colors ${active ? `${c.bg} ${c.text}` : 'text-gray-600 hover:bg-gray-50'}`}>
                     <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${active ? c.dot : 'bg-gray-200'}`} />
@@ -703,11 +704,12 @@ export default function MyBookingsPage() {
   const [fromFilter, setFromFilter] = useState('Any');
   const [pageSize, setPageSize] = useState(25);
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
 
   /* Reset to page 1 whenever filters/tab/sort/pageSize change */
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab, priorityFilter, fromFilter, createdFilter, closedAtFilter, sortBy, pageSize]);
+  }, [activeTab, priorityFilter, fromFilter, createdFilter, closedAtFilter, sortBy, pageSize, searchQuery]);
 
   const status = activeTab === 'All' ? undefined : activeTab;
   const { data: agents = [], isLoading: agentsLoading } = useGetAgentsQuery();
@@ -744,14 +746,33 @@ export default function MyBookingsPage() {
   const { data: cProg } = useGetBookingsQuery({ ...countBase, status: 'In Progress' },   { skip: skipCount });
   const { data: cDone } = useGetBookingsQuery({ ...countBase, status: 'Completed' },     { skip: skipCount });
 
-  const TAB_COUNTS: Record<Tab, number | undefined> = {
+  const allItems = data?.items ?? [];
+
+  function matchesSearch(b: BookingListItem) {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return [
+      b.id, b.subject, b.sender_email,
+      b.da_number ?? '', b.priority, b.status,
+      b.tags ?? '',
+      b.agent?.name ?? '', b.agent?.email ?? '',
+      ...b.support_agents.map(a => a.name),
+    ].some(v => v.toLowerCase().includes(q));
+  }
+
+  const searchFiltered = searchQuery ? allItems.filter(matchesSearch) : allItems;
+
+  const TAB_COUNTS: Record<Tab, number | undefined> = searchQuery ? {
+    All:           searchFiltered.length,
+    Pending:       searchFiltered.filter(b => b.status === 'Pending').length,
+    'In Progress': searchFiltered.filter(b => b.status === 'In Progress').length,
+    Completed:     searchFiltered.filter(b => b.status === 'Completed').length,
+  } : {
     All:           hasNoAgentProfile ? 0 : cAll?.total,
     Pending:       hasNoAgentProfile ? 0 : cPend?.total,
     'In Progress': hasNoAgentProfile ? 0 : cProg?.total,
     Completed:     hasNoAgentProfile ? 0 : cDone?.total,
   };
-
-  const allItems = data?.items ?? [];
 
   const [senderOptions, setSenderOptions] = useState<string[]>([]);
   useEffect(() => {
@@ -763,7 +784,8 @@ export default function MyBookingsPage() {
   }, [allItems]);
   const uniqueSenders = ['Any', ...senderOptions];
 
-  const sorted = [...allItems].sort((a, b) => {
+  const sorted = [...allItems]
+    .sort((a, b) => {
       if (sortBy === 'Priority') {
         const ord: Record<string, number> = { 'Very Urgent': 0, Urgent: 1, 'Not Urgent': 2 };
         return (ord[a.priority] ?? 3) - (ord[b.priority] ?? 3);
@@ -773,7 +795,8 @@ export default function MyBookingsPage() {
         return due(a) - due(b);
       }
       return new Date(b.received_at).getTime() - new Date(a.received_at).getTime();
-    });
+    })
+    .filter(matchesSearch);
 
   /* Persist the current visible list + origin so the detail page's Back/Prev/Next work from this context */
   useEffect(() => {
@@ -850,6 +873,33 @@ export default function MyBookingsPage() {
           </button>
         </motion.div>
 
+        {/* Search bar */}
+        <motion.div variants={staggerItem} className="relative">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search by ID, subject, email, DA number, priority, status, tags, agent…"
+            className={`w-full pl-9 py-2.5 bg-white border rounded-xl text-sm text-gray-700 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all shadow-sm ${searchQuery ? 'pr-28' : 'pr-4'}`}
+          />
+          {searchQuery && (
+            <>
+              <span className="absolute right-8 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-indigo-500 whitespace-nowrap pointer-events-none">
+                {sorted.length} result{sorted.length !== 1 ? 's' : ''}
+              </span>
+              <button onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </>
+          )}
+        </motion.div>
+
         {/* Ticket list */}
         <motion.div variants={staggerItem} className="flex-1 min-h-0">
           <AnimatePresence mode="wait" custom={tabDir}>
@@ -895,8 +945,15 @@ export default function MyBookingsPage() {
                 </div>
               ) : sorted.length === 0 ? (
                 <div className="py-16 text-center bg-white rounded-xl border border-gray-100 shadow-sm">
-                  <p className="text-3xl mb-2">📋</p>
-                  <p className="text-sm font-semibold text-gray-400">No {activeTab === 'All' ? '' : TAB_LABEL[activeTab]} tickets</p>
+                  <p className="text-3xl mb-2">{searchQuery ? '🔍' : '📋'}</p>
+                  <p className="text-sm font-semibold text-gray-400">
+                    {searchQuery ? `No results for "${searchQuery}"` : `No ${activeTab === 'All' ? '' : TAB_LABEL[activeTab]} tickets`}
+                  </p>
+                  {searchQuery && (
+                    <button onClick={() => setSearchQuery('')} className="mt-2 text-xs text-indigo-500 hover:text-indigo-700 font-medium transition-colors">
+                      Clear search
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-2">
