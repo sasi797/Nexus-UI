@@ -78,7 +78,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1, duration: 0.4 }}
-        className="px-5 py-5 border-b border-gray-100"
+        className="px-5 h-14 flex items-center border-b border-gray-100"
       >
         <div className="flex items-center gap-2.5">
           <motion.div
@@ -99,7 +99,6 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
           </motion.div>
           <div>
             <p className="font-bold text-gray-900 text-sm leading-tight tracking-tight">Nexus</p>
-            <p className="text-[10px] text-gray-500 font-medium">BookOps AI</p>
           </div>
         </div>
       </motion.div>
@@ -109,7 +108,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
         variants={staggerContainer}
         initial="hidden"
         animate="visible"
-        className="flex-1 py-4 px-3 space-y-0.5"
+        className="flex-1 pt-4 pb-1 px-3 space-y-0.5"
       >
         {navItems.filter(item => !item.adminOnly || user?.role !== 'agent').map((item) => {
           const active = isActive(item.href);
