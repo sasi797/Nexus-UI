@@ -11,7 +11,7 @@ import {
 } from '@/services/bookingsApi';
 import { useGetAgentsQuery, Agent } from '@/services/agentsApi';
 import { useGetDashboardStatsQuery } from '@/services/dashboardApi';
-import { useGetBookingConfigQuery, COLOR_MAP, getColor, BookingConfigItem } from '@/services/bookingConfigApi';
+import { useGetBookingConfigQuery, getColor, BookingConfigItem } from '@/services/bookingConfigApi';
 import { useAppSelector } from '@/store/hooks';
 import ApiErrorState from '@/components/ApiErrorState';
 
@@ -44,15 +44,6 @@ function formatHMS(ms: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-function formatDuration(ms: number): string {
-  const totalMins = Math.floor(ms / 60_000);
-  const mins = totalMins % 60;
-  const hours = Math.floor(totalMins / 60) % 24;
-  const days = Math.floor(totalMins / 1440);
-  if (days > 0) return `${days}d ${hours}h ${mins}m`;
-  if (hours > 0) return `${hours}h ${mins}m`;
-  return `${totalMins}m`;
-}
 
 function elapsedCfg(ms: number) {
   const mins = ms / 60_000;
@@ -172,15 +163,6 @@ function DaBadges({ daNumber }: { daNumber: string }) {
 }
 
 const SLA: Record<string, number> = { 'Very Urgent': 4, Urgent: 8, 'Not Urgent': 24 };
-function dueIn(b: BookingListItem) {
-  const dueAt = new Date(b.received_at).getTime() + (SLA[b.priority] ?? 8) * 3_600_000;
-  const ms = dueAt - Date.now();
-  if (ms <= 0) return 'Overdue';
-  const h = Math.floor(ms / 3_600_000);
-  if (h >= 48) return `Due in ${Math.floor(h / 24)} days`;
-  if (h >= 1) return `Due in ${h} hour${h !== 1 ? 's' : ''}`;
-  return `Due in ${Math.floor((ms % 3_600_000) / 60_000)} min`;
-}
 
 /* Status icon paths (fixed by value) */
 const S_PATH: Record<string, string> = {
@@ -190,13 +172,6 @@ const S_PATH: Record<string, string> = {
 };
 
 /* Helpers that read from live config */
-function usePriorityCfg(config: ReturnType<typeof useGetBookingConfigQuery>['data']) {
-  const priorities = (config ?? []).filter((c: BookingConfigItem) => c.type === 'priority');
-  const dot = (v: string) => getColor((priorities.find((p: BookingConfigItem) => p.value === v)?.color) ?? 'gray').dot;
-  const text = (v: string) => getColor((priorities.find((p: BookingConfigItem) => p.value === v)?.color) ?? 'gray').text;
-  const bg = (v: string) => { const c = getColor((priorities.find((p: BookingConfigItem) => p.value === v)?.color) ?? 'gray'); return `${c.bg} hover:${c.bg}`; };
-  return { dot, text, bg, items: priorities };
-}
 
 function parseTags(raw: string | null | undefined, tagValues: string[]): string[] {
   if (!raw) return [];
@@ -720,7 +695,7 @@ export default function AllBookingsPage() {
   }
 
   const [filtersOpen, setFiltersOpen] = useState(true);
-  const [sortBy, setSortBy] = useState('Date created');
+  const [sortBy] = useState('Date created');
   const [agentFilter, setAgentFilter] = useState('Any agent');
   const [priorityFilter, setPriorityFilter] = useState('Any priority');
   const [createdFilter, setCreatedFilter] = useState('Anytime');
@@ -936,7 +911,10 @@ export default function AllBookingsPage() {
             }`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h18M3 12h18M3 19h18" />
+              <circle cx="8" cy="5" r="2" fill="currentColor" stroke="none" />
+              <circle cx="16" cy="12" r="2" fill="currentColor" stroke="none" />
+              <circle cx="11" cy="19" r="2" fill="currentColor" stroke="none" />
             </svg>
           </button>
           <div className="pointer-events-none absolute right-0 top-full mt-2 z-50 opacity-0 translate-y-1 group-hover/ft:opacity-100 group-hover/ft:translate-y-0 transition-all duration-150">
