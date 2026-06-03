@@ -40,6 +40,25 @@ function formatBytes(n: number | null) {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function extractForwardedSender(bodyText: string): string | null {
+  if (!bodyText) return null;
+  const lines = bodyText.split('\n');
+  // Walk the first few lines — if the body starts with Outlook "From: ..." it's a forward
+  for (const line of lines.slice(0, 8)) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (/^From:\s/i.test(trimmed)) {
+      const angleMatch = trimmed.match(/<([^>@\s]+@[^>@\s]+)>/);
+      if (angleMatch) return angleMatch[1].trim();
+      const bareMatch = trimmed.match(/From:\s+(\S+@\S+)/i);
+      if (bareMatch) return bareMatch[1].replace(/[;,>]$/, '').trim();
+    }
+    // Stop if we hit content that isn't a forwarded-header line
+    if (!/^(From:|Sent:|To:|Subject:|Date:|Cc:)/i.test(trimmed)) break;
+  }
+  return null;
+}
+
 function splitQuotedContent(text: string): { main: string; quoted: string | null } {
   const lines = text.split('\n');
   for (let i = 0; i < lines.length; i++) {
@@ -296,6 +315,7 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
   const [replyText, setReplyText] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [sent, setSent] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [forwardTo, setForwardTo] = useState('');
   const [toInput, setToInput] = useState('');
   const [extraToChips, setExtraToChips] = useState<string[]>([]);
@@ -319,16 +339,20 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
   const firstInbound = messages.find(m => m.direction === 'inbound');
   const isMailbox = (e: string) => e.toLowerCase() === MAILBOX_EMAIL;
 
-  // Reply: just the sender
-  const replyToEmails = firstInbound
-    ? [firstInbound.from_email]
-    : [senderEmail];
+  // For forwarded emails the body starts with "From: Name <email>" — extract the real customer
+  const forwardedOriginalSender = firstInbound?.body_text
+    ? extractForwardedSender(firstInbound.body_text)
+    : null;
+  const effectiveInboundSender = forwardedOriginalSender ?? firstInbound?.from_email ?? senderEmail;
 
-  // Reply All: sender + original To addresses (excluding our mailbox)
+  // Reply: real customer (or forwarder if not a forward)
+  const replyToEmails = [effectiveInboundSender];
+
+  // Reply All: real customer + original To addresses (excluding our mailbox)
   const replyAllToEmails = (() => {
     if (!firstInbound) return [senderEmail];
     const all = new Set<string>();
-    all.add(firstInbound.from_email);
+    all.add(effectiveInboundSender);
     firstInbound.to_email?.split(',').map(e => e.trim()).filter(e => e && !isMailbox(e)).forEach(e => all.add(e));
     return [...all];
   })();
@@ -375,6 +399,7 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
   const handleSend = async () => {
     if (!replyText.trim() && selectedFiles.length === 0) return;
     if (composeTab === 'Forward' && !forwardTo.trim()) return;
+    setSendError(null);
     const fd = new FormData();
     fd.append('body_text', replyText.trim() || ' ');
     selectedFiles.forEach(f => fd.append('files', f));
@@ -391,7 +416,12 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
     const allCc = [...ccChips, ...pendingCc];
     if (allCc.length > 0) fd.append('cc_emails', allCc.join(', '));
 
-    await replyMessage({ bookingId, formData: fd });
+    const result = await replyMessage({ bookingId, formData: fd });
+    if ('error' in result) {
+      const errMsg = (result.error as { data?: { detail?: string } })?.data?.detail ?? 'Failed to send. Please try again.';
+      setSendError(errMsg);
+      return;
+    }
     setReplyText('');
     setSelectedFiles([]);
     setToInput('');
@@ -614,6 +644,16 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
                   <button onClick={() => removeFile(i)} className="text-gray-400 hover:text-gray-600 transition-colors leading-none ml-0.5 text-sm">✕</button>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* Send error */}
+          {sendError && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600 font-medium">
+              <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.293 4.707a1 1 0 011.414 0L21 13.414A2 2 0 0119.586 15H4.414A2 2 0 013 13.414l9.293-8.707z"/>
+              </svg>
+              {sendError}
             </div>
           )}
 
