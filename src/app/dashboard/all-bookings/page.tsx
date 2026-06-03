@@ -1045,7 +1045,7 @@ export default function AllBookingsPage() {
       <motion.div variants={staggerItem} className={`order-1 lg:order-2 w-full lg:w-80 lg:shrink-0 flex-col gap-3 ${filtersOpen ? 'flex' : 'hidden'}`}>
 
         {/* Filters card */}
-        <div className="bg-slate-50 rounded-xl border border-slate-200 shadow-sm p-4 space-y-4 lg:sticky lg:top-0 max-h-[calc(100vh-7rem)] overflow-y-auto">
+        <div className="bg-gray-50 border-t-[1.5px] border-gray-300 p-4 space-y-4 lg:sticky lg:top-0 max-h-[calc(100vh-7rem)] overflow-y-auto">
 
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold tracking-widest text-gray-400 uppercase">Filters</span>
