@@ -64,9 +64,9 @@ function formatDuration(ms: number): string {
 
 function elapsedCfg(ms: number) {
   const mins = ms / 60_000;
-  if (mins <= 15) return { text: 'text-emerald-600', bg: 'bg-emerald-50 ring-emerald-200', dot: 'bg-emerald-400', label: 'Low' };
-  if (mins <= 30) return { text: 'text-amber-600',   bg: 'bg-amber-50 ring-amber-200',     dot: 'bg-amber-400',   label: 'Med' };
-  return              { text: 'text-red-600',         bg: 'bg-red-50 ring-red-200',         dot: 'bg-red-500',     label: 'High' };
+  if (mins <= 15) return { text: 'text-emerald-700', bg: 'bg-emerald-100 ring-emerald-300', dot: 'bg-emerald-500', label: 'Low' };
+  if (mins <= 30) return { text: 'text-amber-700',   bg: 'bg-amber-100 ring-amber-300',     dot: 'bg-amber-500',   label: 'Med' };
+  return              { text: 'text-red-700',         bg: 'bg-red-100 ring-red-300',         dot: 'bg-red-600',     label: 'High' };
 }
 
 function ElapsedBadge({ booking }: { booking: BookingListItem }) {
@@ -92,10 +92,10 @@ function ElapsedBadge({ booking }: { booking: BookingListItem }) {
 
   const cfg = elapsedCfg(ms);
   return (
-    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md ring-1 text-[10px] font-mono font-bold ${cfg.bg} ${cfg.text}`}>
-      <span className={`w-2 h-2 rounded-full shrink-0 animate-pulse ${cfg.dot}`} />
+    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md ring-1 text-[11px] font-mono font-bold ${cfg.bg} ${cfg.text}`}>
+      <span className={`w-2.5 h-2.5 rounded-full shrink-0 animate-pulse ${cfg.dot}`} />
       {formatHMS(ms)}
-      <span className="text-[10px] font-semibold opacity-60">{cfg.label}</span>
+      <span className="text-[11px] font-semibold opacity-60">{cfg.label}</span>
     </span>
   );
 }
@@ -446,14 +446,16 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: { booking: 
 
         {/* Row 3: agent + support — not inside link */}
         <div className="flex items-center gap-2 mt-0.5" onClick={e => e.stopPropagation()}>
+          {/* Received time */}
+          <span className="text-[11px] text-gray-400 font-medium shrink-0">{formatReceivedAt(booking.received_at)}</span>
           {/* Agent */}
           {isMine ? (
-            <div className="flex items-center gap-1 text-xs text-indigo-600 font-medium shrink-0">
-              <svg className="w-3 h-3 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center gap-1 text-[11px] text-gray-400 font-medium shrink-0">
+              <svg className="w-3 h-3 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
               <span>You</span>
-              <svg className="w-2.5 h-2.5 text-indigo-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-2.5 h-2.5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
               </svg>
             </div>
@@ -461,12 +463,12 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: { booking: 
             <InlineDropdown align="left"
               trigger={(open, toggle) => (
                 <button onClick={toggle}
-                  className={`flex items-center gap-1 text-[12px] font-semibold text-gray-700 shrink-0 rounded-md px-1.5 py-0.5 transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
-                  <svg className="w-3.5 h-3.5 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  className={`flex items-center gap-1 text-[11px] font-medium text-gray-400 shrink-0 rounded-md px-1.5 py-0.5 transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
+                  <svg className="w-3 h-3 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
                   <span className="truncate max-w-[80px]">{booking.agent?.name ?? '—'}</span>
-                  <Chevron cls="text-gray-400" />
+                  <Chevron cls="text-gray-300" />
                 </button>
               )}>
               {close => (
@@ -523,7 +525,6 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: { booking: 
 
       {/* Timer */}
       <div className="flex flex-col items-center justify-center shrink-0 px-3 gap-1">
-        <span className="text-[11px] text-gray-600 font-semibold font-mono">{formatReceivedAt(booking.received_at)}</span>
         <ElapsedBadge booking={booking} />
       </div>
 
