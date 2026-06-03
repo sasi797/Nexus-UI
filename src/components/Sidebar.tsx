@@ -50,7 +50,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const dispatch  = useAppDispatch();
   const user      = useAppSelector(state => state.auth.user);
   const [logoutApi] = useLogoutMutation();
-  const { data: notifData } = useGetNotificationsQuery(undefined, { pollingInterval: 30_000 });
+  const { data: notifData } = useGetNotificationsQuery(undefined, { pollingInterval: 60_000 });
   const unreadCount = notifData?.unread_count ?? 0;
   const badgeLabel  = unreadCount > 99 ? '99+' : String(unreadCount);
 

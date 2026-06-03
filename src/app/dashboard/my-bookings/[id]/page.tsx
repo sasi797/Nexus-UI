@@ -249,7 +249,7 @@ export default function BookingDetailPage() {
   const [daDesc, setDaDesc]               = useState('');
 
   const { data: b, isLoading }                   = useGetBookingQuery(id);
-  const { data: bookingEvents = [] }             = useGetBookingEventsQuery(id);
+  const { data: bookingEvents = [] }             = useGetBookingEventsQuery(id, { pollingInterval: 30_000 });
   const [patchStatus,    { isLoading: patching }] = usePatchBookingStatusMutation();
   const [updateBooking,  { isLoading: saving }]   = useUpdateBookingMutation();
   const [addSupport]                              = useAddSupportAgentMutation();

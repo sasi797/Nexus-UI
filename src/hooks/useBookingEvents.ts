@@ -16,8 +16,10 @@ export function useBookingEvents(token: string | null) {
     es.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data);
+
         if (data.type === 'new_booking') {
           dispatch(api.util.invalidateTags(['Booking', 'Dashboard']));
+
         } else if (data.type === 'new_message') {
           const bookingId: string | undefined = data.booking_id;
           const reopened: boolean = data.reopened === true;
@@ -28,13 +30,22 @@ export function useBookingEvents(token: string | null) {
             (tags as unknown[]).push('Booking', 'Dashboard');
           }
           dispatch(api.util.invalidateTags(tags));
+
+        } else if (data.type === 'booking_event') {
+          const bookingId: string | undefined = data.booking_id;
+          const tags: Parameters<typeof api.util.invalidateTags>[0] = bookingId
+            ? [{ type: 'Booking', id: bookingId }, 'Dashboard']
+            : ['Booking', 'Dashboard'];
+          dispatch(api.util.invalidateTags(tags));
+
+        } else if (data.type === 'notification') {
+          dispatch(api.util.invalidateTags(['Notification']));
         }
       } catch {
         // ignore malformed messages
       }
     };
 
-    // Do NOT call es.close() here — EventSource auto-reconnects on error when left open
     es.onerror = () => {};
 
     return () => es.close();

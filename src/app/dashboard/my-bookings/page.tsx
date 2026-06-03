@@ -804,66 +804,52 @@ export default function MyBookingsPage() {
   const endIdx     = Math.min(currentPage * pageSize, totalCount);
 
   return (
-    <motion.div variants={pageTransition} initial="hidden" animate="visible" className="flex flex-col lg:flex-row gap-4 h-full min-h-0">
+    <motion.div variants={pageTransition} initial="hidden" animate="visible" className="flex flex-col gap-3 h-full min-h-0">
 
-      {/* ── Main ── */}
-      <div className="flex-1 min-w-0 flex flex-col gap-3 order-2 lg:order-1">
+      {/* Bookings tab switcher */}
+      <div className="flex items-center border-b border-gray-200">
+        <Link href="/dashboard/all-bookings"
+          className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium text-gray-400 border-b-2 border-transparent -mb-px hover:text-gray-700 hover:border-gray-300 transition-all whitespace-nowrap">
+          🌐 All Bookings
+        </Link>
+        <span className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold text-indigo-600 border-b-2 border-indigo-500 -mb-px cursor-default whitespace-nowrap">
+          🎯 My Bookings
+        </span>
+      </div>
 
-        {/* Bookings tab switcher */}
-        <div className="flex items-center border-b border-gray-200">
-          <Link href="/dashboard/all-bookings"
-            className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium text-gray-400 border-b-2 border-transparent -mb-px hover:text-gray-700 hover:border-gray-300 transition-all whitespace-nowrap">
-            🌐 All Bookings
-          </Link>
-          <span className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold text-indigo-600 border-b-2 border-indigo-500 -mb-px cursor-default whitespace-nowrap">
-            🎯 My Bookings
-          </span>
+      {/* Status tabs + search + pagination + filter toggle — single row */}
+      <motion.div variants={staggerItem} className="flex items-center gap-2">
+
+        {/* Left: status tabs */}
+        <div className="flex items-center border-b border-gray-200 shrink-0">
+          {TABS.map(tab => {
+            const isActive = activeTab === tab;
+            return (
+              <button key={tab} onClick={() => handleTabChange(tab)}
+                className={`flex items-center gap-1.5 px-4 py-2 text-[12.5px] font-semibold border-b-2 -mb-px transition-all duration-150 whitespace-nowrap shrink-0 ${
+                  isActive
+                    ? 'text-indigo-600 border-indigo-500'
+                    : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300'
+                }`}>
+                {tab === 'All' && <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>}
+                {tab === 'Pending' && <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>}
+                {tab === 'In Progress' && <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>}
+                {tab === 'Completed' && <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+                {TAB_LABEL[tab]}
+                {TAB_COUNTS[tab] !== undefined && (
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none ${
+                    isActive ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-400'
+                  }`}>
+                    {TAB_COUNTS[tab]}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Tab bar + filter toggle */}
-        <motion.div variants={staggerItem} className="flex items-center gap-2 overflow-x-auto">
-          <div className="flex items-center border-b border-gray-200 shrink-0">
-            {TABS.map(tab => {
-              const isActive = activeTab === tab;
-              return (
-                <button key={tab} onClick={() => handleTabChange(tab)}
-                  className={`flex items-center gap-1.5 px-4 py-2 text-[12.5px] font-semibold border-b-2 -mb-px transition-all duration-150 whitespace-nowrap shrink-0 ${
-                    isActive
-                      ? 'text-indigo-600 border-indigo-500'
-                      : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300'
-                  }`}>
-                  {tab === 'All' && <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>}
-                  {tab === 'Pending' && <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>}
-                  {tab === 'In Progress' && <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>}
-                  {tab === 'Completed' && <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-                  {TAB_LABEL[tab]}
-                  {TAB_COUNTS[tab] !== undefined && (
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none ${
-                      isActive ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-400'
-                    }`}>
-                      {TAB_COUNTS[tab]}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          {/* Filter toggle */}
-          <button
-            onClick={() => setFiltersOpen(v => !v)}
-            className={`ml-auto shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              filtersOpen ? 'bg-indigo-50 text-indigo-600 ring-1 ring-indigo-200' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
-            }`}
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-            </svg>
-            {filtersOpen ? 'Hide Filters' : 'Filters'}
-          </button>
-        </motion.div>
-
-        {/* Search bar */}
-        <motion.div variants={staggerItem} className="relative">
+        {/* Search */}
+        <div className="relative w-64 shrink-0 ml-auto">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
@@ -871,8 +857,8 @@ export default function MyBookingsPage() {
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search by ID, subject, email, DA number, priority, status, tags, agent…"
-            className={`w-full pl-9 py-2.5 bg-white border rounded-xl text-sm text-gray-700 placeholder:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-300 transition-all shadow-sm ${searchQuery ? 'pr-28' : 'pr-4'}`}
+            placeholder="Search by ID, subject, email, DA…"
+            className={`w-full pl-9 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 focus:bg-white transition-all ${searchQuery ? 'pr-28' : 'pr-4'}`}
           />
           {searchQuery && (
             <>
@@ -887,84 +873,14 @@ export default function MyBookingsPage() {
               </button>
             </>
           )}
-        </motion.div>
+        </div>
 
-        {/* Ticket list */}
-        <motion.div variants={staggerItem} className="flex-1 min-h-0">
-          <AnimatePresence mode="wait" custom={tabDir}>
-            <motion.div
-              key={activeTab}
-              custom={tabDir}
-              variants={{
-                enter: (d: number) => ({ opacity: 0, x: d * 22 }),
-                center: { opacity: 1, x: 0 },
-                exit: (d: number) => ({ opacity: 0, x: d * -14 }),
-              }}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{ duration: 0.19, ease: [0.25, 0.1, 0.25, 1] }}
-            >
-              {isError ? (
-                <ApiErrorState title="Failed to load tickets" onRetry={refetch} />
-              ) : isLoading ? (
-                <div className="space-y-2">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="flex items-center gap-3 px-4 py-3.5 bg-white rounded-xl border border-gray-100 shadow-sm">
-                      <div className="w-4 h-4 bg-gray-100 rounded animate-pulse shrink-0" />
-                      <div className="w-10 h-10 bg-gray-100 rounded-full animate-pulse shrink-0" />
-                      <div className="flex-1 space-y-2">
-                        <div className="h-2.5 w-14 bg-gray-100 rounded animate-pulse" />
-                        <div className="h-3.5 w-2/3 bg-gray-100 rounded animate-pulse" />
-                        <div className="h-2.5 w-1/3 bg-gray-100 rounded animate-pulse" />
-                      </div>
-                      <div className="flex flex-col items-end gap-1.5">
-                        <div className="h-5 w-20 bg-gray-100 rounded-lg animate-pulse" />
-                        <div className="h-5 w-24 bg-gray-100 rounded-lg animate-pulse" />
-                        <div className="h-5 w-16 bg-gray-100 rounded-lg animate-pulse" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : hasNoAgentProfile ? (
-                <div className="py-16 text-center bg-white rounded-xl border border-gray-100 shadow-sm">
-                  <p className="text-3xl mb-2">🔗</p>
-                  <p className="text-sm font-semibold text-gray-400">No agent profile linked to your account</p>
-                  <p className="text-xs text-gray-300 mt-1">Ask an admin to create an agent profile for you in Settings</p>
-                </div>
-              ) : sorted.length === 0 ? (
-                <div className="py-16 text-center bg-white rounded-xl border border-gray-100 shadow-sm">
-                  <p className="text-3xl mb-2">{searchQuery ? '🔍' : '📋'}</p>
-                  <p className="text-sm font-semibold text-gray-400">
-                    {searchQuery ? `No results for "${searchQuery}"` : `No ${activeTab === 'All' ? '' : TAB_LABEL[activeTab]} tickets`}
-                  </p>
-                  {searchQuery && (
-                    <button onClick={() => setSearchQuery('')} className="mt-2 text-xs text-indigo-500 hover:text-indigo-700 font-medium transition-colors">
-                      Clear search
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {sorted.map(b => <BookingRow key={b.id} booking={b} agents={agents} myUserEmail={user?.email} bookingConfig={bookingConfig} />)}
-                </div>
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </motion.div>
-
-      </div>
-
-      {/* ── Filters sidebar ── */}
-      <motion.div variants={staggerItem} className={`order-1 lg:order-2 w-full lg:w-80 lg:shrink-0 flex-col gap-3 ${filtersOpen ? 'flex' : 'hidden'}`}>
-
-        {/* Export + pagination — top-right corner */}
-        <div className="flex items-center justify-end gap-1.5 text-sm text-gray-500 lg:mt-6">
-
+        {/* Pagination */}
+        <div className="flex items-center gap-1.5 shrink-0 pb-1">
           <InlineDropdown align="right"
             trigger={(open, toggle) => (
               <button onClick={toggle}
-                className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-gray-600 font-semibold bg-white hover:bg-gray-50 transition-colors shadow-sm ${open ? 'border-indigo-300 ring-2 ring-indigo-100' : 'border-gray-200'}`}>
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-gray-600 font-semibold bg-white hover:bg-gray-50 transition-colors shadow-sm text-[12px] ${open ? 'border-indigo-300 ring-2 ring-indigo-100' : 'border-gray-200'}`}>
                 {pageSize}/pg
                 <Chevron cls={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
               </button>
@@ -981,51 +897,148 @@ export default function MyBookingsPage() {
             {totalCount === 0 ? '0' : `${startIdx}–${endIdx}`} of {totalCount}
           </span>
 
-          <button
-            disabled={currentPage <= 1}
-            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+          <button disabled={currentPage <= 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
             className="p-0.5 rounded hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
           </button>
-
-          <button
-            disabled={currentPage >= totalPages}
-            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+          <button disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
             className="p-0.5 rounded hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
           </button>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-4 lg:sticky lg:top-0 max-h-[calc(100vh-7rem)] overflow-y-auto lg:mt-6">
-
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold tracking-widest text-gray-400 uppercase">Filters</span>
-            <button className="p-1 rounded hover:bg-gray-100 transition-colors">
-              <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </button>
+        {/* Filter toggle icon */}
+        <div className="relative group/ft shrink-0 mb-1">
+          <button
+            onClick={() => setFiltersOpen(v => !v)}
+            className={`flex items-center justify-center w-8 h-8 rounded-lg border transition-colors ${
+              filtersOpen ? 'bg-indigo-50 border-indigo-200 text-indigo-600 hover:bg-indigo-100' : 'bg-white border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-gray-600'
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h18M3 12h18M3 19h18" />
+              <circle cx="8" cy="5" r="2" fill="currentColor" stroke="none" />
+              <circle cx="16" cy="12" r="2" fill="currentColor" stroke="none" />
+              <circle cx="11" cy="19" r="2" fill="currentColor" stroke="none" />
+            </svg>
+          </button>
+          <div className="pointer-events-none absolute right-0 top-full mt-2 z-50 opacity-0 translate-y-1 group-hover/ft:opacity-100 group-hover/ft:translate-y-0 transition-all duration-150">
+            <div className="bg-gray-900 text-white text-[11px] font-medium px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap">
+              {filtersOpen ? 'Hide Filters' : 'Show Filters'}
+              <div className="absolute -top-1 right-2.5 w-2 h-2 bg-gray-900 rotate-45 rounded-sm" />
+            </div>
           </div>
-
-          <FilterSelect label="From" value={fromFilter} options={uniqueSenders} onChange={setFromFilter} />
-
-          <div className="border-t border-gray-100" />
-
-          <FilterSelect label="Status" value={activeTab}
-            options={['All', 'Pending', 'In Progress', 'Completed']}
-            onChange={(v) => handleTabChange(v as typeof activeTab)} />
-
-          <div className="border-t border-gray-100" />
-
-          <FilterSelect label="Priority" value={priorityFilter}
-            options={['Any priority', 'Very Urgent', 'Urgent', 'Not Urgent']} onChange={setPriorityFilter} />
-          <FilterSelect label="Created" value={createdFilter}
-            options={['Anytime', 'Today', 'Last 7 days', 'Last 30 days']} onChange={setCreatedFilter} />
-          <FilterSelect label="Closed at" value={closedAtFilter}
-            options={['Anytime', 'Today', 'This week', 'This month']} onChange={setClosedAtFilter} />
         </div>
+
       </motion.div>
+
+      {/* Two-column content area */}
+      <div className="flex flex-1 min-h-0 flex-col lg:flex-row gap-4">
+
+        {/* ── Main ── */}
+        <div className="flex-1 min-w-0 flex flex-col gap-3 order-2 lg:order-1">
+
+          {/* Ticket list */}
+          <motion.div variants={staggerItem} className="flex-1 min-h-0">
+            <AnimatePresence mode="wait" custom={tabDir}>
+              <motion.div
+                key={activeTab}
+                custom={tabDir}
+                variants={{
+                  enter: (d: number) => ({ opacity: 0, x: d * 22 }),
+                  center: { opacity: 1, x: 0 },
+                  exit: (d: number) => ({ opacity: 0, x: d * -14 }),
+                }}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.19, ease: [0.25, 0.1, 0.25, 1] }}
+              >
+                {isError ? (
+                  <ApiErrorState title="Failed to load tickets" onRetry={refetch} />
+                ) : isLoading ? (
+                  <div className="space-y-2">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <div key={i} className="flex items-center gap-3 px-4 py-3.5 bg-white rounded-xl border border-gray-100 shadow-sm">
+                        <div className="w-4 h-4 bg-gray-100 rounded animate-pulse shrink-0" />
+                        <div className="w-10 h-10 bg-gray-100 rounded-full animate-pulse shrink-0" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-2.5 w-14 bg-gray-100 rounded animate-pulse" />
+                          <div className="h-3.5 w-2/3 bg-gray-100 rounded animate-pulse" />
+                          <div className="h-2.5 w-1/3 bg-gray-100 rounded animate-pulse" />
+                        </div>
+                        <div className="flex flex-col items-end gap-1.5">
+                          <div className="h-5 w-20 bg-gray-100 rounded-lg animate-pulse" />
+                          <div className="h-5 w-24 bg-gray-100 rounded-lg animate-pulse" />
+                          <div className="h-5 w-16 bg-gray-100 rounded-lg animate-pulse" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : hasNoAgentProfile ? (
+                  <div className="py-16 text-center bg-white rounded-xl border border-gray-100 shadow-sm">
+                    <p className="text-3xl mb-2">🔗</p>
+                    <p className="text-sm font-semibold text-gray-400">No agent profile linked to your account</p>
+                    <p className="text-xs text-gray-300 mt-1">Ask an admin to create an agent profile for you in Settings</p>
+                  </div>
+                ) : sorted.length === 0 ? (
+                  <div className="py-16 text-center bg-white rounded-xl border border-gray-100 shadow-sm">
+                    <p className="text-3xl mb-2">{searchQuery ? '🔍' : '📋'}</p>
+                    <p className="text-sm font-semibold text-gray-400">
+                      {searchQuery ? `No results for "${searchQuery}"` : `No ${activeTab === 'All' ? '' : TAB_LABEL[activeTab]} tickets`}
+                    </p>
+                    {searchQuery && (
+                      <button onClick={() => setSearchQuery('')} className="mt-2 text-xs text-indigo-500 hover:text-indigo-700 font-medium transition-colors">
+                        Clear search
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {sorted.map(b => <BookingRow key={b.id} booking={b} agents={agents} myUserEmail={user?.email} bookingConfig={bookingConfig} />)}
+                  </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </motion.div>
+
+        </div>
+
+        {/* ── Filters sidebar ── */}
+        <motion.div variants={staggerItem} className={`order-1 lg:order-2 w-full lg:w-80 lg:shrink-0 flex-col gap-3 ${filtersOpen ? 'flex' : 'hidden'}`}>
+
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-4 lg:sticky lg:top-0 max-h-[calc(100vh-7rem)] overflow-y-auto">
+
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold tracking-widest text-gray-400 uppercase">Filters</span>
+              <button className="p-1 rounded hover:bg-gray-100 transition-colors">
+                <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </button>
+            </div>
+
+            <FilterSelect label="From" value={fromFilter} options={uniqueSenders} onChange={setFromFilter} />
+
+            <div className="border-t border-gray-100" />
+
+            <FilterSelect label="Status" value={activeTab}
+              options={['All', 'Pending', 'In Progress', 'Completed']}
+              onChange={(v) => handleTabChange(v as typeof activeTab)} />
+
+            <div className="border-t border-gray-100" />
+
+            <FilterSelect label="Priority" value={priorityFilter}
+              options={['Any priority', 'Very Urgent', 'Urgent', 'Not Urgent']} onChange={setPriorityFilter} />
+            <FilterSelect label="Created" value={createdFilter}
+              options={['Anytime', 'Today', 'Last 7 days', 'Last 30 days']} onChange={setCreatedFilter} />
+            <FilterSelect label="Closed at" value={closedAtFilter}
+              options={['Anytime', 'Today', 'This week', 'This month']} onChange={setClosedAtFilter} />
+          </div>
+        </motion.div>
+
+      </div>
 
     </motion.div>
   );

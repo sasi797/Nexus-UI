@@ -50,7 +50,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
   const [tz, setTz]       = useState<'Asia/Kolkata' | 'Europe/London'>('Asia/Kolkata');
   const ref = useRef<HTMLDivElement>(null);
 
-  const { data }      = useGetNotificationsQuery(undefined, { pollingInterval: 30_000 });
+  const { data }      = useGetNotificationsQuery(undefined, { pollingInterval: 60_000 });
   const [markRead]    = useMarkReadMutation();
   const [markAllRead] = useMarkAllReadMutation();
 

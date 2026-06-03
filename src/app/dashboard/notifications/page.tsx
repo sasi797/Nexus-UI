@@ -163,7 +163,7 @@ function NotifCard({ n, onRead, onDelete }: { n: NotificationItem; onRead: (id: 
 
 /* ── Page ── */
 export default function NotificationsPage() {
-  const { data, isLoading } = useGetNotificationsQuery(undefined, { pollingInterval: 15_000 });
+  const { data, isLoading } = useGetNotificationsQuery(undefined, { pollingInterval: 60_000 });
   const [markRead] = useMarkReadMutation();
   const [markAllRead, { isLoading: markingAll }] = useMarkAllReadMutation();
   const [deleteNotif] = useDeleteNotificationMutation();
