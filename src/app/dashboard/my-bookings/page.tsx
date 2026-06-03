@@ -813,10 +813,10 @@ export default function MyBookingsPage() {
         <div className="flex items-center border-b border-gray-200">
           <Link href="/dashboard/all-bookings"
             className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium text-gray-400 border-b-2 border-transparent -mb-px hover:text-gray-700 hover:border-gray-300 transition-all whitespace-nowrap">
-            🗂️ All Bookings
+            🌐 All Bookings
           </Link>
           <span className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold text-indigo-600 border-b-2 border-indigo-500 -mb-px cursor-default whitespace-nowrap">
-            🙋 My Bookings
+            🎯 My Bookings
           </span>
         </div>
 
