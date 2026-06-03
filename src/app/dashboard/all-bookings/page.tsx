@@ -427,7 +427,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
 
       {/* Avatar */}
       <Link href={`/dashboard/my-bookings/${booking.id}`} className="shrink-0">
-        <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${avatarColor(booking.sender_email)} flex items-center justify-center text-white text-[12px] font-bold shadow-sm`}>
+        <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${avatarColor(booking.sender_email)} flex items-center justify-center text-white text-[12px] font-bold shadow-sm`}>
           {booking.sender_email.charAt(0).toUpperCase()}
         </div>
       </Link>

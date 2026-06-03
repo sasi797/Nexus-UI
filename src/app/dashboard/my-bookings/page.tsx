@@ -426,7 +426,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: { booking: 
       {/* Clickable → detail */}
       <Link href={`/dashboard/my-bookings/${booking.id}`} className="flex items-center gap-3 flex-1 min-w-0">
         {/* Avatar */}
-        <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${avatarColor(booking.sender_email)} flex items-center justify-center text-white text-[13px] font-bold shrink-0 shadow-sm`}>
+        <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${avatarColor(booking.sender_email)} flex items-center justify-center text-white text-[13px] font-bold shrink-0 shadow-sm`}>
           {booking.sender_email.charAt(0).toUpperCase()}
         </div>
 
