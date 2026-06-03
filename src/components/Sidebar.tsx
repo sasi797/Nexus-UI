@@ -114,7 +114,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
           const active = isActive(item.href);
           return (
             <motion.div key={item.href} variants={staggerItem}>
-              <Link href={item.href} onClick={onClose}>
+              <Link href={item.href} onClick={onClose} className="no-underline">
                 <motion.div
                   whileHover={{ x: 3 }} whileTap={{ scale: 0.97 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 20 }}
