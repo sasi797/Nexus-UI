@@ -553,7 +553,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
             <InlineDropdown
               trigger={(open, toggle) => (
                 <button onClick={toggle}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-semibold w-full justify-end text-xs transition-colors ${open ? 'bg-gray-100' : pc.bg} ${pc.text}`}>
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-semibold w-full justify-end text-xs transition-colors ${open ? 'bg-gray-100' : ''} ${pc.text}`}>
                   <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${pc.dot}`} />
                   {pItem?.label ?? booking.priority}
                   <Chevron cls="text-current opacity-40" />
