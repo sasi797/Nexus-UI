@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/store';
-import { useGetMessagesQuery, useReplyMessageMutation } from '@/services/emailApi';
+import { useGetMessagesQuery, useReplyMessageMutation, useSyncEmailsMutation } from '@/services/emailApi';
 import { useGetEmailTemplatesQuery } from '@/services/emailTemplatesApi';
 import type { EmailMessage, EmailAttachment } from '@/services/emailApi';
 
@@ -57,6 +57,24 @@ function extractForwardedSender(bodyText: string): string | null {
     if (!/^(From:|Sent:|To:|Subject:|Date:|Cc:)/i.test(trimmed)) break;
   }
   return null;
+}
+
+function splitHtmlQuotedContent(html: string): { main: string; quoted: string | null } {
+  // Outlook wraps the quoted thread in <div id="divRplyFwdMsg"> or <div id="divRplyFwdMsg_...">
+  const outlookIdx = html.search(/<div[^>]+id=["']divRplyFwdMsg/i);
+  if (outlookIdx > 30) return { main: html.slice(0, outlookIdx), quoted: html.slice(outlookIdx) };
+
+  // Some clients use <blockquote> for the quoted section
+  const bqIdx = html.search(/<blockquote/i);
+  if (bqIdx > 30) return { main: html.slice(0, bqIdx), quoted: html.slice(bqIdx) };
+
+  // Outlook <hr> separator before "From: / Sent: / To:" quote header
+  const hrIdx = html.search(/<hr[\s/>]/i);
+  if (hrIdx > 30 && /(From:|Sent:|Subject:)/i.test(html.slice(hrIdx, hrIdx + 600))) {
+    return { main: html.slice(0, hrIdx), quoted: html.slice(hrIdx) };
+  }
+
+  return { main: html, quoted: null };
 }
 
 function splitQuotedContent(text: string): { main: string; quoted: string | null } {
@@ -246,12 +264,14 @@ function MessageCard({ msg, token, defaultOpen }: { msg: EmailMessage; token: st
                 </div>
               )}
 
-              {/* Attachments — shown above body */}
-              {msg.attachments.length > 0 && (
+              {/* Attachments — shown above body (inline signature images filtered out) */}
+              {msg.attachments.filter(a => !/^image\d+\.(png|jpe?g|gif|webp)$/i.test(a.filename)).length > 0 && (
                 <div className="pt-3 pb-3 border-b border-gray-50 flex flex-wrap gap-2">
-                  {msg.attachments.map(att => (
-                    <AttachmentChip key={att.id} att={att} token={token} />
-                  ))}
+                  {msg.attachments
+                    .filter(a => !/^image\d+\.(png|jpe?g|gif|webp)$/i.test(a.filename))
+                    .map(att => (
+                      <AttachmentChip key={att.id} att={att} token={token} />
+                    ))}
                 </div>
               )}
 
@@ -280,12 +300,34 @@ function MessageCard({ msg, token, defaultOpen }: { msg: EmailMessage; token: st
                       )}
                     </>
                   );
-                })() : msg.body_html ? (
-                  <div
-                    className="prose prose-sm max-w-none text-gray-700 [&_*]:max-w-full [&_img]:max-w-full"
-                    dangerouslySetInnerHTML={{ __html: msg.body_html }}
-                  />
-                ) : <span className="text-[12px] italic text-gray-400">(No text content)</span>}
+                })() : msg.body_html ? (() => {
+                  const { main, quoted } = splitHtmlQuotedContent(msg.body_html);
+                  return (
+                    <>
+                      <div
+                        className="prose prose-sm max-w-none text-gray-700 [&_*]:max-w-full [&_img]:max-w-full"
+                        dangerouslySetInnerHTML={{ __html: main }}
+                      />
+                      {quoted && (
+                        <div className="mt-2">
+                          <button
+                            onClick={() => setShowQuoted(v => !v)}
+                            className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 hover:text-indigo-500 transition-colors px-2 py-1 rounded hover:bg-indigo-50/50"
+                          >
+                            <span className="text-base leading-none tracking-tighter">···</span>
+                            <span className="ml-1">{showQuoted ? 'Hide quoted text' : 'Show quoted text'}</span>
+                          </button>
+                          {showQuoted && (
+                            <div
+                              className="mt-2 text-[12px] text-gray-400 border-l-2 border-gray-200 pl-3 prose prose-sm max-w-none [&_*]:max-w-full [&_img]:max-w-full"
+                              dangerouslySetInnerHTML={{ __html: quoted }}
+                            />
+                          )}
+                        </div>
+                      )}
+                    </>
+                  );
+                })() : <span className="text-[12px] italic text-gray-400">(No text content)</span>}
               </div>
             </div>
           </motion.div>
@@ -308,6 +350,8 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
   const accessToken = useSelector((s: RootState) => s.auth.accessToken);
   const { data: messages = [], isLoading } = useGetMessagesQuery(bookingId, { pollingInterval: 20000 });
   const [replyMessage, { isLoading: sending }] = useReplyMessageMutation();
+  const [syncEmails, { isLoading: syncing }] = useSyncEmailsMutation();
+  const [syncResult, setSyncResult] = useState<string | null>(null);
 
   const [internalTab, setInternalTab] = useState<ComposeTab>('Reply');
   const composeTab = controlledTab ?? internalTab;
@@ -466,8 +510,40 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
 
   const composePlaceholder = composeTab === 'Forward' ? 'Write your forwarded message…' : 'Write your reply…';
 
+  const handleSync = async () => {
+    setSyncResult(null);
+    try {
+      const res = await syncEmails(bookingId).unwrap();
+      setSyncResult(res.synced > 0 ? `${res.synced} new email${res.synced !== 1 ? 's' : ''} synced` : 'Already up to date');
+    } catch {
+      setSyncResult('Sync failed');
+    }
+    setTimeout(() => setSyncResult(null), 4000);
+  };
+
   return (
     <div className="space-y-3">
+      {/* Sync button */}
+      <div className="flex items-center justify-end gap-2">
+        {syncResult && (
+          <span className="text-xs text-gray-500">{syncResult}</span>
+        )}
+        <button
+          onClick={handleSync}
+          disabled={syncing}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-colors disabled:opacity-50"
+        >
+          <svg
+            className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`}
+            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          {syncing ? 'Syncing…' : 'Sync Emails'}
+        </button>
+      </div>
+
       {/* Message cards */}
       {isLoading ? (
         <div className="space-y-3">

@@ -35,8 +35,15 @@ export const emailApi = api.injectEndpoints({
       }),
       invalidatesTags: (_r, _e, { bookingId }) => [{ type: 'EmailMessage', id: bookingId }],
     }),
+    syncEmails: build.mutation<{ synced: number }, string>({
+      query: (bookingId) => ({
+        url: `/bookings/${bookingId}/sync-emails`,
+        method: 'POST',
+      }),
+      invalidatesTags: (_r, _e, bookingId) => [{ type: 'EmailMessage', id: bookingId }],
+    }),
   }),
   overrideExisting: false,
 });
 
-export const { useGetMessagesQuery, useReplyMessageMutation } = emailApi;
+export const { useGetMessagesQuery, useReplyMessageMutation, useSyncEmailsMutation } = emailApi;
