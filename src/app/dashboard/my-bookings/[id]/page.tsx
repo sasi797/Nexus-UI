@@ -387,8 +387,12 @@ export default function BookingDetailPage() {
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${PRIORITY_BADGE[b.priority] ?? 'bg-gray-100 text-gray-500'}`}>
                     {b.priority}
                   </span>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isOpen ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' : 'bg-gray-100 text-gray-500'}`}>
-                    {isOpen ? 'Open' : 'Closed'}
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ring-1 ${
+                    b.status === 'Pending' ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' :
+                    b.status === 'In Progress' ? 'bg-blue-50 text-blue-700 ring-blue-200' :
+                    'bg-gray-100 text-gray-500 ring-gray-200'
+                  }`}>
+                    {b.status === 'Pending' ? 'Open' : b.status}
                   </span>
                 </div>
                 <h2 className="text-[15px] font-bold text-gray-900 leading-snug">{b.subject}</h2>
