@@ -74,7 +74,7 @@ function ElapsedBadge({ booking }: { booking: BookingListItem }) {
 
   if (done) {
     return (
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-gray-100 ring-1 ring-gray-200 text-[11px] font-mono font-semibold text-gray-500">
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-gray-100 ring-1 ring-gray-200 text-[10px] font-mono font-semibold text-gray-500">
         <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         {formatHMS(ms)}
       </span>
@@ -83,7 +83,7 @@ function ElapsedBadge({ booking }: { booking: BookingListItem }) {
 
   const cfg = elapsedCfg(ms);
   return (
-    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md ring-1 text-[11px] font-mono font-bold ${cfg.bg} ${cfg.text}`}>
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md ring-1 text-[10px] font-mono font-bold ${cfg.bg} ${cfg.text}`}>
       <span className={`w-2 h-2 rounded-full shrink-0 animate-pulse ${cfg.dot}`} />
       {formatHMS(ms)}
       <span className="text-[10px] font-semibold opacity-60">{cfg.label}</span>
