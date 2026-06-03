@@ -1024,7 +1024,7 @@ export default function MyBookingsPage() {
           </button>
         </div>
 
-        <div className="bg-gray-50 border-t-[1.5px] border-gray-300 p-4 space-y-4 lg:sticky lg:top-0 max-h-[calc(100vh-7rem)] overflow-y-auto lg:mt-6">
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-4 lg:sticky lg:top-0 max-h-[calc(100vh-7rem)] overflow-y-auto lg:mt-6">
 
           {/* Header */}
           <div className="flex items-center justify-between">
