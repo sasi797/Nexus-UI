@@ -197,7 +197,7 @@ export default function NotificationsPage() {
         {/* Header */}
         <div className="px-4 pt-4 pb-3 border-b border-gray-100">
           {/* <h1 className="text-[15px] font-bold text-gray-900 leading-tight">Notifications</h1> */}
-          <p className="text-[12px] text-gray-500 mt-0.5">
+          <p className="text-[12px] text-gray-500 font-semibold mt-0.5">
             {unread > 0 ? `${unread} unread` : 'All caught up'}
           </p>
           {unread > 0 && (
