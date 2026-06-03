@@ -180,7 +180,6 @@ function AttachmentChip({ att, token }: { att: EmailAttachment; token: string | 
 function MessageCard({ msg, token, defaultOpen }: { msg: EmailMessage; token: string | null; defaultOpen: boolean }) {
   const isInbound = msg.direction === 'inbound';
   const [collapsed, setCollapsed] = useState(!defaultOpen);
-  const [showQuoted, setShowQuoted] = useState(false);
 
   const senderName = isInbound ? extractName(msg.from_email) : 'Nexus Support';
   const senderEmail = isInbound ? msg.from_email : '';
@@ -277,57 +276,31 @@ function MessageCard({ msg, token, defaultOpen }: { msg: EmailMessage; token: st
 
               {/* Body */}
               <div className="pt-3 text-[13px] text-gray-700 leading-relaxed">
-                {msg.body_text ? (() => {
-                  const { main, quoted } = splitQuotedContent(msg.body_text);
-                  return (
-                    <>
-                      <pre className="whitespace-pre-wrap font-sans">{main}</pre>
-                      {quoted && (
-                        <div className="mt-2">
-                          <button
-                            onClick={() => setShowQuoted(v => !v)}
-                            className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 hover:text-indigo-500 transition-colors px-2 py-1 rounded hover:bg-indigo-50/50"
-                          >
-                            <span className="text-base leading-none tracking-tighter">···</span>
-                            <span className="ml-1">{showQuoted ? 'Hide quoted text' : 'Show quoted text'}</span>
-                          </button>
-                          {showQuoted && (
-                            <pre className="mt-2 whitespace-pre-wrap font-sans text-[12px] text-gray-400 border-l-2 border-gray-200 pl-3">
-                              {quoted}
-                            </pre>
-                          )}
-                        </div>
-                      )}
-                    </>
-                  );
-                })() : msg.body_html ? (() => {
-                  const { main, quoted } = splitHtmlQuotedContent(msg.body_html);
-                  return (
-                    <>
-                      <div
-                        className="prose prose-sm max-w-none text-gray-700 [&_*]:max-w-full [&_img]:max-w-full"
-                        dangerouslySetInnerHTML={{ __html: main }}
-                      />
-                      {quoted && (
-                        <div className="mt-2">
-                          <button
-                            onClick={() => setShowQuoted(v => !v)}
-                            className="flex items-center gap-1 text-[11px] font-semibold text-gray-400 hover:text-indigo-500 transition-colors px-2 py-1 rounded hover:bg-indigo-50/50"
-                          >
-                            <span className="text-base leading-none tracking-tighter">···</span>
-                            <span className="ml-1">{showQuoted ? 'Hide quoted text' : 'Show quoted text'}</span>
-                          </button>
-                          {showQuoted && (
-                            <div
-                              className="mt-2 text-[12px] text-gray-400 border-l-2 border-gray-200 pl-3 prose prose-sm max-w-none [&_*]:max-w-full [&_img]:max-w-full"
-                              dangerouslySetInnerHTML={{ __html: quoted }}
-                            />
-                          )}
-                        </div>
-                      )}
-                    </>
-                  );
-                })() : <span className="text-[12px] italic text-gray-400">(No text content)</span>}
+                {msg.body_text ? (
+                  isInbound ? (
+                    // Inbound: show full content, no toggle
+                    <pre className="whitespace-pre-wrap font-sans">{msg.body_text}</pre>
+                  ) : (
+                    // Outbound: show only the new reply text, strip quoted thread
+                    <pre className="whitespace-pre-wrap font-sans">
+                      {splitQuotedContent(msg.body_text).main}
+                    </pre>
+                  )
+                ) : msg.body_html ? (
+                  isInbound ? (
+                    // Inbound: render full HTML, no toggle
+                    <div
+                      className="prose prose-sm max-w-none text-gray-700 [&_*]:max-w-full [&_img]:max-w-full"
+                      dangerouslySetInnerHTML={{ __html: msg.body_html }}
+                    />
+                  ) : (
+                    // Outbound: render only the new reply portion, strip quoted thread
+                    <div
+                      className="prose prose-sm max-w-none text-gray-700 [&_*]:max-w-full [&_img]:max-w-full"
+                      dangerouslySetInnerHTML={{ __html: splitHtmlQuotedContent(msg.body_html).main }}
+                    />
+                  )
+                ) : <span className="text-[12px] italic text-gray-400">(No text content)</span>}
               </div>
             </div>
           </motion.div>
