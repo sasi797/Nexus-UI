@@ -333,7 +333,7 @@ export default function BookingDetailPage() {
       <div className="flex flex-col lg:flex-row gap-5 items-start">
 
         {/* ── Left main panel ── */}
-        <motion.div variants={staggerItem} className={`flex-1 min-w-0 bg-white rounded-xl shadow-sm border border-gray-100 border-l-4 ${PRIORITY_LEFT[b.priority] ?? 'border-l-gray-200'} overflow-hidden`}>
+        <motion.div variants={staggerItem} className="flex-1 min-w-0 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
 
           {/* Subject header */}
           <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100">
