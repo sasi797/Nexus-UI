@@ -384,7 +384,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: { booking: 
     {/* ── Mobile card (< md) ── */}
     <Link
       href={`/dashboard/my-bookings/${booking.id}`}
-      className={`md:hidden block rounded-xl border shadow-sm active:opacity-75 transition-all ${busy ? 'opacity-60 pointer-events-none' : ''} ${isCompleted ? 'bg-orange-50 border-orange-200' : 'bg-white border-gray-100'}`}
+      className={`md:hidden block rounded-lg border shadow-sm active:opacity-75 transition-all ${busy ? 'opacity-60 pointer-events-none' : ''} ${isCompleted ? 'bg-orange-50 border-orange-200' : 'bg-white border-gray-100'}`}
     >
       <div className="px-4 py-3.5">
         <div className="flex items-center justify-between mb-1.5">
@@ -417,7 +417,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: { booking: 
     </Link>
 
     {/* ── Desktop row (≥ md) ── */}
-    <div className={`hidden md:flex items-center gap-3 px-4 py-3.5 rounded-xl border shadow-sm hover:shadow-md transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${isCompleted ? 'bg-orange-100 border-orange-200 hover:border-orange-300' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
+    <div className={`hidden md:flex items-center gap-3 px-4 pt-4 pb-3 rounded-lg border shadow-sm hover:shadow-md transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${isCompleted ? 'bg-orange-100 border-orange-200 hover:border-orange-300' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
 
       {/* Checkbox */}
       <input type="checkbox" onClick={e => e.stopPropagation()}
@@ -440,13 +440,13 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: { booking: 
             <TagBadges tags={parseTags(booking.tags, tagValues)} tagConfig={tagCfg} />
           </div>
           <p className="text-[13.5px] font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors leading-snug truncate">
-            {booking.subject}
+            <span className="mr-1">😊</span>{booking.subject}
           </p>
           <div className="flex items-center gap-1 mt-0.5">
-            <svg className="w-3 h-3 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
-            <span className="text-[11px] text-gray-400">{extractName(booking.sender_email)}</span>
+            <span className="text-[12px] text-gray-600 font-semibold">{extractName(booking.sender_email)}</span>
           </div>
         </div>
       </Link>
@@ -499,8 +499,8 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: { booking: 
           <InlineDropdown
             trigger={(open, toggle) => (
               <button onClick={toggle}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-medium text-gray-500 w-full justify-end text-xs max-w-[160px] transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
-                <svg className="w-3.5 h-3.5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-semibold text-gray-700 w-full justify-end text-[12px] max-w-[160px] transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
+                <svg className="w-3.5 h-3.5 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
                 <span className="truncate">{booking.agent?.name ?? '—'}</span>
@@ -1024,7 +1024,7 @@ export default function MyBookingsPage() {
           </button>
         </div>
 
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-4 lg:sticky lg:top-0 max-h-[calc(100vh-7rem)] overflow-y-auto lg:mt-6">
+        <div className="bg-slate-50 rounded-xl border border-slate-200 shadow-sm p-4 space-y-4 lg:sticky lg:top-0 max-h-[calc(100vh-7rem)] overflow-y-auto lg:mt-6">
 
           {/* Header */}
           <div className="flex items-center justify-between">
