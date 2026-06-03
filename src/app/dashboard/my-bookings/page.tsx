@@ -44,6 +44,14 @@ function formatHMS(ms: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
+function formatReceivedAt(iso: string): string {
+  const d = new Date(iso);
+  const day = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${day} ${hh}:${mm}`;
+}
+
 function formatDuration(ms: number): string {
   const totalMins = Math.floor(ms / 60_000);
   const mins = totalMins % 60;
@@ -444,7 +452,8 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: { booking: 
       </Link>
 
       {/* Timer — center "empty white space" between content and meta */}
-      <div className="flex items-center justify-center shrink-0 px-4">
+      <div className="flex flex-col items-center justify-center shrink-0 px-4 gap-1">
+        <span className="text-[10.5px] text-gray-700 font-semibold">{formatReceivedAt(booking.received_at)}</span>
         <ElapsedBadge booking={booking} />
       </div>
 

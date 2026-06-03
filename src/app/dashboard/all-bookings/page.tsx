@@ -35,6 +35,14 @@ function extractName(email: string) {
     .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
 }
 
+function formatReceivedAt(iso: string): string {
+  const d = new Date(iso);
+  const day = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${day} ${hh}:${mm}`;
+}
+
 function formatHMS(ms: number): string {
   const totalSecs = Math.floor(Math.max(ms, 0) / 1000);
   const s = totalSecs % 60;
@@ -538,7 +546,8 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
       </div>
 
       {/* Timer */}
-      <div className="hidden sm:flex items-center justify-center shrink-0 px-3">
+      <div className="hidden sm:flex flex-col items-center justify-center shrink-0 px-3 gap-1">
+        <span className="text-[10.5px] text-gray-700 font-semibold">{formatReceivedAt(booking.received_at)}</span>
         <ElapsedBadge booking={booking} />
       </div>
 
@@ -603,7 +612,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
                 <svg className="w-3 h-3 shrink-0 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                 </svg>
-                {activeTags.length === 0 ? <span className="text-gray-400">Tags</span> : <TagBadges tags={activeTags} tagConfig={tagCfg} />}
+                {activeTags.length === 0 ? <span className="text-gray-600">Tags</span> : <TagBadges tags={activeTags} tagConfig={tagCfg} />}
                 <Chevron cls="text-gray-400 ml-0.5" />
               </button>
             );
