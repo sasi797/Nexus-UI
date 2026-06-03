@@ -439,7 +439,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: { booking: 
             )}
             <TagBadges tags={parseTags(booking.tags, tagValues)} tagConfig={tagCfg} />
           </div>
-          <p className="text-[13.5px] font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors leading-snug truncate">
+          <p className="text-[12px] font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors leading-snug truncate">
             <span className="mr-1">😊</span>{booking.subject}
           </p>
           <div className="flex items-center gap-1 mt-0.5">

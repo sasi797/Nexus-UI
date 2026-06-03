@@ -443,7 +443,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
             {isCompleted && booking.da_number && <DaBadges daNumber={booking.da_number} />}
             <TagBadges tags={parseTags(booking.tags, tagValues)} tagConfig={tagCfg} />
           </div>
-          <p className="text-[13px] font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors leading-snug truncate">
+          <p className="text-[12px] font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors leading-snug truncate">
             <span className="mr-1">😊</span>{booking.subject}
           </p>
         </Link>
