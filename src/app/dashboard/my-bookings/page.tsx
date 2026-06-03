@@ -746,10 +746,11 @@ export default function MyBookingsPage() {
 
   const countBase = { agent_id: myAgentId, priority, sender_email: fromFilter === 'Any' ? undefined : fromFilter, created_after: CREATED_MAP[createdFilter], closed_after: CLOSED_MAP[closedAtFilter], page_size: 1 };
   const skipCount = agentsLoading || hasNoAgentProfile;
-  const { data: cAll }  = useGetBookingsQuery({ ...countBase },                          { skip: skipCount });
-  const { data: cPend } = useGetBookingsQuery({ ...countBase, status: 'Pending' },       { skip: skipCount });
-  const { data: cProg } = useGetBookingsQuery({ ...countBase, status: 'In Progress' },   { skip: skipCount });
-  const { data: cDone } = useGetBookingsQuery({ ...countBase, status: 'Completed' },     { skip: skipCount });
+  const countOpts = { skip: skipCount, refetchOnMountOrArgChange: true };
+  const { data: cAll }  = useGetBookingsQuery({ ...countBase },                          countOpts);
+  const { data: cPend } = useGetBookingsQuery({ ...countBase, status: 'Pending' },       countOpts);
+  const { data: cProg } = useGetBookingsQuery({ ...countBase, status: 'In Progress' },   countOpts);
+  const { data: cDone } = useGetBookingsQuery({ ...countBase, status: 'Completed' },     countOpts);
 
   const allItems = data?.items ?? [];
 
@@ -809,71 +810,47 @@ export default function MyBookingsPage() {
       <div className="flex-1 min-w-0 flex flex-col gap-3 order-2 lg:order-1">
 
         {/* Bookings tab switcher */}
-        <div className="flex gap-0.5 bg-white border border-gray-200 shadow-sm p-1 rounded-xl w-fit">
+        <div className="flex items-center border-b border-gray-200">
           <Link href="/dashboard/all-bookings"
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-50 transition-all">
-            <svg className="w-3.5 h-3.5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-            </svg>
-            All Bookings
+            className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium text-gray-400 border-b-2 border-transparent -mb-px hover:text-gray-700 hover:border-gray-300 transition-all whitespace-nowrap">
+            🗂️ All Bookings
           </Link>
-          <span className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-semibold bg-gray-200 text-gray-900">
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-            My Bookings
+          <span className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold text-indigo-600 border-b-2 border-indigo-500 -mb-px cursor-default whitespace-nowrap">
+            🙋 My Bookings
           </span>
         </div>
 
         {/* Tab bar + filter toggle */}
         <motion.div variants={staggerItem} className="flex items-center gap-2 overflow-x-auto">
-          <div className="flex items-center gap-0.5 bg-white border border-gray-200 shadow-sm p-1 rounded-xl shrink-0">
-          {TABS.map(tab => (
-            <button key={tab} onClick={() => handleTabChange(tab)}
-              className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12.5px] font-semibold transition-all duration-150 whitespace-nowrap shrink-0">
-              {activeTab === tab && (
-                <motion.div layoutId="booking-tab-bg"
-                  className="absolute inset-0 bg-gray-200 rounded-lg"
-                  transition={{ type: 'spring', stiffness: 420, damping: 38 }} />
-              )}
-              <span className={`relative z-10 flex items-center gap-1.5 transition-colors duration-150 ${activeTab === tab ? 'text-gray-900' : 'text-gray-500 hover:text-gray-800'}`}>
-                {tab === 'All' && (
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                  </svg>
-                )}
-                {tab === 'Pending' && (
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                  </svg>
-                )}
-                {tab === 'In Progress' && (
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                )}
-                {tab === 'Completed' && (
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                )}
-                {TAB_LABEL[tab]}
-                {TAB_COUNTS[tab] !== undefined && (
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none transition-colors ${
-                    activeTab === tab ? 'bg-gray-400/20 text-gray-700' : 'bg-gray-100 text-gray-400'
+          <div className="flex items-center border-b border-gray-200 shrink-0">
+            {TABS.map(tab => {
+              const isActive = activeTab === tab;
+              const emoji: Record<string, string> = { All: '📋', Pending: '📬', 'In Progress': '⚡', Completed: '✅' };
+              return (
+                <button key={tab} onClick={() => handleTabChange(tab)}
+                  className={`flex items-center gap-1.5 px-4 py-2 text-[12.5px] font-semibold border-b-2 -mb-px transition-all duration-150 whitespace-nowrap shrink-0 ${
+                    isActive
+                      ? 'text-indigo-600 border-indigo-500'
+                      : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300'
                   }`}>
-                    {TAB_COUNTS[tab]}
-                  </span>
-                )}
-              </span>
-            </button>
-          ))}
+                  <span>{emoji[tab]}</span>
+                  {TAB_LABEL[tab]}
+                  {TAB_COUNTS[tab] !== undefined && (
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none ${
+                      isActive ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-400'
+                    }`}>
+                      {TAB_COUNTS[tab]}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
-          {/* Filter toggle — always visible */}
+          {/* Filter toggle */}
           <button
             onClick={() => setFiltersOpen(v => !v)}
-            className={`ml-auto shrink-0 flex items-center gap-1.5 px-3 py-1.5 mb-1 rounded-lg border text-xs font-semibold transition-colors ${
-              filtersOpen ? 'bg-indigo-50 border-indigo-200 text-indigo-600 hover:bg-indigo-100' : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
+            className={`ml-auto shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              filtersOpen ? 'bg-indigo-50 text-indigo-600 ring-1 ring-indigo-200' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
             }`}
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
