@@ -827,11 +827,13 @@ export default function AllBookingsPage() {
       {/* Bookings tab switcher */}
       <div className="flex items-center border-b border-gray-200">
         <span className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold text-indigo-600 border-b-2 border-indigo-500 -mb-px cursor-default whitespace-nowrap">
-          🗂️ All Bookings
+          <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+          All Bookings
         </span>
         <Link href="/dashboard/my-bookings"
           className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium text-gray-400 border-b-2 border-transparent -mb-px hover:text-gray-700 hover:border-gray-300 transition-all whitespace-nowrap">
-          🙋 My Bookings
+          <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+          My Bookings
         </Link>
       </div>
 
@@ -849,10 +851,10 @@ export default function AllBookingsPage() {
                     ? 'text-indigo-600 border-indigo-500'
                     : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300'
                 }`}>
-                {tab === 'All' && <span>📋</span>}
-                {tab === 'Pending' && <span>📬</span>}
-                {tab === 'In Progress' && <span>⚡</span>}
-                {tab === 'Completed' && <span>✅</span>}
+                {tab === 'All' && <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>}
+                {tab === 'Pending' && <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>}
+                {tab === 'In Progress' && <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>}
+                {tab === 'Completed' && <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
                 {TAB_LABEL[tab]}
                 {TAB_COUNTS[tab] !== undefined && (
                   <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none ${
