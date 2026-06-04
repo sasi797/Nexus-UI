@@ -276,25 +276,27 @@ function MessageCard({ msg, token, defaultOpen }: { msg: EmailMessage; token: st
 
               {/* Body */}
               <div className="pt-3 text-[13px] text-gray-700 leading-relaxed">
-                {msg.body_text ? (
+                {!isInbound && msg.body_html ? (
+                  // Outbound with HTML — render formatted reply (user may have used B/I/U)
+                  <div
+                    className="prose prose-sm max-w-none text-gray-700 [&_*]:max-w-full [&_img]:max-w-full"
+                    dangerouslySetInnerHTML={{ __html: splitHtmlQuotedContent(msg.body_html).main }}
+                  />
+                ) : msg.body_text ? (
                   isInbound ? (
-                    // Inbound: show full content, no toggle
                     <pre className="whitespace-pre-wrap font-sans">{msg.body_text}</pre>
                   ) : (
-                    // Outbound: show only the new reply text, strip quoted thread
                     <pre className="whitespace-pre-wrap font-sans">
                       {splitQuotedContent(msg.body_text).main}
                     </pre>
                   )
                 ) : msg.body_html ? (
                   isInbound ? (
-                    // Inbound: render full HTML, no toggle
                     <div
                       className="prose prose-sm max-w-none text-gray-700 [&_*]:max-w-full [&_img]:max-w-full"
                       dangerouslySetInnerHTML={{ __html: msg.body_html }}
                     />
                   ) : (
-                    // Outbound: render only the new reply portion, strip quoted thread
                     <div
                       className="prose prose-sm max-w-none text-gray-700 [&_*]:max-w-full [&_img]:max-w-full"
                       dangerouslySetInnerHTML={{ __html: splitHtmlQuotedContent(msg.body_html).main }}
@@ -487,8 +489,8 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
   const removeFile = (idx: number) => setSelectedFiles(prev => prev.filter((_, i) => i !== idx));
 
   const formatText = (cmd: string) => {
+    editorRef.current?.focus();  // must be focused before list commands
     document.execCommand(cmd, false);
-    editorRef.current?.focus();
   };
 
   const handleSend = async () => {
@@ -809,20 +811,77 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
           </div>
 
           {/* Formatting toolbar */}
-          <div className="flex items-center gap-0.5 -mb-1">
-            {([
-              { cmd: 'bold',      label: 'B', title: 'Bold',      cls: 'font-bold' },
-              { cmd: 'italic',    label: 'I', title: 'Italic',    cls: 'italic' },
-              { cmd: 'underline', label: 'U', title: 'Underline', cls: 'underline' },
-            ] as { cmd: string; label: string; title: string; cls: string }[]).map(({ cmd, label, title, cls }) => (
+          <div className="flex items-center gap-1.5 pb-2 border-b border-gray-100">
+            {/* B / I / U / S group */}
+            <div className="flex items-center rounded-lg border border-gray-200 divide-x divide-gray-200 overflow-hidden">
+              {([
+                { cmd: 'bold',         title: 'Bold',          node: <span className="font-extrabold text-[13px] leading-none">B</span> },
+                { cmd: 'italic',       title: 'Italic',        node: <span className="font-serif italic font-medium text-[14px] leading-none">I</span> },
+                { cmd: 'underline',    title: 'Underline',     node: <span className="underline text-[13px] leading-none" style={{ textDecorationThickness: '1.5px' }}>U</span> },
+                { cmd: 'strikeThrough',title: 'Strikethrough', node: <span className="line-through text-[13px] leading-none">S</span> },
+              ] as { cmd: string; title: string; node: React.ReactNode }[]).map(({ cmd, title, node }) => (
+                <button
+                  key={cmd}
+                  type="button"
+                  title={title}
+                  onMouseDown={e => { e.preventDefault(); formatText(cmd); }}
+                  className="w-8 h-7 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                >{node}</button>
+              ))}
+            </div>
+
+            {/* Divider */}
+            <div className="w-px h-4 bg-gray-200" />
+
+            {/* List group */}
+            <div className="flex items-center rounded-lg border border-gray-200 divide-x divide-gray-200 overflow-hidden">
               <button
-                key={cmd}
                 type="button"
-                title={title}
-                onMouseDown={e => { e.preventDefault(); formatText(cmd); }}
-                className={`w-7 h-7 flex items-center justify-center rounded text-xs ${cls} text-gray-400 hover:text-gray-800 hover:bg-gray-100 transition-colors`}
-              >{label}</button>
-            ))}
+                title="Bullet list"
+                onMouseDown={e => { e.preventDefault(); formatText('insertUnorderedList'); }}
+                className="w-8 h-7 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h.01M4 12h.01M4 18h.01"/>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 6h12M8 12h12M8 18h12"/>
+                </svg>
+              </button>
+              <button
+                type="button"
+                title="Numbered list"
+                onMouseDown={e => { e.preventDefault(); formatText('insertOrderedList'); }}
+                className="w-8 h-7 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6h11M10 12h11M10 18h11"/>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 6h1v3M4 9h2M4 12.5c0-.8.7-1.5 1.5-1.5S7 12 7 12.5c0 .5-.4 1-1 1.5L4 15.5h3"/>
+                </svg>
+              </button>
+            </div>
+
+            {/* Indent group */}
+            <div className="flex items-center rounded-lg border border-gray-200 divide-x divide-gray-200 overflow-hidden">
+              <button
+                type="button"
+                title="Indent"
+                onMouseDown={e => { e.preventDefault(); formatText('indent'); }}
+                className="w-8 h-7 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6h18M3 12h12M3 18h12M17 10l3 2-3 2"/>
+                </svg>
+              </button>
+              <button
+                type="button"
+                title="Remove formatting"
+                onMouseDown={e => { e.preventDefault(); formatText('removeFormat'); }}
+                className="w-8 h-7 flex items-center justify-center text-gray-500 hover:text-red-500 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M9 3h11l-5 6M3 21l5-6"/>
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Rich-text editor */}
@@ -837,7 +896,7 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
                 const text = e.clipboardData.getData('text/plain');
                 document.execCommand('insertText', false, text);
               }}
-              className="w-full py-1 text-sm text-gray-700 bg-transparent focus:outline-none min-h-[80px] leading-relaxed"
+              className="w-full py-1 text-sm text-gray-700 bg-transparent focus:outline-none min-h-[80px] leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5"
             />
             {editorEmpty && (
               <span className="absolute top-1 left-0 text-sm text-gray-300 pointer-events-none select-none">
