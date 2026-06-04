@@ -232,7 +232,7 @@ export default function LoginPage() {
                     transition={{ duration: 0.25 }}
                   >
                     <div className="mb-7">
-                      <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-200 mb-4">
+                      <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-200 mb-4 text-white">
                         <NexusLogo size={22} />
                       </div>
                       <h2 className="text-2xl font-black text-gray-800">Sign In</h2>
