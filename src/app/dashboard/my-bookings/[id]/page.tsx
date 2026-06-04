@@ -37,10 +37,10 @@ const PRIORITY_DOT: Record<string, string> = {
 const STATUS_PILL_ON: Record<string, string> = {
   Pending: 'bg-amber-50 text-amber-700 border-amber-300',
   'In Progress': 'bg-blue-50 text-blue-700 border-blue-300',
-  Completed: 'bg-gray-100 text-gray-600 border-gray-300',
+  Completed: 'bg-red-50 text-red-600 border-red-300',
 };
 const STATUS_DOT: Record<string, string> = {
-  Pending: 'bg-amber-400', 'In Progress': 'bg-blue-500', Completed: 'bg-gray-300',
+  Pending: 'bg-amber-400', 'In Progress': 'bg-blue-500', Completed: 'bg-red-400',
 };
 
 const AVATAR_COLORS = [
@@ -648,7 +648,7 @@ export default function BookingDetailPage() {
                         const c = TAG_CFG[tag];
                         return (
                           <button key={tag}
-                            disabled={saving || patching}
+                            disabled={saving || patching || !isOpen}
                             onClick={() => handleTagToggle(tag)}
                             className={`flex-1 flex items-center justify-center gap-1 text-[10px] font-bold py-1.5 rounded-lg border transition-all disabled:opacity-50 ${active ? c.on : 'border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600 hover:bg-gray-50'}`}>
                             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${active ? c.dot : c.offDot}`} />
