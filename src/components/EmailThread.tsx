@@ -682,7 +682,7 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
                   className="w-full text-[12px] text-gray-700 bg-transparent focus:outline-none placeholder:text-gray-300"
                 />
                 {forwardToSuggestions.length > 0 && (
-                  <div className="absolute top-full left-0 mt-0.5 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
+                  <div className="absolute bottom-full left-0 mb-0.5 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
                     {forwardToSuggestions.map(email => (
                       <button
                         key={email}
@@ -740,7 +740,7 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
                     className="w-full text-[12px] text-gray-700 bg-transparent focus:outline-none placeholder:text-gray-300"
                   />
                   {toSuggestions.length > 0 && (
-                    <div className="absolute top-full left-0 mt-0.5 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
+                    <div className="absolute bottom-full left-0 mb-0.5 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
                       {toSuggestions.map(email => (
                         <button
                           key={email}
@@ -792,7 +792,7 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
                 className="w-full text-[12px] text-gray-700 bg-transparent focus:outline-none placeholder:text-gray-300"
               />
               {ccSuggestions.length > 0 && (
-                <div className="absolute top-full left-0 mt-0.5 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
+                <div className="absolute bottom-full left-0 mb-0.5 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
                   {ccSuggestions.map(email => (
                     <button
                       key={email}
