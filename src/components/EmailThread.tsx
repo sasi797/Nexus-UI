@@ -330,6 +330,13 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
   const composeTab = controlledTab ?? internalTab;
   const setComposeTab = (t: ComposeTab) => { setInternalTab(t); onComposeTabChange?.(t); };
   const [replyText, setReplyText] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = replyRef?.current ?? textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [replyText, replyRef]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [sent, setSent] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -488,10 +495,11 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
     try {
       const res = await syncEmails(bookingId).unwrap();
       setSyncResult(res.synced > 0 ? `${res.synced} new email${res.synced !== 1 ? 's' : ''} synced` : 'Already up to date');
-    } catch {
-      setSyncResult('Sync failed');
+    } catch (err: unknown) {
+      const detail = (err as { data?: { detail?: string } })?.data?.detail;
+      setSyncResult(detail ?? 'Sync failed — try again');
     }
-    setTimeout(() => setSyncResult(null), 4000);
+    setTimeout(() => setSyncResult(null), 6000);
   };
 
   return (
@@ -675,12 +683,12 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
 
           {/* Textarea — transparent, no border */}
           <textarea
-            ref={replyRef}
+            ref={replyRef ?? textareaRef}
             value={replyText}
             onChange={e => setReplyText(e.target.value)}
             placeholder={composePlaceholder}
             rows={4}
-            className="w-full px-0 py-1 text-sm text-gray-700 bg-transparent focus:outline-none resize-none placeholder:text-gray-300 leading-relaxed"
+            className="w-full px-0 py-1 text-sm text-gray-700 bg-transparent focus:outline-none resize-none overflow-hidden placeholder:text-gray-300 leading-relaxed"
           />
 
           {/* Selected files preview */}
