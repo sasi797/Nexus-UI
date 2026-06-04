@@ -181,7 +181,7 @@ function MessageCard({ msg, token, defaultOpen }: { msg: EmailMessage; token: st
   const isInbound = msg.direction === 'inbound';
   const [collapsed, setCollapsed] = useState(!defaultOpen);
 
-  const senderName = isInbound ? extractName(msg.from_email) : 'Nexus Support';
+  const senderName = isInbound ? extractName(msg.from_email) : 'GCC Support';
   const senderEmail = isInbound ? msg.from_email : '';
   const initials = isInbound ? msg.from_email.charAt(0).toUpperCase() : 'B';
   const gradientClass = isInbound
@@ -504,27 +504,6 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
 
   return (
     <div className="space-y-3">
-      {/* Sync button */}
-      <div className="flex items-center justify-end gap-2">
-        {syncResult && (
-          <span className="text-xs text-gray-500">{syncResult}</span>
-        )}
-        <button
-          onClick={handleSync}
-          disabled={syncing}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 border border-gray-200 hover:border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-colors disabled:opacity-50"
-        >
-          <svg
-            className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`}
-            fill="none" stroke="currentColor" viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          {syncing ? 'Syncing…' : 'Sync Emails'}
-        </button>
-      </div>
-
       {/* Message cards */}
       {isLoading ? (
         <div className="space-y-3">

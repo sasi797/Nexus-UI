@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { pageTransition, staggerItem, fadeIn } from '@/lib/animations';
+import { pageTransition, staggerItem } from '@/lib/animations';
 import {
   useGetBookingQuery, usePatchBookingStatusMutation,
   useUpdateBookingMutation, useGetBookingEventsQuery,
@@ -15,7 +15,6 @@ import { useGetAgentsQuery, Agent } from '@/services/agentsApi';
 
 import EmailThread from '@/components/EmailThread';
 
-type Tab = 'Conversation' | 'History';
 type ComposeTab = 'Reply' | 'Reply All' | 'Forward';
 
 /* ── helpers ── */
@@ -236,12 +235,74 @@ function SupportAgentPicker({ available, onAdd, disabled }: {
   );
 }
 
+function HistorySection({
+  events,
+  eventCfg,
+}: {
+  events: { id: string; event: string; new_value?: string | null; old_value?: string | null; actor_name?: string | null; created_at: string }[];
+  eventCfg: Record<string, { icon: string; color: string; label: (e: typeof events[0]) => string }>;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between group"
+      >
+        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">History</span>
+        <svg
+          className={`w-3.5 h-3.5 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
+          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: 'easeInOut' }}
+            className="overflow-hidden"
+          >
+            <div className="relative mt-2">
+              <div className="absolute left-[11px] top-2 bottom-2 w-px bg-gray-100" />
+              {events.length === 0 && (
+                <p className="text-xs text-gray-400 py-4 text-center">No history yet</p>
+              )}
+              {events.map(ev => {
+                const cfg = eventCfg[ev.event] ?? { icon: '•', color: 'bg-gray-100', label: () => ev.event };
+                return (
+                  <div key={ev.id} className="flex items-start gap-2.5 relative py-2.5">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0 z-10 ring-2 ring-white ${cfg.color}`}>
+                      {cfg.icon}
+                    </div>
+                    <div className="flex-1 min-w-0 pt-0.5">
+                      <p className="text-xs font-semibold text-gray-700 leading-snug">{cfg.label(ev)}</p>
+                      {ev.actor_name && (
+                        <p className="text-[10px] text-indigo-500 font-medium">{ev.actor_name}</p>
+                      )}
+                      <p className="text-[10px] text-gray-400 mt-0.5">
+                        {new Date(ev.created_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export default function BookingDetailPage() {
   const { id }   = useParams<{ id: string }>();
   const router   = useRouter();
   const replyRef = useRef<HTMLTextAreaElement>(null);
 
-  const [activeTab, setActiveTab]         = useState<Tab>('Conversation');
   const [composeTab, setComposeTab]       = useState<ComposeTab>('Reply');
   const [savedField, setSavedField]       = useState<string | null>(null);
   const [showDaModal, setShowDaModal]     = useState(false);
@@ -302,7 +363,6 @@ export default function BookingDetailPage() {
 
   const focusCompose = (tab: ComposeTab) => {
     setComposeTab(tab);
-    setActiveTab('Conversation');
     setTimeout(() => {
       replyRef.current?.focus();
       replyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -453,77 +513,17 @@ export default function BookingDetailPage() {
             </motion.button>
           </div>
 
-          {/* Tabs */}
-          <div className="px-3 sm:px-5 border-b border-gray-100 flex items-center gap-1">
-            {(['Conversation', 'History'] as Tab[]).map(tab => (
-              <button key={tab} onClick={() => setActiveTab(tab)}
-                className={`relative px-3 py-2.5 text-xs font-bold transition-colors ${activeTab === tab ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600'}`}>
-                {tab}
-                {activeTab === tab && (
-                  <motion.div layoutId="detail-tab-underline" className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 rounded-full" />
-                )}
-              </button>
-            ))}
+          {/* Conversation */}
+          <div className="p-3 sm:p-5">
+            <EmailThread
+              bookingId={b.id}
+              senderEmail={b.sender_email}
+              replyRef={replyRef}
+              composeTab={composeTab}
+              onComposeTabChange={setComposeTab}
+              readOnly={false}
+            />
           </div>
-
-          {/* Tab content */}
-          <AnimatePresence mode="wait">
-            <motion.div key={activeTab} variants={fadeIn} initial="hidden" animate="visible" exit="hidden" className="p-3 sm:p-5">
-
-              {activeTab === 'Conversation' && (
-                <EmailThread
-                  bookingId={b.id}
-                  senderEmail={b.sender_email}
-                  replyRef={replyRef}
-                  composeTab={composeTab}
-                  onComposeTabChange={setComposeTab}
-                  readOnly={false}
-                />
-              )}
-
-              {activeTab === 'History' && (() => {
-                const EVENT_CFG: Record<string, { icon: string; color: string; label: (e: typeof bookingEvents[0]) => string }> = {
-                  created:             { icon: '📩', color: 'bg-gray-100',    label: e => `Booking created${e.new_value ? ` · ${e.new_value}` : ''}` },
-                  status_changed:      { icon: '🔄', color: 'bg-blue-50',     label: e => `Status → ${e.new_value === 'Pending' ? 'Open' : e.new_value}` },
-                  priority_changed:    { icon: '⚡', color: 'bg-amber-50',    label: e => `Priority → ${e.new_value}` },
-                  agent_assigned:      { icon: '👤', color: 'bg-indigo-50',   label: e => `Assigned to ${e.new_value ?? 'agent'}${e.old_value ? ` (${e.old_value})` : ''}` },
-                  agent_unassigned:    { icon: '↩️', color: 'bg-gray-50',     label: () => 'Agent removed' },
-                  no_agents_available:   { icon: '⚠️', color: 'bg-amber-50',   label: () => 'No present agents — stays Open' },
-                  reply_received:        { icon: '💬', color: 'bg-sky-50',     label: e => `${e.new_value ?? 'Reply received'} — booking reopened` },
-                  support_agent_added:   { icon: '👥', color: 'bg-violet-50',  label: e => `Support agent added: ${e.new_value ?? ''}` },
-                  support_agent_removed: { icon: '👤', color: 'bg-gray-50',    label: e => `Support agent removed: ${e.old_value ?? ''}` },
-                };
-                return (
-                  <div className="relative">
-                    <div className="absolute left-[11px] top-4 bottom-4 w-px bg-gray-100" />
-                    {bookingEvents.length === 0 && (
-                      <p className="text-xs text-gray-400 py-6 text-center">No history yet</p>
-                    )}
-                    {bookingEvents.map((ev) => {
-                      const cfg = EVENT_CFG[ev.event] ?? { icon: '•', color: 'bg-gray-100', label: () => ev.event };
-                      return (
-                        <div key={ev.id} className="flex items-start gap-3 relative py-3">
-                          <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0 z-10 ring-2 ring-white ${cfg.color}`}>
-                            {cfg.icon}
-                          </div>
-                          <div className="flex-1 min-w-0 pt-0.5">
-                            <p className="text-xs font-semibold text-gray-700">{cfg.label(ev)}</p>
-                            {ev.actor_name && (
-                              <p className="text-[10px] text-indigo-500 font-medium">{ev.actor_name}</p>
-                            )}
-                            <p className="text-[10px] text-gray-400 mt-0.5">
-                              {new Date(ev.created_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
-
-            </motion.div>
-          </AnimatePresence>
         </motion.div>
 
         {/* ── Right sidebar ── */}
@@ -764,31 +764,21 @@ export default function BookingDetailPage() {
               {/* Divider */}
               <div className="border-t border-gray-100" />
 
-              {/* Dates */}
-              <div className="space-y-3">
-                <div>
-                  <p className={labelCls}>Received</p>
-                  <p className="text-xs font-semibold text-gray-700">
-                    {new Date(b.received_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                </div>
-                {b.assigned_at && (
-                  <div>
-                    <p className={labelCls}>Assigned</p>
-                    <p className="text-xs font-semibold text-gray-700">
-                      {new Date(b.assigned_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
-                )}
-                {b.completed_at && (
-                  <div>
-                    <p className={labelCls}>Closed</p>
-                    <p className="text-xs font-semibold text-gray-700">
-                      {new Date(b.completed_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
-                )}
-              </div>
+              {/* History — collapsible */}
+              {(() => {
+                const EVENT_CFG: Record<string, { icon: string; color: string; label: (e: typeof bookingEvents[0]) => string }> = {
+                  created:               { icon: '📩', color: 'bg-gray-100',   label: e => `Booking created${e.new_value ? ` · ${e.new_value}` : ''}` },
+                  status_changed:        { icon: '🔄', color: 'bg-blue-50',    label: e => `Status → ${e.new_value === 'Pending' ? 'Open' : e.new_value}` },
+                  priority_changed:      { icon: '⚡', color: 'bg-amber-50',   label: e => `Priority → ${e.new_value}` },
+                  agent_assigned:        { icon: '👤', color: 'bg-indigo-50',  label: e => `Assigned to ${e.new_value ?? 'agent'}${e.old_value ? ` (${e.old_value})` : ''}` },
+                  agent_unassigned:      { icon: '↩️', color: 'bg-gray-50',    label: () => 'Agent removed' },
+                  no_agents_available:   { icon: '⚠️', color: 'bg-amber-50',   label: () => 'No present agents — stays Open' },
+                  reply_received:        { icon: '💬', color: 'bg-sky-50',     label: e => `${e.new_value ?? 'Reply received'} — booking reopened` },
+                  support_agent_added:   { icon: '👥', color: 'bg-violet-50',  label: e => `Support agent added: ${e.new_value ?? ''}` },
+                  support_agent_removed: { icon: '👤', color: 'bg-gray-50',    label: e => `Support agent removed: ${e.old_value ?? ''}` },
+                };
+                return <HistorySection events={bookingEvents} eventCfg={EVENT_CFG} />;
+              })()}
 
             </div>
           </div>
