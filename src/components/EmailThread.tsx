@@ -481,11 +481,11 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
       for (const field of [msg.to_email, msg.cc_emails]) {
         field?.split(/[,;]/).forEach(part => { const e2 = extractEmail(part); if (e2) s.add(e2); });
       }
-      // Scan body text for every email address (catches forwarded Cc/To headers
-      // that wrap across multiple lines and signature emails)
+      // Scan body text/html for every email address (catches forwarded Cc/To headers)
       const emailRe = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+      const bodyToScan = msg.body_text ?? (msg.body_html ?? '').replace(/<[^>]+>/g, ' ');
       let m;
-      while ((m = emailRe.exec(msg.body_text ?? '')) !== null) s.add(m[0].toLowerCase());
+      while ((m = emailRe.exec(bodyToScan)) !== null) s.add(m[0].toLowerCase());
     }
     s.delete(MAILBOX_EMAIL);
     return [...s];
