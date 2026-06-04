@@ -555,7 +555,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
               trigger={(open, toggle) => (
                 <button onClick={toggle}
                   className={`flex items-center gap-1 px-2.5 py-1 rounded-lg w-full justify-end transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
-                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[10px] font-bold ${pc.bg} ${pc.text} ${pc.border}`}>
+                  <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${pc.text}`}>
                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${pc.dot}`} />
                     {pItem?.label ?? booking.priority}
                   </span>
@@ -579,7 +579,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
           trigger={(open, toggle) => (
             <button onClick={toggle}
               className={`flex items-center gap-1 px-2.5 py-1 rounded-lg w-full justify-end transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
-              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[10px] font-bold ${sc.bg} ${sc.text} ${sc.border}`}>
+              <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${sc.text}`}>
                 <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${sc.dot}`} />
                 {sc.label}
               </span>
@@ -606,7 +606,22 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
                 <svg className="w-3 h-3 shrink-0 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                 </svg>
-                {activeTags.length === 0 ? <span className="text-gray-600">Tags</span> : <TagBadges tags={activeTags} tagConfig={tagCfg} />}
+                {activeTags.length === 0 ? (
+                  <span className="text-gray-400">Tags</span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 flex-wrap">
+                    {activeTags.map(t => {
+                      const cfg = tagCfg.find((c: BookingConfigItem) => c.value === t);
+                      const c = getColor(cfg?.color ?? 'gray');
+                      return (
+                        <span key={t} className={`inline-flex items-center gap-1 text-[11px] font-semibold ${c.text}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${c.dot}`} />
+                          {cfg?.label ?? t}
+                        </span>
+                      );
+                    })}
+                  </span>
+                )}
                 <Chevron cls="text-gray-400 ml-0.5" />
               </button>
             );
