@@ -14,10 +14,6 @@ export const pendingQueueApi = api.injectEndpoints({
       query: (body) => ({ url: '/pending-queue/assign', method: 'POST', body }),
       invalidatesTags: ['PendingQueue', 'Booking', 'Dashboard'],
     }),
-    autoAssignAll: build.mutation<{ assigned: number }, void>({
-      query: () => ({ url: '/pending-queue/auto-assign-all', method: 'POST' }),
-      invalidatesTags: ['PendingQueue', 'Booking', 'AllocationLog', 'Dashboard'],
-    }),
     removeFromQueue: build.mutation<void, string>({
       query: (bookingId) => ({ url: `/pending-queue/${bookingId}`, method: 'DELETE' }),
       invalidatesTags: ['PendingQueue'],
@@ -26,4 +22,4 @@ export const pendingQueueApi = api.injectEndpoints({
   overrideExisting: false,
 });
 
-export const { useGetPendingQueueQuery, useAssignFromQueueMutation, useAutoAssignAllMutation, useRemoveFromQueueMutation } = pendingQueueApi;
+export const { useGetPendingQueueQuery, useAssignFromQueueMutation, useRemoveFromQueueMutation } = pendingQueueApi;

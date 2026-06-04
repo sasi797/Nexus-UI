@@ -23,12 +23,16 @@ const avatarGrads = [
   'from-rose-500 to-pink-500', 'from-amber-500 to-orange-500', 'from-purple-500 to-fuchsia-500',
 ];
 
+const DROPDOWN_EST_HEIGHT = 160;
+
 function useDropdownPos(open: boolean, btnRef: React.RefObject<HTMLButtonElement | null>) {
-  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 0, openUp: false });
   useEffect(() => {
     if (open && btnRef.current) {
       const r = btnRef.current.getBoundingClientRect();
-      setPos({ top: r.bottom + 4, left: r.left, width: r.width });
+      const spaceBelow = window.innerHeight - r.bottom;
+      const openUp = spaceBelow < DROPDOWN_EST_HEIGHT && r.top > DROPDOWN_EST_HEIGHT;
+      setPos({ top: openUp ? r.top : r.bottom + 4, left: r.left, width: r.width, openUp });
     }
   }, [open, btnRef]);
   return pos;
@@ -61,7 +65,7 @@ function ShiftSelect({ value, shifts, onChange }: { value: string; shifts: Shift
         </svg>
       </button>
       {open && createPortal(
-        <div ref={menuRef} style={{ position: 'fixed', top: pos.top, left: pos.left, minWidth: Math.max(pos.width, 170), zIndex: 9999 }}
+        <div ref={menuRef} style={{ position: 'fixed', top: pos.openUp ? undefined : pos.top, bottom: pos.openUp ? window.innerHeight - pos.top : undefined, left: pos.left, minWidth: Math.max(pos.width, 170), zIndex: 9999 }}
           className="bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 overflow-hidden">
           <div onClick={() => { onChange(''); setOpen(false); }}
             className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-gray-50 text-[12px] text-gray-400 font-medium transition-colors">
@@ -119,7 +123,7 @@ function StatusSelect({ value, onChange }: { value: AttendanceStatus; onChange: 
         </svg>
       </button>
       {open && createPortal(
-        <div ref={menuRef} style={{ position: 'fixed', top: pos.top, left: pos.left, minWidth: 160, zIndex: 9999 }}
+        <div ref={menuRef} style={{ position: 'fixed', top: pos.openUp ? undefined : pos.top, bottom: pos.openUp ? window.innerHeight - pos.top : undefined, left: pos.left, minWidth: 160, zIndex: 9999 }}
           className="bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 overflow-hidden">
           {STATUS_LIST.map(s => {
             const sc = statusCfg[s];
