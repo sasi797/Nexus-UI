@@ -360,8 +360,8 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
   const tagCfg = cfgItems.filter((c: BookingConfigItem) => c.type === 'tag');
   const tagValues = tagCfg.map((t: BookingConfigItem) => t.value);
 
-  const statusItem = statusCfg.find((s: BookingConfigItem) => s.value === booking.status) ?? statusCfg[0];
-  const sc = statusItem ? { dot: getColor(statusItem.color).dot, text: getColor(statusItem.color).text, label: statusItem.label, path: S_PATH[statusItem.value] ?? S_PATH.Pending } : { dot: 'bg-gray-400', text: 'text-gray-500', label: booking.status, path: S_PATH.Completed };
+  const statusItem = statusCfg.find((s: BookingConfigItem) => s.value === booking.status);
+  const sc = statusItem ? { dot: getColor(statusItem.color).dot, text: getColor(statusItem.color).text, bg: getColor(statusItem.color).bg, border: getColor(statusItem.color).border, label: statusItem.label, path: S_PATH[statusItem.value] ?? S_PATH.Pending } : { dot: 'bg-gray-400', text: 'text-gray-500', bg: 'bg-gray-100', border: 'border-gray-200', label: booking.status, path: S_PATH.Completed };
 
   const isMine = !!myUserEmail && booking.agent?.email === myUserEmail;
   const supportIds = new Set(booking.support_agents.map(a => a.id));
@@ -554,17 +554,19 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
             <InlineDropdown
               trigger={(open, toggle) => (
                 <button onClick={toggle}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-semibold w-full justify-end text-xs transition-colors ${open ? 'bg-gray-100' : ''} ${pc.text}`}>
-                  <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${pc.dot}`} />
-                  {pItem?.label ?? booking.priority}
-                  <Chevron cls="text-current opacity-40" />
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg w-full justify-end transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
+                  <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[10px] font-bold ${pc.bg} ${pc.text} ${pc.border}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${pc.dot}`} />
+                    {pItem?.label ?? booking.priority}
+                  </span>
+                  <Chevron cls="text-gray-300 ml-0.5" />
                 </button>
               )}>
               {close => priorityCfg.map((p: BookingConfigItem) => {
                 const cc = getColor(p.color);
                 return (
                   <DdItem key={p.value} label={p.label} active={booking.priority === p.value}
-                    left={<span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${cc.dot}`} />}
+                    left={<span className={`w-2 h-2 rounded-full shrink-0 ${cc.dot}`} />}
                     onClick={() => { updateBooking({ id: booking.id, body: { priority: p.value } }); close(); }} />
                 );
               })}
@@ -576,19 +578,19 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
         <InlineDropdown
           trigger={(open, toggle) => (
             <button onClick={toggle}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg font-semibold w-full justify-end text-xs transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'} ${sc.text}`}>
-              <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sc.path} />
-              </svg>
-              {sc.label}
-              <Chevron cls="text-current opacity-40" />
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg w-full justify-end transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
+              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[10px] font-bold ${sc.bg} ${sc.text} ${sc.border}`}>
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${sc.dot}`} />
+                {sc.label}
+              </span>
+              <Chevron cls="text-gray-300 ml-0.5" />
             </button>
           )}>
           {close => statusCfg.map((s: BookingConfigItem) => {
             const cc = getColor(s.color);
             return (
               <DdItem key={s.value} label={s.label} active={booking.status === s.value}
-                left={<span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${cc.dot}`} />}
+                left={<span className={`w-2 h-2 rounded-full shrink-0 ${cc.dot}`} />}
                 onClick={() => handleStatusClick(s.value, close)} />
             );
           })}

@@ -53,6 +53,7 @@ export const bookingConfigApi = api.injectEndpoints({
     getBookingConfig: build.query<BookingConfigItem[], void>({
       query: () => '/booking-config',
       providesTags: ['BookingConfig' as never],
+      keepUnusedDataFor: 0,
     }),
     createBookingConfig: build.mutation<BookingConfigItem, BookingConfigCreate>({
       query: (body) => ({ url: '/booking-config', method: 'POST', body }),

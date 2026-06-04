@@ -11,7 +11,7 @@ import { useGetEmailTemplatesQuery, useCreateEmailTemplateMutation, useUpdateEma
 import {
   useGetBookingConfigQuery, useCreateBookingConfigMutation,
   useUpdateBookingConfigMutation, useDeleteBookingConfigMutation,
-  AVAILABLE_COLORS, COLOR_MAP, BookingConfigItem,
+  AVAILABLE_COLORS, COLOR_MAP,
 } from '@/services/bookingConfigApi';
 
 type SettingsSection = 'Shifts' | 'Users' | 'Roles' | 'Email Templates' | 'Bookings';
@@ -791,44 +791,45 @@ export default function SettingsPage() {
                       ))}
                     </div>
 
-                    {/* Add form (tags only — status/priority values are fixed) */}
-                    {isTagTab && (
-                      <div className="px-4 md:px-8 py-4 border-b border-gray-100 bg-gray-50/60">
-                        <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">Add New Tag</p>
-                        <div className="flex flex-wrap gap-3 items-end">
-                          <div className="flex-1 min-w-[140px]">
-                            <label className="block text-[11px] font-semibold text-gray-500 mb-1">Value &amp; Label</label>
-                            <input type="text" placeholder="e.g. Express"
-                              value={newConfigItem.value}
-                              onChange={e => setNewConfigItem(p => ({ ...p, value: e.target.value, label: e.target.value }))}
-                              className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white w-full" />
-                          </div>
-                          <div className="flex-1 min-w-[160px]">
-                            <label className="block text-[11px] font-semibold text-gray-500 mb-1">Color</label>
-                            <div className="flex flex-wrap gap-1.5">
-                              {AVAILABLE_COLORS.map(c => {
-                                const cls = COLOR_MAP[c];
-                                return (
-                                  <button key={c} type="button" title={c}
-                                    onClick={() => setNewConfigItem(p => ({ ...p, color: c }))}
-                                    className={`w-6 h-6 rounded-full border-2 transition-all ${cls.dot} ${newConfigItem.color === c ? 'border-gray-800 scale-125' : 'border-transparent hover:scale-110'}`} />
-                                );
-                              })}
-                            </div>
-                          </div>
-                          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                            disabled={!newConfigItem.value || creatingConfig}
-                            onClick={async () => {
-                              if (!newConfigItem.value) return;
-                              await createConfig({ type: 'tag', value: newConfigItem.value, label: newConfigItem.label || newConfigItem.value, color: newConfigItem.color, order_index: tabItems.length });
-                              setNewConfigItem({ value: '', label: '', color: 'sky' });
-                            }}
-                            className="text-sm font-semibold bg-indigo-600 text-white px-5 py-2 rounded-lg disabled:opacity-50 flex items-center gap-1.5 self-end">
-                            {creatingConfig ? 'Adding…' : '+ Add Tag'}
-                          </motion.button>
+                    {/* Add form */}
+                    <div className="px-4 md:px-8 py-4 border-b border-gray-100 bg-gray-50/60">
+                      <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">
+                        Add New {bookingsTab === 'tag' ? 'Tag' : bookingsTab === 'status' ? 'Status' : 'Priority'}
+                      </p>
+                      <div className="flex flex-wrap gap-3 items-end">
+                        <div className="flex-1 min-w-[140px]">
+                          <label className="block text-[11px] font-semibold text-gray-500 mb-1">Label</label>
+                          <input type="text"
+                            placeholder={bookingsTab === 'tag' ? 'e.g. Express' : bookingsTab === 'status' ? 'e.g. On Hold' : 'e.g. Critical'}
+                            value={newConfigItem.value}
+                            onChange={e => setNewConfigItem(p => ({ ...p, value: e.target.value, label: e.target.value }))}
+                            className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white w-full" />
                         </div>
+                        <div className="flex-1 min-w-[160px]">
+                          <label className="block text-[11px] font-semibold text-gray-500 mb-1">Color</label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {AVAILABLE_COLORS.map(c => {
+                              const cls = COLOR_MAP[c];
+                              return (
+                                <button key={c} type="button" title={c}
+                                  onClick={() => setNewConfigItem(p => ({ ...p, color: c }))}
+                                  className={`w-6 h-6 rounded-full border-2 transition-all ${cls.dot} ${newConfigItem.color === c ? 'border-gray-800 scale-125' : 'border-transparent hover:scale-110'}`} />
+                              );
+                            })}
+                          </div>
+                        </div>
+                        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                          disabled={!newConfigItem.value || creatingConfig}
+                          onClick={async () => {
+                            if (!newConfigItem.value) return;
+                            await createConfig({ type: bookingsTab, value: newConfigItem.value.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''), label: newConfigItem.label || newConfigItem.value, color: newConfigItem.color, order_index: tabItems.length });
+                            setNewConfigItem({ value: '', label: '', color: 'sky' });
+                          }}
+                          className="text-sm font-semibold bg-indigo-600 text-white px-5 py-2 rounded-lg disabled:opacity-50 flex items-center gap-1.5 self-end">
+                          {creatingConfig ? 'Adding…' : `+ Add ${bookingsTab === 'tag' ? 'Tag' : bookingsTab === 'status' ? 'Status' : 'Priority'}`}
+                        </motion.button>
                       </div>
-                    )}
+                    </div>
 
                     {/* Items list */}
                     <div className="px-4 md:px-8 py-5 space-y-2">
@@ -882,13 +883,11 @@ export default function SettingsPage() {
                                       className="w-7 h-7 flex items-center justify-center rounded-md text-gray-300 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
                                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                                     </motion.button>
-                                    {isTagTab && (
-                                      <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                                        onClick={() => deleteConfig(item.id)}
-                                        className="w-7 h-7 flex items-center justify-center rounded-md text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors">
-                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-                                      </motion.button>
-                                    )}
+                                    <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                                      onClick={() => deleteConfig(item.id)}
+                                      className="w-7 h-7 flex items-center justify-center rounded-md text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors">
+                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                    </motion.button>
                                   </div>
                                 </>
                               )}
@@ -896,9 +895,6 @@ export default function SettingsPage() {
                           );
                         })}
                       </AnimatePresence>
-                      {!isTagTab && (
-                        <p className="text-[11px] text-gray-400 mt-3 px-1">Status and priority values are fixed — only their label and color can be changed.</p>
-                      )}
                     </div>
                   </div>
                 );
