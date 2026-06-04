@@ -197,6 +197,12 @@ const S_PATH: Record<string, string> = {
   Completed:   'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
 };
 
+const P_PATH: Record<string, string> = {
+  'Very Urgent': 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
+  'Urgent':      'M5 10l7-7m0 0l7 7m-7-7v18',
+  'Not Urgent':  'M20 12H4',
+};
+
 function parseTags(raw: string | null | undefined, tagValues: string[]): string[] {
   if (!raw) return [];
   return raw.split(',').map(s => s.trim()).filter(s => tagValues.includes(s));
@@ -540,7 +546,9 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: { booking: 
               <button onClick={toggle}
                 className={`flex items-center gap-1 px-2.5 py-1 rounded-lg w-full justify-end transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
                 <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${pc.text}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${pc.dot}`} />
+                  <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={P_PATH[pi?.value ?? ''] ?? P_PATH['Not Urgent']} />
+                  </svg>
                   {pi?.label ?? booking.priority}
                 </span>
                 <Chevron cls="text-gray-300 ml-0.5" />
@@ -563,7 +571,9 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: { booking: 
             <button onClick={toggle}
               className={`flex items-center gap-1 px-2.5 py-1 rounded-lg w-full justify-end transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
               <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${sc.text}`}>
-                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${sc.dot}`} />
+                <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sc.path} />
+                </svg>
                 {sc.label}
               </span>
               <Chevron cls="text-gray-300 ml-0.5" />
