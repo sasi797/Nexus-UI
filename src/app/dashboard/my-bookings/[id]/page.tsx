@@ -396,15 +396,38 @@ export default function BookingDetailPage() {
         <motion.div variants={staggerItem} className="flex-1 min-w-0 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
 
           {/* Subject header */}
-          <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100">
-            <div className="flex items-center justify-between mb-3">
-              <Link href={listOrigin}
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-400 hover:text-indigo-600 transition-colors">
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+          <div className="px-4 sm:px-6 py-3 border-b border-gray-100">
+            {/* Top bar: back link + id + priority + prev/next */}
+            <div className="flex items-center justify-between mb-2.5">
+              <div className="flex items-center gap-1.5">
+                <Link href={listOrigin}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-400 hover:text-indigo-600 transition-colors">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  {listLabel}
+                </Link>
+
+                <svg className="w-3 h-3 text-gray-200 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-                {listLabel}
-              </Link>
+
+                {/* Ticket ID with hash icon */}
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-violet-50 border border-violet-200">
+                  <svg className="w-2.5 h-2.5 text-violet-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                  </svg>
+                  <span className="text-[10px] font-bold text-violet-600 font-mono tracking-wide">{b.id}</span>
+                </span>
+
+                {/* Priority badge with lightning icon */}
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${PRIORITY_BADGE[b.priority] ?? 'bg-gray-100 text-gray-500'}`}>
+                  <svg className="w-2.5 h-2.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  {b.priority}
+                </span>
+              </div>
 
               {/* Prev / Next navigation */}
               <div className="flex items-center gap-1">
@@ -435,28 +458,15 @@ export default function BookingDetailPage() {
                 </button>
               </div>
             </div>
-            <div className="flex items-start gap-4">
-              {/* Sender avatar */}
-              <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${avatarColor(b.sender_email)} flex items-center justify-center text-white text-[14px] font-bold shrink-0 shadow-sm mt-0.5`}>
+
+            {/* Subject + sender */}
+            <div className="flex items-start gap-3">
+              <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${avatarColor(b.sender_email)} flex items-center justify-center text-white text-[13px] font-bold shrink-0 shadow-sm mt-0.5`}>
                 {b.sender_email.charAt(0).toUpperCase()}
               </div>
-
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <span className="text-[10px] font-bold text-gray-400 font-mono">{b.id}</span>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${PRIORITY_BADGE[b.priority] ?? 'bg-gray-100 text-gray-500'}`}>
-                    {b.priority}
-                  </span>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ring-1 ${
-                    b.status === 'Pending' ? 'bg-emerald-50 text-emerald-700 ring-emerald-200' :
-                    b.status === 'In Progress' ? 'bg-blue-50 text-blue-700 ring-blue-200' :
-                    'bg-gray-100 text-gray-500 ring-gray-200'
-                  }`}>
-                    {b.status === 'Pending' ? 'Open' : b.status}
-                  </span>
-                </div>
                 <h2 className="text-[15px] font-bold text-gray-900 leading-snug">{b.subject}</h2>
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-xs text-gray-400 mt-0.5">
                   <span className="font-semibold text-gray-600">{extractName(b.sender_email)}</span>
                   <span className="mx-1.5 text-gray-300">·</span>
                   <span className="text-gray-400">{b.sender_email}</span>
