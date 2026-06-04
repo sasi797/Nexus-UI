@@ -302,7 +302,7 @@ function HistorySection({
 export default function BookingDetailPage() {
   const { id }   = useParams<{ id: string }>();
   const router   = useRouter();
-  const replyRef = useRef<HTMLTextAreaElement>(null);
+  const replyRef = useRef<HTMLElement>(null);
 
   const [composeTab, setComposeTab]       = useState<ComposeTab>('Reply');
   const [savedField, setSavedField]       = useState<string | null>(null);

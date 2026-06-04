@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/store';
@@ -313,7 +313,7 @@ function MessageCard({ msg, token, defaultOpen }: { msg: EmailMessage; token: st
 interface Props {
   bookingId: string;
   senderEmail: string;
-  replyRef?: React.RefObject<HTMLTextAreaElement | null>;
+  replyRef?: React.RefObject<HTMLElement | null>;
   composeTab?: ComposeTab;
   onComposeTabChange?: (tab: ComposeTab) => void;
   readOnly?: boolean;
@@ -329,14 +329,32 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
   const [internalTab, setInternalTab] = useState<ComposeTab>('Reply');
   const composeTab = controlledTab ?? internalTab;
   const setComposeTab = (t: ComposeTab) => { setInternalTab(t); onComposeTabChange?.(t); };
-  const [replyText, setReplyText] = useState('');
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  useEffect(() => {
-    const el = replyRef?.current ?? textareaRef.current;
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = `${el.scrollHeight}px`;
-  }, [replyText, replyRef]);
+
+  // Rich-text editor (replaces plain textarea)
+  const editorRef = useRef<HTMLDivElement>(null);
+  const [editorEmpty, setEditorEmpty] = useState(true);
+  const setEditorElement = useCallback((el: HTMLDivElement | null) => {
+    (editorRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+    if (replyRef) (replyRef as React.MutableRefObject<HTMLElement | null>).current = el;
+  }, [replyRef]);
+
+  // Drag-and-drop
+  const composeContainerRef = useRef<HTMLDivElement>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    if ([...e.dataTransfer.types].includes('Files')) setIsDragOver(true);
+  };
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (!composeContainerRef.current?.contains(e.relatedTarget as Node)) setIsDragOver(false);
+  };
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) setSelectedFiles(prev => [...prev, ...files]);
+  };
+
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [sent, setSent] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -346,6 +364,7 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
   const [removedBaseEmails, setRemovedBaseEmails] = useState<Set<string>>(new Set());
   const [ccChips, setCcChips] = useState<string[]>([]);
   const [ccInput, setCcInput] = useState('');
+
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
   const templatePickerRef = useRef<HTMLDivElement>(null);
   const { data: emailTemplates = [] } = useGetEmailTemplatesQuery();
@@ -382,6 +401,53 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
   })();
 
   const baseToEmails = composeTab === 'Reply All' ? replyAllToEmails : replyToEmails;
+
+  // Collect all emails seen in this thread for autocomplete (used in suggestions below)
+  const knownEmails = useMemo(() => {
+    const s = new Set<string>();
+    const extractEmail = (raw: string): string | null => {
+      const angle = raw.match(/<([^>@\s]+@[^>@\s]+)>/);
+      if (angle) return angle[1].trim().toLowerCase();
+      const bare = raw.trim();
+      return bare.includes('@') ? bare.toLowerCase() : null;
+    };
+    for (const msg of messages) {
+      // From metadata fields
+      const e = extractEmail(msg.from_email ?? '');
+      if (e) s.add(e);
+      for (const field of [msg.to_email, msg.cc_emails]) {
+        field?.split(/[,;]/).forEach(part => { const e2 = extractEmail(part); if (e2) s.add(e2); });
+      }
+      // Scan body text for every email address (catches forwarded Cc/To headers
+      // that wrap across multiple lines and signature emails)
+      const emailRe = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+      let m;
+      while ((m = emailRe.exec(msg.body_text ?? '')) !== null) s.add(m[0].toLowerCase());
+    }
+    s.delete(MAILBOX_EMAIL);
+    return [...s];
+  }, [messages]);
+
+  const toSuggestions = useMemo(() => {
+    if (!toInput.trim()) return [];
+    const q = toInput.toLowerCase();
+    const added = new Set([...baseToEmails.filter(e => !removedBaseEmails.has(e)), ...extraToChips]);
+    return knownEmails.filter(e => e.toLowerCase().includes(q) && !added.has(e)).slice(0, 5);
+  }, [toInput, knownEmails, baseToEmails, extraToChips, removedBaseEmails]);
+
+  const ccSuggestions = useMemo(() => {
+    if (!ccInput.trim()) return [];
+    const q = ccInput.toLowerCase();
+    return knownEmails.filter(e => e.toLowerCase().includes(q) && !ccChips.includes(e)).slice(0, 5);
+  }, [ccInput, knownEmails, ccChips]);
+
+  const forwardToSuggestions = useMemo(() => {
+    if (composeTab !== 'Forward' || !forwardTo.trim()) return [];
+    const lastToken = forwardTo.split(',').pop()?.trim() ?? '';
+    if (!lastToken) return [];
+    const q = lastToken.toLowerCase();
+    return knownEmails.filter(e => e.toLowerCase().includes(q)).slice(0, 5);
+  }, [forwardTo, knownEmails, composeTab]);
 
   // Reset chip state and pre-fill CC on tab switch
   useEffect(() => {
@@ -420,12 +486,20 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
 
   const removeFile = (idx: number) => setSelectedFiles(prev => prev.filter((_, i) => i !== idx));
 
+  const formatText = (cmd: string) => {
+    document.execCommand(cmd, false);
+    editorRef.current?.focus();
+  };
+
   const handleSend = async () => {
-    if (!replyText.trim() && selectedFiles.length === 0) return;
+    const html = editorRef.current?.innerHTML ?? '';
+    const text = editorRef.current?.innerText?.trim() ?? '';
+    if (!text && selectedFiles.length === 0) return;
     if (composeTab === 'Forward' && !forwardTo.trim()) return;
     setSendError(null);
     const fd = new FormData();
-    fd.append('body_text', replyText.trim() || ' ');
+    fd.append('body_text', text || ' ');
+    fd.append('body_html', html);
     selectedFiles.forEach(f => fd.append('files', f));
 
     if (composeTab === 'Forward') {
@@ -446,7 +520,8 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
       setSendError(errMsg);
       return;
     }
-    setReplyText('');
+    if (editorRef.current) editorRef.current.innerHTML = '';
+    setEditorEmpty(true);
     setSelectedFiles([]);
     setToInput('');
     setExtraToChips([]);
@@ -554,9 +629,27 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
       )}
 
       {/* Compose area */}
-      {!readOnly && <div className="border border-gray-200 rounded-xl overflow-hidden mt-2 bg-white shadow-sm">
+      {!readOnly && <div
+        ref={composeContainerRef}
+        className="border border-gray-200 rounded-xl mt-2 bg-white shadow-sm relative"
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        {/* Drag-and-drop overlay */}
+        {isDragOver && (
+          <div className="absolute inset-0 bg-indigo-50/80 border-2 border-dashed border-indigo-400 rounded-xl flex items-center justify-center z-20 pointer-events-none">
+            <div className="text-center">
+              <svg className="w-9 h-9 text-indigo-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+              </svg>
+              <p className="text-sm font-semibold text-indigo-600 mt-2">Drop files to attach</p>
+            </div>
+          </div>
+        )}
+
         {/* Tab bar */}
-        <div className="flex border-b border-gray-100 bg-gray-50/60">
+        <div className="flex border-b border-gray-100 bg-gray-50/60 rounded-t-xl overflow-hidden">
           {composeTabs.map(tab => (
             <button
               key={tab.id}
@@ -578,13 +671,32 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
           <div className="flex items-start gap-1.5 flex-wrap border-b border-gray-50 pb-2 min-h-[28px]">
             <span className="text-[11px] font-semibold text-gray-400 shrink-0 mt-[3px]">To:</span>
             {composeTab === 'Forward' ? (
-              <input
-                type="text"
-                value={forwardTo}
-                onChange={e => setForwardTo(e.target.value)}
-                placeholder="recipient@example.com, another@example.com"
-                className="flex-1 min-w-0 text-[12px] text-gray-700 bg-transparent focus:outline-none placeholder:text-gray-300"
-              />
+              <div className="relative flex-1 min-w-0">
+                <input
+                  type="text"
+                  value={forwardTo}
+                  onChange={e => setForwardTo(e.target.value)}
+                  placeholder="recipient@example.com, another@example.com"
+                  className="w-full text-[12px] text-gray-700 bg-transparent focus:outline-none placeholder:text-gray-300"
+                />
+                {forwardToSuggestions.length > 0 && (
+                  <div className="absolute top-full left-0 mt-0.5 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
+                    {forwardToSuggestions.map(email => (
+                      <button
+                        key={email}
+                        type="button"
+                        onMouseDown={e => {
+                          e.preventDefault();
+                          const parts = forwardTo.split(',');
+                          parts[parts.length - 1] = ' ' + email;
+                          setForwardTo(parts.join(',').replace(/^,\s*/, ''));
+                        }}
+                        className="w-full text-left px-3 py-2 text-[12px] text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors truncate"
+                      >{email}</button>
+                    ))}
+                  </div>
+                )}
+              </div>
             ) : (
               <>
                 {baseToEmails.filter(e => !removedBaseEmails.has(e)).map((email, i) => (
@@ -607,23 +719,41 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
                     >✕</button>
                   </span>
                 ))}
-                <input
-                  type="text"
-                  value={toInput}
-                  onChange={e => setToInput(e.target.value)}
-                  onKeyDown={e => {
-                    if ((e.key === 'Enter' || e.key === ',' || e.key === 'Tab') && toInput.trim()) {
-                      e.preventDefault();
-                      commitToInput();
-                    }
-                    if (e.key === 'Backspace' && !toInput && extraToChips.length > 0) {
-                      setExtraToChips(prev => prev.slice(0, -1));
-                    }
-                  }}
-                  onBlur={commitToInput}
-                  placeholder={baseToEmails.filter(e => !removedBaseEmails.has(e)).length === 0 && extraToChips.length === 0 ? 'Add recipient...' : 'Add more...'}
-                  className="flex-1 min-w-[100px] text-[12px] text-gray-700 bg-transparent focus:outline-none placeholder:text-gray-300"
-                />
+                <div className="relative flex-1 min-w-[100px]">
+                  <input
+                    type="text"
+                    value={toInput}
+                    onChange={e => setToInput(e.target.value)}
+                    onKeyDown={e => {
+                      if ((e.key === 'Enter' || e.key === ',' || e.key === 'Tab') && toInput.trim()) {
+                        e.preventDefault();
+                        commitToInput();
+                      }
+                      if (e.key === 'Backspace' && !toInput && extraToChips.length > 0) {
+                        setExtraToChips(prev => prev.slice(0, -1));
+                      }
+                    }}
+                    onBlur={commitToInput}
+                    placeholder={baseToEmails.filter(e => !removedBaseEmails.has(e)).length === 0 && extraToChips.length === 0 ? 'Add recipient...' : 'Add more...'}
+                    className="w-full text-[12px] text-gray-700 bg-transparent focus:outline-none placeholder:text-gray-300"
+                  />
+                  {toSuggestions.length > 0 && (
+                    <div className="absolute top-full left-0 mt-0.5 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
+                      {toSuggestions.map(email => (
+                        <button
+                          key={email}
+                          type="button"
+                          onMouseDown={e => {
+                            e.preventDefault();
+                            setExtraToChips(prev => [...prev, email]);
+                            setToInput('');
+                          }}
+                          className="w-full text-left px-3 py-2 text-[12px] text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors truncate"
+                        >{email}</button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </>
             )}
           </div>
@@ -641,34 +771,80 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
                 >✕</button>
               </span>
             ))}
-            <input
-              type="text"
-              value={ccInput}
-              onChange={e => setCcInput(e.target.value)}
-              onKeyDown={e => {
-                if ((e.key === 'Enter' || e.key === ',' || e.key === 'Tab') && ccInput.trim()) {
-                  e.preventDefault();
-                  commitCcInput();
-                }
-                if (e.key === 'Backspace' && !ccInput && ccChips.length > 0) {
-                  setCcChips(prev => prev.slice(0, -1));
-                }
-              }}
-              onBlur={commitCcInput}
-              placeholder={ccChips.length === 0 ? 'cc@example.com, another@example.com' : 'Add more...'}
-              className="flex-1 min-w-[120px] text-[12px] text-gray-700 bg-transparent focus:outline-none placeholder:text-gray-300"
-            />
+            <div className="relative flex-1 min-w-[120px]">
+              <input
+                type="text"
+                value={ccInput}
+                onChange={e => setCcInput(e.target.value)}
+                onKeyDown={e => {
+                  if ((e.key === 'Enter' || e.key === ',' || e.key === 'Tab') && ccInput.trim()) {
+                    e.preventDefault();
+                    commitCcInput();
+                  }
+                  if (e.key === 'Backspace' && !ccInput && ccChips.length > 0) {
+                    setCcChips(prev => prev.slice(0, -1));
+                  }
+                }}
+                onBlur={commitCcInput}
+                placeholder={ccChips.length === 0 ? 'cc@example.com, another@example.com' : 'Add more...'}
+                className="w-full text-[12px] text-gray-700 bg-transparent focus:outline-none placeholder:text-gray-300"
+              />
+              {ccSuggestions.length > 0 && (
+                <div className="absolute top-full left-0 mt-0.5 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
+                  {ccSuggestions.map(email => (
+                    <button
+                      key={email}
+                      type="button"
+                      onMouseDown={e => {
+                        e.preventDefault();
+                        setCcChips(prev => [...prev, email]);
+                        setCcInput('');
+                      }}
+                      className="w-full text-left px-3 py-2 text-[12px] text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors truncate"
+                    >{email}</button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Textarea — transparent, no border */}
-          <textarea
-            ref={replyRef ?? textareaRef}
-            value={replyText}
-            onChange={e => setReplyText(e.target.value)}
-            placeholder={composePlaceholder}
-            rows={4}
-            className="w-full px-0 py-1 text-sm text-gray-700 bg-transparent focus:outline-none resize-none overflow-hidden placeholder:text-gray-300 leading-relaxed"
-          />
+          {/* Formatting toolbar */}
+          <div className="flex items-center gap-0.5 -mb-1">
+            {([
+              { cmd: 'bold',      label: 'B', title: 'Bold',      cls: 'font-bold' },
+              { cmd: 'italic',    label: 'I', title: 'Italic',    cls: 'italic' },
+              { cmd: 'underline', label: 'U', title: 'Underline', cls: 'underline' },
+            ] as { cmd: string; label: string; title: string; cls: string }[]).map(({ cmd, label, title, cls }) => (
+              <button
+                key={cmd}
+                type="button"
+                title={title}
+                onMouseDown={e => { e.preventDefault(); formatText(cmd); }}
+                className={`w-7 h-7 flex items-center justify-center rounded text-xs ${cls} text-gray-400 hover:text-gray-800 hover:bg-gray-100 transition-colors`}
+              >{label}</button>
+            ))}
+          </div>
+
+          {/* Rich-text editor */}
+          <div className="relative min-h-[80px]">
+            <div
+              ref={setEditorElement}
+              contentEditable
+              suppressContentEditableWarning
+              onInput={e => setEditorEmpty(!(e.currentTarget as HTMLDivElement).innerText.trim())}
+              onPaste={e => {
+                e.preventDefault();
+                const text = e.clipboardData.getData('text/plain');
+                document.execCommand('insertText', false, text);
+              }}
+              className="w-full py-1 text-sm text-gray-700 bg-transparent focus:outline-none min-h-[80px] leading-relaxed"
+            />
+            {editorEmpty && (
+              <span className="absolute top-1 left-0 text-sm text-gray-300 pointer-events-none select-none">
+                {composePlaceholder}
+              </span>
+            )}
+          </div>
 
           {/* Selected files preview */}
           {selectedFiles.length > 0 && (
@@ -742,7 +918,13 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
                         <button
                           key={t.id}
                           type="button"
-                          onClick={() => { setReplyText(t.body); setShowTemplatePicker(false); }}
+                          onClick={() => {
+                            if (editorRef.current) {
+                              editorRef.current.innerHTML = t.body.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+                              setEditorEmpty(false);
+                            }
+                            setShowTemplatePicker(false);
+                          }}
                           className="w-full text-left px-3 py-2.5 hover:bg-indigo-50 transition-colors group/item last:rounded-b-xl"
                         >
                           <p className="text-sm font-semibold text-gray-800 group-hover/item:text-indigo-700">{t.name}</p>
@@ -775,7 +957,7 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
               whileTap={{ scale: 0.97 }}
               onClick={handleSend}
               disabled={
-                (composeTab === 'Forward' ? !forwardTo.trim() : (!replyText.trim() && selectedFiles.length === 0)) ||
+                (composeTab === 'Forward' ? !forwardTo.trim() : (editorEmpty && selectedFiles.length === 0)) ||
                 sending
               }
               className="flex items-center gap-2 text-xs font-bold px-4 py-1.5 rounded-lg shadow-sm disabled:opacity-50 transition-all text-white bg-indigo-600 hover:bg-indigo-700"
