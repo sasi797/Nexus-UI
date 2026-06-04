@@ -341,11 +341,11 @@ export default function BookingDetailPage() {
     flashSaved('status');
   };
   const handlePriorityChange = async (priority: string) => {
-    await updateBooking({ id, body: { priority } });
+    await updateBooking({ id, body: { subject: b?.subject, sender_email: b?.sender_email, priority } });
     flashSaved('priority');
   };
   const handleAgentChange = async (agent_id: string) => {
-    await updateBooking({ id, body: { agent_id: agent_id || undefined } });
+    await updateBooking({ id, body: { subject: b?.subject, sender_email: b?.sender_email, agent_id: agent_id || undefined } });
     flashSaved('agent');
   };
 
@@ -651,7 +651,7 @@ export default function BookingDetailPage() {
                 const activeTags: BTag[] = (b.tags ?? '').split(',').map(s => s.trim()).filter((s): s is BTag => BOOKING_TAGS.includes(s as BTag));
                 const handleTagToggle = async (tag: BTag) => {
                   const next = activeTags.includes(tag) ? activeTags.filter(t => t !== tag) : [...activeTags, tag];
-                  await updateBooking({ id, body: { tags: next.join(',') } });
+                  await updateBooking({ id, body: { subject: b.subject, sender_email: b.sender_email, tags: next.join(',') } });
                   flashSaved('tags');
                 };
                 return (

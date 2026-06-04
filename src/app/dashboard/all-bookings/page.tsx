@@ -487,11 +487,11 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
                 <>
                   <DdItem label="Unassign" active={!booking.agent}
                     left={<span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-[9px] text-gray-400 font-bold shrink-0">—</span>}
-                    onClick={() => { updateBooking({ id: booking.id, body: { agent_id: undefined } }); close(); }} />
+                    onClick={() => { updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, agent_id: undefined } }); close(); }} />
                   {agents.map(a => (
                     <DdItem key={a.id} label={a.name} active={booking.agent?.id === a.id}
                       left={<div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[9px] font-bold shrink-0`}>{a.name.charAt(0).toUpperCase()}</div>}
-                      onClick={() => { updateBooking({ id: booking.id, body: { agent_id: a.id } }); close(); }} />
+                      onClick={() => { updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, agent_id: a.id } }); close(); }} />
                   ))}
                 </>
               )}
@@ -575,7 +575,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
                 return (
                   <DdItem key={p.value} label={p.label} active={booking.priority === p.value}
                     left={<span className={`w-2 h-2 rounded-full shrink-0 ${cc.dot}`} />}
-                    onClick={() => { updateBooking({ id: booking.id, body: { priority: p.value } }); close(); }} />
+                    onClick={() => { updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, priority: p.value } }); close(); }} />
                 );
               })}
             </InlineDropdown>
@@ -646,7 +646,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
                   <button key={tag.value}
                     onClick={() => {
                       const next = active ? activeTags.filter(t => t !== tag.value) : [...activeTags, tag.value];
-                      updateBooking({ id: booking.id, body: { tags: serializeTags(next) } });
+                      updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, tags: serializeTags(next) } });
                       close();
                     }}
                     className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-medium transition-colors ${active ? `${c.bg} ${c.text}` : 'text-gray-600 hover:bg-gray-50'}`}>
