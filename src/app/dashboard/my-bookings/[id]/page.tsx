@@ -9,6 +9,7 @@ import {
   useGetBookingQuery, usePatchBookingStatusMutation,
   useUpdateBookingMutation, useGetBookingEventsQuery,
   useAddSupportAgentMutation, useRemoveSupportAgentMutation,
+  BookingEvent,
 } from '@/services/bookingsApi';
 
 import { useGetAgentsQuery, Agent } from '@/services/agentsApi';
@@ -239,8 +240,8 @@ function HistorySection({
   events,
   eventCfg,
 }: {
-  events: { id: string; event: string; new_value?: string | null; old_value?: string | null; actor_name?: string | null; created_at: string }[];
-  eventCfg: Record<string, { icon: string; color: string; label: (e: typeof events[0]) => string }>;
+  events: BookingEvent[];
+  eventCfg: Record<string, { icon: string; color: string; label: (e: BookingEvent) => string }>;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -776,7 +777,7 @@ export default function BookingDetailPage() {
 
               {/* History — collapsible */}
               {(() => {
-                const EVENT_CFG: Record<string, { icon: string; color: string; label: (e: typeof bookingEvents[0]) => string }> = {
+                const EVENT_CFG: Record<string, { icon: string; color: string; label: (e: BookingEvent) => string }> = {
                   created:               { icon: '📩', color: 'bg-gray-100',   label: e => `Booking created${e.new_value ? ` · ${e.new_value}` : ''}` },
                   status_changed:        { icon: '🔄', color: 'bg-blue-50',    label: e => `Status → ${e.new_value === 'Pending' ? 'Open' : e.new_value}` },
                   priority_changed:      { icon: '⚡', color: 'bg-amber-50',   label: e => `Priority → ${e.new_value}` },
