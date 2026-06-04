@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSelector } from 'react-redux';
 import type { RootState } from '@/store';
@@ -101,6 +102,63 @@ function splitQuotedContent(text: string): { main: string; quoted: string | null
     }
   }
   return { main: text.trim(), quoted: null };
+}
+
+function SuggestionPortal({
+  suggestions,
+  anchorRef,
+  onSelect,
+}: {
+  suggestions: string[];
+  anchorRef: React.RefObject<HTMLElement | null>;
+  onSelect: (email: string) => void;
+}) {
+  const [style, setStyle] = useState<React.CSSProperties>({});
+
+  useEffect(() => {
+    if (suggestions.length === 0) return;
+    const update = () => {
+      const el = anchorRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setStyle({
+        position: 'fixed',
+        bottom: window.innerHeight - r.top + 2,
+        left: r.left,
+        width: Math.max(288, r.width),
+        zIndex: 9999,
+      });
+    };
+    update();
+    window.addEventListener('scroll', update, true);
+    window.addEventListener('resize', update);
+    return () => {
+      window.removeEventListener('scroll', update, true);
+      window.removeEventListener('resize', update);
+    };
+  }, [suggestions, anchorRef]);
+
+  if (suggestions.length === 0) return null;
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div style={style} className="bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
+      {suggestions.map(email => (
+        <button
+          key={email}
+          type="button"
+          onMouseDown={e => { e.preventDefault(); onSelect(email); }}
+          className="w-full text-left px-3 py-2.5 text-[12px] text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors truncate flex items-center gap-2"
+        >
+          <svg className="w-3 h-3 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+          {email}
+        </button>
+      ))}
+    </div>,
+    document.body
+  );
 }
 
 function AttachmentChip({ att, token }: { att: EmailAttachment; token: string | null }) {
@@ -369,6 +427,9 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
 
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
   const templatePickerRef = useRef<HTMLDivElement>(null);
+  const toInputWrapperRef = useRef<HTMLDivElement>(null);
+  const ccInputWrapperRef = useRef<HTMLDivElement>(null);
+  const fwdInputWrapperRef = useRef<HTMLDivElement>(null);
   const { data: emailTemplates = [] } = useGetEmailTemplatesQuery();
 
   useEffect(() => {
@@ -489,8 +550,19 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
   const removeFile = (idx: number) => setSelectedFiles(prev => prev.filter((_, i) => i !== idx));
 
   const formatText = (cmd: string) => {
-    editorRef.current?.focus();  // must be focused before list commands
-    document.execCommand(cmd, false);
+    const el = editorRef.current;
+    if (!el) return;
+    el.focus();
+    // execCommand is deprecated but still the only cross-browser way to toggle
+    // inline formatting in a contentEditable. Wrap in try/catch so a CSP block
+    // or browser removal doesn't crash the whole compose area.
+    try {
+      document.execCommand(cmd, false);
+    } catch {
+      // silently ignore — formatting unavailable in this environment
+    }
+    // Keep editorEmpty in sync after command
+    setEditorEmpty(!el.innerText.trim());
   };
 
   const handleSend = async () => {
@@ -673,7 +745,7 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
           <div className="flex items-start gap-1.5 flex-wrap border-b border-gray-50 pb-2 min-h-[28px]">
             <span className="text-[11px] font-semibold text-gray-400 shrink-0 mt-[3px]">To:</span>
             {composeTab === 'Forward' ? (
-              <div className="relative flex-1 min-w-0">
+              <div ref={fwdInputWrapperRef} className="relative flex-1 min-w-0">
                 <input
                   type="text"
                   value={forwardTo}
@@ -681,23 +753,15 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
                   placeholder="recipient@example.com, another@example.com"
                   className="w-full text-[12px] text-gray-700 bg-transparent focus:outline-none placeholder:text-gray-300"
                 />
-                {forwardToSuggestions.length > 0 && (
-                  <div className="absolute bottom-full left-0 mb-0.5 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
-                    {forwardToSuggestions.map(email => (
-                      <button
-                        key={email}
-                        type="button"
-                        onMouseDown={e => {
-                          e.preventDefault();
-                          const parts = forwardTo.split(',');
-                          parts[parts.length - 1] = ' ' + email;
-                          setForwardTo(parts.join(',').replace(/^,\s*/, ''));
-                        }}
-                        className="w-full text-left px-3 py-2 text-[12px] text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors truncate"
-                      >{email}</button>
-                    ))}
-                  </div>
-                )}
+                <SuggestionPortal
+                  suggestions={forwardToSuggestions}
+                  anchorRef={fwdInputWrapperRef}
+                  onSelect={email => {
+                    const parts = forwardTo.split(',');
+                    parts[parts.length - 1] = ' ' + email;
+                    setForwardTo(parts.join(',').replace(/^,\s*/, ''));
+                  }}
+                />
               </div>
             ) : (
               <>
@@ -721,7 +785,7 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
                     >✕</button>
                   </span>
                 ))}
-                <div className="relative flex-1 min-w-[100px]">
+                <div ref={toInputWrapperRef} className="relative flex-1 min-w-[100px]">
                   <input
                     type="text"
                     value={toInput}
@@ -739,22 +803,11 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
                     placeholder={baseToEmails.filter(e => !removedBaseEmails.has(e)).length === 0 && extraToChips.length === 0 ? 'Add recipient...' : 'Add more...'}
                     className="w-full text-[12px] text-gray-700 bg-transparent focus:outline-none placeholder:text-gray-300"
                   />
-                  {toSuggestions.length > 0 && (
-                    <div className="absolute bottom-full left-0 mb-0.5 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
-                      {toSuggestions.map(email => (
-                        <button
-                          key={email}
-                          type="button"
-                          onMouseDown={e => {
-                            e.preventDefault();
-                            setExtraToChips(prev => [...prev, email]);
-                            setToInput('');
-                          }}
-                          className="w-full text-left px-3 py-2 text-[12px] text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors truncate"
-                        >{email}</button>
-                      ))}
-                    </div>
-                  )}
+                  <SuggestionPortal
+                    suggestions={toSuggestions}
+                    anchorRef={toInputWrapperRef}
+                    onSelect={email => { setExtraToChips(prev => [...prev, email]); setToInput(''); }}
+                  />
                 </div>
               </>
             )}
@@ -773,7 +826,7 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
                 >✕</button>
               </span>
             ))}
-            <div className="relative flex-1 min-w-[120px]">
+            <div ref={ccInputWrapperRef} className="relative flex-1 min-w-[120px]">
               <input
                 type="text"
                 value={ccInput}
@@ -791,22 +844,11 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
                 placeholder={ccChips.length === 0 ? 'cc@example.com, another@example.com' : 'Add more...'}
                 className="w-full text-[12px] text-gray-700 bg-transparent focus:outline-none placeholder:text-gray-300"
               />
-              {ccSuggestions.length > 0 && (
-                <div className="absolute bottom-full left-0 mb-0.5 w-72 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
-                  {ccSuggestions.map(email => (
-                    <button
-                      key={email}
-                      type="button"
-                      onMouseDown={e => {
-                        e.preventDefault();
-                        setCcChips(prev => [...prev, email]);
-                        setCcInput('');
-                      }}
-                      className="w-full text-left px-3 py-2 text-[12px] text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors truncate"
-                    >{email}</button>
-                  ))}
-                </div>
-              )}
+              <SuggestionPortal
+                suggestions={ccSuggestions}
+                anchorRef={ccInputWrapperRef}
+                onSelect={email => { setCcChips(prev => [...prev, email]); setCcInput(''); }}
+              />
             </div>
           </div>
 
