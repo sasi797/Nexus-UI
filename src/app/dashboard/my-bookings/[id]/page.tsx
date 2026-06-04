@@ -309,6 +309,7 @@ export default function BookingDetailPage() {
   const [showDaModal, setShowDaModal]     = useState(false);
   const [daNumber, setDaNumber]           = useState('');
   const [daDesc, setDaDesc]               = useState('');
+  const [sidebarOpen, setSidebarOpen]     = useState(true);
 
   const { data: b, isLoading }                   = useGetBookingQuery(id);
   const { data: bookingEvents = [] }             = useGetBookingEventsQuery(id, { pollingInterval: 30_000 });
@@ -457,6 +458,19 @@ export default function BookingDetailPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
                   </svg>
                 </button>
+
+                {/* Sidebar collapse toggle */}
+                <button
+                  onClick={() => setSidebarOpen(o => !o)}
+                  title={sidebarOpen ? 'Hide ticket details' : 'Show ticket details'}
+                  className="flex items-center justify-center w-7 h-7 rounded-lg border border-gray-200 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 transition-all ml-1">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {sidebarOpen
+                      ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                      : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                    }
+                  </svg>
+                </button>
               </div>
             </div>
 
@@ -538,7 +552,7 @@ export default function BookingDetailPage() {
         </motion.div>
 
         {/* ── Right sidebar ── */}
-        <motion.div variants={staggerItem} className="w-full lg:w-80 lg:shrink-0">
+        {sidebarOpen && <motion.div variants={staggerItem} className="w-full lg:w-80 lg:shrink-0">
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
 
             {/* Sidebar header */}
@@ -793,7 +807,7 @@ export default function BookingDetailPage() {
 
             </div>
           </div>
-        </motion.div>
+        </motion.div>}
       </div>
 
       {/* ── DA Completion Modal ── */}
