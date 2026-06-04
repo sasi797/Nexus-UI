@@ -27,7 +27,6 @@ export default function LoginPage() {
   const [view,          setView]          = useState<View>('login');
   const [email,         setEmail]         = useState('');
   const [password,      setPassword]      = useState('');
-  const [rememberMe,    setRememberMe]    = useState(false);
   const [showPassword,  setShowPassword]  = useState(false);
   const [newPass,       setNewPass]       = useState('');
   const [showNewPass,   setShowNewPass]   = useState(false);
@@ -39,11 +38,6 @@ export default function LoginPage() {
   const [login,         { isLoading: loggingIn }]  = useLoginMutation();
   const [resetPassword, { isLoading: resetting }]  = useResetPasswordMutation();
 
-  // Remember me — load saved email on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('bts_remember_email');
-    if (saved) { setEmail(saved); setRememberMe(true); }
-  }, []);
 
   const handleLogin = async (e: React.SyntheticEvent) => {
     e.preventDefault();
@@ -55,11 +49,6 @@ export default function LoginPage() {
       });
       const user = await res.json();
       dispatch(setCredentials({ accessToken: tokens.access_token, refreshToken: tokens.refresh_token, user }));
-      if (rememberMe) {
-        localStorage.setItem('bts_remember_email', email);
-      } else {
-        localStorage.removeItem('bts_remember_email');
-      }
       router.push('/dashboard/all-bookings');
     } catch {
       setErrorMsg('Invalid email or password');
@@ -281,12 +270,7 @@ export default function LoginPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between">
-                        <label className="flex items-center gap-2 cursor-pointer select-none">
-                          <input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)}
-                            className="w-4 h-4 rounded border-gray-300 accent-violet-600 cursor-pointer" />
-                          <span className="text-[12px] text-gray-500">Remember me</span>
-                        </label>
+                      <div className="flex items-center justify-end">
                         <button type="button" onClick={() => switchView('reset')}
                           className="text-[12px] text-violet-600 hover:text-violet-700 font-semibold transition-colors">
                           Forgot password?
