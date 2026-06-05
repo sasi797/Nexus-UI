@@ -244,7 +244,7 @@ function HistorySection({
   events: BookingEvent[];
   eventCfg: Record<string, { icon: string; color: string; label: (e: BookingEvent) => string }>;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   return (
     <div>
       <button
@@ -338,6 +338,7 @@ export default function BookingDetailPage() {
   };
 
   const handleStatusChange = async (status: string) => {
+    if (status === 'Completed') { handleClose(); return; }
     await patchStatus({ id, status });
     flashSaved('status');
   };
@@ -387,7 +388,7 @@ export default function BookingDetailPage() {
   }
   if (!b) return <p className="text-gray-400 text-sm">Booking not found.</p>;
 
-  const isOpen = b.status !== 'Completed';
+  const isOpen = true;
 
   return (
     <motion.div variants={pageTransition} initial="hidden" animate="visible" className="space-y-4">
@@ -465,12 +466,19 @@ export default function BookingDetailPage() {
                   onClick={() => setSidebarOpen(o => !o)}
                   title={sidebarOpen ? 'Hide ticket details' : 'Show ticket details'}
                   className="flex items-center justify-center w-7 h-7 rounded-lg border border-gray-200 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 transition-all ml-1">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    {sidebarOpen
-                      ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                      : <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-                    }
-                  </svg>
+                  {sidebarOpen ? (
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 3v18" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l3 3-3 3" />
+                    </svg>
+                  ) : (
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 3v18" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9l-3 3 3 3" />
+                    </svg>
+                  )}
                 </button>
               </div>
             </div>
@@ -599,19 +607,19 @@ export default function BookingDetailPage() {
               {/* Status — instant-save pills */}
               <div>
                 <p className={labelCls}>Status</p>
-                <div className="flex gap-1.5">
+                <div className="grid grid-cols-2 gap-1.5">
                   {(['Pending', 'In Progress', 'Completed', 'Ignored'] as const).map(s => (
                     <button
                       key={s}
                       disabled={saving || patching || !isOpen}
                       onClick={() => handleStatusChange(s)}
-                      className={`flex-1 flex items-center justify-center gap-1 text-[10px] font-bold py-1.5 rounded-lg border transition-all disabled:opacity-50 ${
+                      className={`flex items-center justify-center gap-1 text-[10.5px] font-bold py-1.5 rounded-lg border transition-all disabled:opacity-50 ${
                         b.status === s
                           ? STATUS_PILL_ON[s]
                           : 'border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600 hover:bg-gray-50'
                       }`}
                     >
-                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${b.status === s ? STATUS_DOT[s] : 'bg-gray-300'}`} />
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${b.status === s ? STATUS_DOT[s] : 'bg-gray-300'}`} />
                       {s === 'Pending' ? 'Open' : s}
                     </button>
                   ))}
