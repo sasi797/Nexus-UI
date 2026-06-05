@@ -15,9 +15,9 @@ import { useGetBookingConfigQuery, getColor, BookingConfigItem } from '@/service
 import { useAppSelector } from '@/store/hooks';
 import ApiErrorState from '@/components/ApiErrorState';
 
-type Tab = 'All' | 'Pending' | 'In Progress' | 'Completed';
-const TABS: Tab[] = ['All', 'Pending', 'In Progress', 'Completed'];
-const TAB_LABEL: Record<Tab, string> = { All: 'All', Pending: 'Open', 'In Progress': 'In Progress', Completed: 'Completed' };
+type Tab = 'All' | 'Pending' | 'In Progress' | 'Completed' | 'Ignored';
+const TABS: Tab[] = ['All', 'Pending', 'In Progress', 'Completed', 'Ignored'];
+const TAB_LABEL: Record<Tab, string> = { All: 'All', Pending: 'Open', 'In Progress': 'In Progress', Completed: 'Completed', Ignored: 'Ignored' };
 
 /* ── helpers ── */
 const AVATAR_COLORS = [
@@ -195,6 +195,7 @@ const S_PATH: Record<string, string> = {
   Pending:      'M13 10V3L4 14h7v7l9-11h-7z',
   'In Progress':'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15',
   Completed:   'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+  Ignored:     'M18.364 5.636l-12.728 12.728M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
 };
 
 const P_PATH: Record<string, string> = {
@@ -779,6 +780,7 @@ export default function MyBookingsPage() {
   const { data: cPend } = useGetBookingsQuery({ ...countBase, status: 'Pending' },       countOpts);
   const { data: cProg } = useGetBookingsQuery({ ...countBase, status: 'In Progress' },   countOpts);
   const { data: cDone } = useGetBookingsQuery({ ...countBase, status: 'Completed' },     countOpts);
+  const { data: cIgn  } = useGetBookingsQuery({ ...countBase, status: 'Ignored' },       countOpts);
 
   const allItems = data?.items ?? [];
 
@@ -787,11 +789,13 @@ export default function MyBookingsPage() {
     Pending:       activeTab === 'Pending'     ? currentData?.total : undefined,
     'In Progress': activeTab === 'In Progress' ? currentData?.total : undefined,
     Completed:     activeTab === 'Completed'   ? currentData?.total : undefined,
+    Ignored:       activeTab === 'Ignored'     ? currentData?.total : undefined,
   } : {
     All:           hasNoAgentProfile ? 0 : cAll?.total,
     Pending:       hasNoAgentProfile ? 0 : cPend?.total,
     'In Progress': hasNoAgentProfile ? 0 : cProg?.total,
     Completed:     hasNoAgentProfile ? 0 : cDone?.total,
+    Ignored:       hasNoAgentProfile ? 0 : cIgn?.total,
   };
 
   const [senderOptions, setSenderOptions] = useState<string[]>([]);
@@ -863,6 +867,7 @@ export default function MyBookingsPage() {
                 {tab === 'Pending' && <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>}
                 {tab === 'In Progress' && <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>}
                 {tab === 'Completed' && <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+                {tab === 'Ignored' && <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-12.728 12.728M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
                 {TAB_LABEL[tab]}
                 {TAB_COUNTS[tab] !== undefined && (
                   <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none ${
@@ -1052,7 +1057,7 @@ export default function MyBookingsPage() {
             <div className="border-t border-gray-100" />
 
             <FilterSelect label="Status" value={activeTab}
-              options={['All', 'Pending', 'In Progress', 'Completed']}
+              options={['All', 'Pending', 'In Progress', 'Completed', 'Ignored']}
               onChange={(v) => handleTabChange(v as typeof activeTab)} />
 
             <div className="border-t border-gray-100" />

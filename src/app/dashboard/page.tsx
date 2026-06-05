@@ -17,6 +17,7 @@ const statusStyle: Record<string, string> = {
   'In Progress': 'bg-blue-50 text-blue-700 ring-1 ring-blue-200',
   Pending:       'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
   Completed:     'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
+  Ignored:       'bg-slate-50 text-slate-600 ring-1 ring-slate-200',
 };
 
 const bookingColumns: ColumnDef<BookingListItem>[] = [

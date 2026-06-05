@@ -39,9 +39,10 @@ const STATUS_PILL_ON: Record<string, string> = {
   Pending: 'bg-amber-50 text-amber-700 border-amber-300',
   'In Progress': 'bg-blue-50 text-blue-700 border-blue-300',
   Completed: 'bg-red-50 text-red-600 border-red-300',
+  Ignored: 'bg-slate-50 text-slate-600 border-slate-300',
 };
 const STATUS_DOT: Record<string, string> = {
-  Pending: 'bg-amber-400', 'In Progress': 'bg-blue-500', Completed: 'bg-red-400',
+  Pending: 'bg-amber-400', 'In Progress': 'bg-blue-500', Completed: 'bg-red-400', Ignored: 'bg-slate-400',
 };
 
 const AVATAR_COLORS = [
@@ -599,7 +600,7 @@ export default function BookingDetailPage() {
               <div>
                 <p className={labelCls}>Status</p>
                 <div className="flex gap-1.5">
-                  {(['Pending', 'In Progress', 'Completed'] as const).map(s => (
+                  {(['Pending', 'In Progress', 'Completed', 'Ignored'] as const).map(s => (
                     <button
                       key={s}
                       disabled={saving || patching || !isOpen}
