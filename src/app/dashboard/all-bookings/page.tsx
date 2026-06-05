@@ -460,7 +460,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
     </Link>
 
     {/* ── Desktop row (≥ md) ── */}
-    <div className={`hidden md:flex items-center gap-2 px-3 pt-3 pb-2.5 rounded-lg border shadow-sm hover:shadow-md transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${checked ? 'bg-indigo-50 border-indigo-300 ring-1 ring-indigo-100' : isCompleted ? 'bg-orange-50/70 border-orange-100 hover:border-orange-200' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
+    <div className={`hidden md:flex items-center gap-3 px-4 py-3 rounded-lg border shadow-sm hover:shadow-md transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${checked ? 'bg-indigo-50 border-indigo-300 ring-1 ring-indigo-100' : isCompleted ? 'bg-orange-50/70 border-orange-100 hover:border-orange-200' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
 
       {/* Checkbox */}
       <Tooltip label={checked ? 'Deselect booking' : 'Select booking'} sub={checked ? 'Row is highlighted' : 'Highlight this row'} className="shrink-0">
@@ -480,7 +480,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
 
         {/* Rows 1 + 2: linked to detail */}
         <Link href={`/dashboard/my-bookings/${booking.id}`} className="block">
-          <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+          <div className="flex items-center gap-1.5 mb-1 flex-wrap">
             <span className="text-gray-400 text-[10px] font-bold">#</span>
             <span className="text-[10px] font-bold text-gray-500 font-mono tracking-tight">{booking.id}</span>
             {isCompleted && booking.da_number && <DaBadges daNumber={booking.da_number} />}
@@ -492,7 +492,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
         </Link>
 
         {/* Row 3: email + agent + support — not inside link */}
-        <div className="flex items-center gap-2 mt-0.5" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-2 mt-1.5" onClick={e => e.stopPropagation()}>
 
           {/* Received time */}
           <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-md shrink-0 border border-gray-200">
@@ -687,34 +687,31 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
         <InlineDropdown align="right"
           trigger={(open, toggle) => {
             const activeTags = parseTags(booking.tags, tagValues);
+            const tagLabels = activeTags.map(t => tagCfg.find((c: BookingConfigItem) => c.value === t)?.label ?? t);
             return (
               <Tooltip
-                label={activeTags.length > 0 ? `${activeTags.length} tag${activeTags.length > 1 ? 's' : ''} applied` : 'No tags assigned'}
+                label={tagLabels.length > 0 ? tagLabels.join(', ') : 'No tags assigned'}
                 sub="Click to manage tags"
                 align="right" disabled={open} className="w-full"
               >
               <button onClick={toggle}
-                className={`flex items-center gap-1 px-2 py-1 rounded-lg w-full justify-end border text-xs font-semibold transition-colors ${open ? 'bg-gray-100 border-gray-300' : activeTags.length > 0 ? 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 hover:border-gray-300' : 'border-dashed border-gray-300 text-gray-400 hover:border-gray-400 hover:bg-gray-50'}`}>
-                <svg className="w-3 h-3 shrink-0 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg w-full justify-end border text-xs font-semibold transition-colors ${open ? 'bg-gray-100 border-gray-300' : activeTags.length > 0 ? 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 hover:border-gray-300' : 'border-dashed border-gray-200 text-gray-400 hover:border-gray-400 hover:bg-gray-50'}`}>
+                <svg className="w-3 h-3 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                 </svg>
                 {activeTags.length === 0 ? (
-                  <span className="text-gray-400">Tags</span>
+                  <span className="text-[11px] text-gray-400 font-medium">Tags</span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 flex-wrap">
+                  <span className="inline-flex items-center gap-1">
                     {activeTags.map(t => {
                       const cfg = tagCfg.find((c: BookingConfigItem) => c.value === t);
                       const c = getColor(cfg?.color ?? 'gray');
-                      return (
-                        <span key={t} className={`inline-flex items-center gap-1 text-[11px] font-semibold ${c.text}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${c.dot}`} />
-                          {cfg?.label ?? t}
-                        </span>
-                      );
+                      return <span key={t} className={`w-2 h-2 rounded-full shrink-0 ${c.dot}`} />;
                     })}
+                    <span className="text-[11px] font-semibold text-gray-600 ml-0.5">{activeTags.length}</span>
                   </span>
                 )}
-                <Chevron cls="text-gray-400 ml-0.5" />
+                <Chevron cls="text-gray-400" />
               </button>
               </Tooltip>
             );
