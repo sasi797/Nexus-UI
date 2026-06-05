@@ -262,6 +262,39 @@ const Chevron = ({ cls = '' }: { cls?: string }) => (
   </svg>
 );
 
+/* ── Tooltip ── */
+function Tooltip({
+  label, sub, children, className = '', align = 'center', disabled = false,
+}: {
+  label: string; sub?: string; children: React.ReactNode;
+  className?: string; align?: 'center' | 'left' | 'right'; disabled?: boolean;
+}) {
+  const boxAlign =
+    align === 'left'  ? 'left-0' :
+    align === 'right' ? 'right-0' :
+    'left-1/2 -translate-x-1/2';
+  const arrowAlign =
+    align === 'left'  ? 'left-3' :
+    align === 'right' ? 'right-3' :
+    'left-1/2 -translate-x-1/2';
+  return (
+    <div className={`relative group/tt ${className}`}>
+      {children}
+      {!disabled && (
+        <div className={`pointer-events-none absolute bottom-full mb-2.5 z-[300] opacity-0 group-hover/tt:opacity-100 translate-y-1 group-hover/tt:translate-y-0 transition-all duration-150 ${boxAlign}`}>
+          <div className="bg-gray-950 text-white rounded-xl shadow-2xl overflow-hidden min-w-max border border-white/10">
+            <div className="px-3 py-2">
+              <p className="text-[11px] font-semibold leading-none">{label}</p>
+              {sub && <p className="text-[10px] text-gray-400 mt-1.5 leading-none">{sub}</p>}
+            </div>
+          </div>
+          <div className={`absolute -bottom-1 w-2 h-2 bg-gray-950 rotate-45 rounded-sm border-r border-b border-white/10 ${arrowAlign}`} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── FilterDropdown ── */
 function FilterDropdown({ value, options, onChange }: {
   value: string; options: string[]; onChange: (v: string) => void;
@@ -359,6 +392,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
   const [showDa, setShowDa] = useState(false);
   const [daNumber, setDaNumber] = useState('');
   const [daDesc, setDaDesc] = useState('');
+  const [checked, setChecked] = useState(false);
   const busy = upd || pat;
 
   const cfgItems = bookingConfig ?? [];
@@ -426,11 +460,13 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
     </Link>
 
     {/* ── Desktop row (≥ md) ── */}
-    <div className={`hidden md:flex items-center gap-2 px-3 pt-3 pb-2.5 rounded-lg border shadow-sm hover:shadow-md transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${isCompleted ? 'bg-orange-50/70 border-orange-100 hover:border-orange-200' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
+    <div className={`hidden md:flex items-center gap-2 px-3 pt-3 pb-2.5 rounded-lg border shadow-sm hover:shadow-md transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${checked ? 'bg-indigo-50 border-indigo-300 ring-1 ring-indigo-100' : isCompleted ? 'bg-orange-50/70 border-orange-100 hover:border-orange-200' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
 
       {/* Checkbox */}
-      <input type="checkbox" onClick={e => e.stopPropagation()}
-        className="w-4 h-4 rounded border-gray-300 text-indigo-600 cursor-pointer shrink-0 accent-indigo-600 opacity-30 group-hover:opacity-100 transition-opacity" />
+      <Tooltip label={checked ? 'Deselect booking' : 'Select booking'} sub={checked ? 'Row is highlighted' : 'Highlight this row'} className="shrink-0">
+        <input type="checkbox" checked={checked} onChange={e => setChecked(e.target.checked)} onClick={e => e.stopPropagation()}
+          className="w-4 h-4 rounded border-gray-300 text-indigo-600 cursor-pointer accent-indigo-600" />
+      </Tooltip>
 
       {/* Avatar */}
       <Link href={`/dashboard/my-bookings/${booking.id}`} className="shrink-0">
@@ -459,7 +495,12 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
         <div className="flex items-center gap-2 mt-0.5" onClick={e => e.stopPropagation()}>
 
           {/* Received time */}
-          <span className="text-[11px] text-gray-400 font-medium shrink-0">{formatReceivedAt(booking.received_at)}</span>
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-md shrink-0 border border-gray-200">
+            <svg className="w-3 h-3 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            {formatReceivedAt(booking.received_at)}
+          </span>
 
           {/* Agent */}
           {isMine ? (
@@ -475,14 +516,26 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
           ) : (
             <InlineDropdown align="left"
               trigger={(open, toggle) => (
-                <button onClick={toggle}
-                  className={`flex items-center gap-1 text-[11px] font-medium text-gray-400 shrink-0 rounded-md px-1.5 py-0.5 transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
-                  <svg className="w-3 h-3 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  <span className="truncate max-w-[80px]">{booking.agent?.name ?? '—'}</span>
-                  <Chevron cls="text-gray-300" />
-                </button>
+                <Tooltip
+                  label={booking.agent ? `Assigned to ${booking.agent.name}` : 'No agent assigned'}
+                  sub={booking.agent ? 'Click to reassign' : 'Click to assign an agent'}
+                  align="left" disabled={open}
+                >
+                  <button onClick={toggle}
+                    className={`flex items-center gap-1.5 text-[11px] font-semibold shrink-0 rounded-md px-2 py-1 border transition-colors ${open ? 'bg-indigo-100 border-indigo-300 text-indigo-700' : booking.agent ? 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300' : 'border-dashed border-amber-300 bg-amber-50 text-amber-600 hover:border-amber-400 hover:bg-amber-100'}`}>
+                    {booking.agent ? (
+                      <div className={`w-4 h-4 rounded-full bg-gradient-to-br ${avatarColor(booking.agent.email)} flex items-center justify-center text-white text-[8px] font-bold shrink-0`}>
+                        {booking.agent.name.charAt(0).toUpperCase()}
+                      </div>
+                    ) : (
+                      <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    )}
+                    <span className="truncate max-w-[80px]">{booking.agent?.name ?? 'Assign'}</span>
+                    <Chevron cls="shrink-0" />
+                  </button>
+                </Tooltip>
               )}>
               {close => (
                 <>
@@ -502,36 +555,41 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
           {/* Support agents */}
           <div className="flex items-center gap-1">
             {booking.support_agents.map(a => (
-              <button key={a.id}
-                title={booking.status === 'Completed' ? a.name : `${a.name} — click to remove`}
-                disabled={booking.status === 'Completed'}
-                onClick={() => removeSupport({ id: booking.id, agent_id: a.id })}
-                className="relative group/sa shrink-0 disabled:cursor-default">
-                <div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[8px] font-bold ring-1 ring-white`}>
-                  {a.name.charAt(0).toUpperCase()}
-                </div>
-                {booking.status !== 'Completed' && (
-                  <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-400 rounded-full hidden group-hover/sa:flex items-center justify-center text-white text-[7px] font-bold leading-none">×</div>
-                )}
-              </button>
+              <Tooltip
+                key={a.id}
+                label={a.name}
+                sub={booking.status === 'Completed' ? 'Support agent' : 'Click to remove'}
+                align="center"
+              >
+                <button
+                  disabled={booking.status === 'Completed'}
+                  onClick={() => removeSupport({ id: booking.id, agent_id: a.id })}
+                  className="relative group/sa shrink-0 disabled:cursor-default">
+                  <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[10px] font-bold ring-2 ring-white shadow-sm`}>
+                    {a.name.charAt(0).toUpperCase()}
+                  </div>
+                  {booking.status !== 'Completed' && (
+                    <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-red-500 rounded-full hidden group-hover/sa:flex items-center justify-center text-white text-[8px] font-bold leading-none shadow-sm">×</div>
+                  )}
+                </button>
+              </Tooltip>
             ))}
             {availableForSupport.length > 0 && booking.status !== 'Completed' && (
               <InlineDropdown align="left"
                 trigger={(open, toggle) => (
-                  <div className="relative group/add shrink-0">
+                  <Tooltip
+                    label="Add support agent"
+                    sub={`${availableForSupport.length} agent${availableForSupport.length > 1 ? 's' : ''} available`}
+                    align="left" disabled={open}
+                  >
                     <button onClick={toggle}
-                      className={`w-5 h-5 rounded-full border border-dashed flex items-center justify-center transition-colors ${open ? 'border-violet-400 text-violet-500 bg-violet-50' : 'border-gray-300 text-gray-400 hover:border-violet-400 hover:text-violet-500'}`}>
-                      <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[11px] font-medium transition-colors shrink-0 ${open ? 'border-violet-400 text-violet-600 bg-violet-50' : 'border-dashed border-gray-300 text-gray-400 hover:border-violet-400 hover:text-violet-500 hover:bg-violet-50'}`}>
+                      <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
                       </svg>
+                      <span>Add</span>
                     </button>
-                    <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 top-full mt-2 z-50 opacity-0 translate-y-1 group-hover/add:opacity-100 group-hover/add:translate-y-0 transition-all duration-150">
-                      <div className="relative bg-gray-900 text-white text-[11px] font-medium px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap">
-                        Add support agent
-                        <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 rotate-45 rounded-sm" />
-                      </div>
-                    </div>
-                  </div>
+                  </Tooltip>
                 )}>
                 {close => availableForSupport.map(a => (
                   <DdItem key={a.id} label={a.name}
@@ -546,12 +604,18 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
       </div>
 
       {/* Timer */}
-      <div className="hidden sm:flex flex-col items-center justify-center shrink-0 px-3 gap-1">
-        <ElapsedBadge booking={booking} />
-      </div>
+      <Tooltip
+        label={isCompleted ? 'Resolution time' : 'Elapsed time'}
+        sub={isCompleted ? 'Total time taken to complete' : 'Time since received · updates live'}
+        className="shrink-0"
+      >
+        <div className="flex flex-col items-center justify-center px-3 gap-1">
+          <ElapsedBadge booking={booking} />
+        </div>
+      </Tooltip>
 
       {/* Right meta — priority + status + tags only */}
-      <div className="flex flex-col items-end gap-0.5 shrink-0 min-w-[110px]">
+      <div className="flex flex-col items-end gap-1 shrink-0 min-w-[130px]">
 
         {/* Priority */}
         {(() => {
@@ -560,16 +624,22 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
           return (
             <InlineDropdown
               trigger={(open, toggle) => (
-                <button onClick={toggle}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg w-full justify-end transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
-                  <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${pc.text}`}>
-                    <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={P_PATH[pItem?.value ?? ''] ?? P_PATH['Not Urgent']} />
-                    </svg>
-                    {pItem?.label ?? booking.priority}
-                  </span>
-                  <Chevron cls="text-gray-300 ml-0.5" />
-                </button>
+                <Tooltip
+                  label={`Priority: ${pItem?.label ?? booking.priority}`}
+                  sub="Click to change priority"
+                  align="right" disabled={open} className="w-full"
+                >
+                  <button onClick={toggle}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-lg w-full justify-end border transition-colors ${open ? `${pc.bg} ${pc.border}` : `border-gray-200 hover:${pc.bg} hover:${pc.border}`}`}>
+                    <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${pc.text}`}>
+                      <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={P_PATH[pItem?.value ?? ''] ?? P_PATH['Not Urgent']} />
+                      </svg>
+                      {pItem?.label ?? booking.priority}
+                    </span>
+                    <Chevron cls="text-gray-300 ml-0.5" />
+                  </button>
+                </Tooltip>
               )}>
               {close => priorityCfg.map((p: BookingConfigItem) => {
                 const cc = getColor(p.color);
@@ -586,16 +656,22 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
         {/* Status */}
         <InlineDropdown
           trigger={(open, toggle) => (
-            <button onClick={toggle}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg w-full justify-end transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
-              <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${sc.text}`}>
-                <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sc.path} />
-                </svg>
-                {sc.label}
-              </span>
-              <Chevron cls="text-gray-300 ml-0.5" />
-            </button>
+            <Tooltip
+              label={`Status: ${sc.label}`}
+              sub="Click to change status"
+              align="right" disabled={open} className="w-full"
+            >
+              <button onClick={toggle}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg w-full justify-end border transition-colors ${open ? `${sc.bg} ${sc.border}` : `border-gray-200 hover:${sc.bg} hover:${sc.border}`}`}>
+                <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${sc.text}`}>
+                  <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sc.path} />
+                  </svg>
+                  {sc.label}
+                </span>
+                <Chevron cls="text-gray-300 ml-0.5" />
+              </button>
+            </Tooltip>
           )}>
           {close => statusCfg.map((s: BookingConfigItem) => {
             const cc = getColor(s.color);
@@ -612,8 +688,13 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
           trigger={(open, toggle) => {
             const activeTags = parseTags(booking.tags, tagValues);
             return (
+              <Tooltip
+                label={activeTags.length > 0 ? `${activeTags.length} tag${activeTags.length > 1 ? 's' : ''} applied` : 'No tags assigned'}
+                sub="Click to manage tags"
+                align="right" disabled={open} className="w-full"
+              >
               <button onClick={toggle}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg w-full justify-end text-xs font-semibold transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'} text-gray-600`}>
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg w-full justify-end border text-xs font-semibold transition-colors ${open ? 'bg-gray-100 border-gray-300' : activeTags.length > 0 ? 'border-gray-200 bg-gray-50 text-gray-700 hover:bg-gray-100 hover:border-gray-300' : 'border-dashed border-gray-300 text-gray-400 hover:border-gray-400 hover:bg-gray-50'}`}>
                 <svg className="w-3 h-3 shrink-0 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                 </svg>
@@ -635,6 +716,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
                 )}
                 <Chevron cls="text-gray-400 ml-0.5" />
               </button>
+              </Tooltip>
             );
           }}>
           {close => (
