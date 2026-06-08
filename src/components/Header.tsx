@@ -29,6 +29,7 @@ const TYPE_ICON: Record<string, { bg: string; icon: string }> = {
   booking_assigned:  { bg: 'bg-blue-100',    icon: '👤' },
   booking_completed: { bg: 'bg-emerald-100', icon: '✅' },
   status_changed:    { bg: 'bg-amber-100',   icon: '🔄' },
+  email_reply:       { bg: 'bg-sky-100',     icon: '✉️' },
 };
 
 function timeAgo(iso: string) {
