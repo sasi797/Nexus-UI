@@ -441,7 +441,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
     {/* ── Mobile card (< md) ── */}
     <Link
       href={`/dashboard/my-bookings/${booking.id}`}
-      className={`md:hidden block rounded-lg border shadow-sm active:opacity-75 transition-all ${busy ? 'opacity-60 pointer-events-none' : ''} ${isCompleted ? 'bg-orange-50/70 border-orange-100' : 'bg-white border-gray-100'}`}
+      className={`md:hidden block rounded-lg border shadow-sm active:opacity-75 transition-all ${busy ? 'opacity-60 pointer-events-none' : ''} ${isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300' : 'bg-white border-gray-100'}`}
     >
       <div className="px-4 py-3.5">
         <div className="flex items-center justify-between mb-1.5">
@@ -474,7 +474,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
     </Link>
 
     {/* ── Desktop row (≥ md) ── */}
-    <div className={`hidden md:flex items-center gap-4 px-3 py-2 rounded-xl border shadow-sm hover:shadow-lg transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${isCompleted ? 'bg-orange-50/70 border-orange-100 hover:border-orange-200' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
+    <div className={`hidden md:flex items-center gap-4 px-3 py-2 rounded-xl border shadow-sm hover:shadow-lg transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300 hover:border-emerald-300' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
 
       {/* Avatar */}
       <Link href={`/dashboard/my-bookings/${booking.id}`} className="shrink-0">

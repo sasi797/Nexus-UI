@@ -405,7 +405,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: { booking: 
     {/* ── Mobile card (< md) ── */}
     <Link
       href={`/dashboard/my-bookings/${booking.id}`}
-      className={`md:hidden block rounded-lg border shadow-sm active:opacity-75 transition-all ${busy ? 'opacity-60 pointer-events-none' : ''} ${isCompleted ? 'bg-orange-50 border-orange-200' : 'bg-white border-gray-100'}`}
+      className={`md:hidden block rounded-lg border shadow-sm active:opacity-75 transition-all ${busy ? 'opacity-60 pointer-events-none' : ''} ${isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300' : 'bg-white border-gray-100'}`}
     >
       <div className="px-4 py-3.5">
         <div className="flex items-center justify-between mb-1.5">
@@ -438,7 +438,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: { booking: 
     </Link>
 
     {/* ── Desktop row (≥ md) ── */}
-    <div className={`hidden md:flex items-center gap-2 px-3 pt-3 pb-2.5 rounded-lg border shadow-sm hover:shadow-md transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${isCompleted ? 'bg-orange-100 border-orange-200 hover:border-orange-300' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
+    <div className={`hidden md:flex items-center gap-2 px-3 pt-3 pb-2.5 rounded-lg border shadow-sm hover:shadow-md transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300 hover:border-emerald-300' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
 
       {/* Checkbox */}
       <input type="checkbox" onClick={e => e.stopPropagation()}
