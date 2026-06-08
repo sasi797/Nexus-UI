@@ -16,6 +16,7 @@ export interface BookingListItem {
   received_at: string;
   assigned_at: string | null;
   completed_at: string | null;
+  updated_at: string;
 }
 
 export interface PaginatedBookings {

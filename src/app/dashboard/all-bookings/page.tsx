@@ -395,9 +395,10 @@ function FilterSelect({ label, value, options, onChange }: {
 }
 
 /* ── Booking row ── */
-function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
+function BookingRow({ booking, agents, myUserEmail, bookingConfig, onModified }: {
   booking: BookingListItem; agents: Agent[]; myUserEmail: string | undefined;
   bookingConfig: ReturnType<typeof useGetBookingConfigQuery>['data'];
+  onModified: (id: string) => void;
 }) {
   const [updateBooking, { isLoading: upd }] = useUpdateBookingMutation();
   const [patchStatus, { isLoading: pat }] = usePatchBookingStatusMutation();
@@ -426,10 +427,12 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
     close();
     if (s === booking.status) return;
     if (s === 'Completed') { setDaNumber(booking.da_number ?? ''); setDaDesc(booking.da_description ?? ''); setShowDa(true); return; }
+    onModified(booking.id);
     patchStatus({ id: booking.id, status: s });
   }
 
   function submitDa() {
+    onModified(booking.id);
     patchStatus({ id: booking.id, status: 'Completed', da_number: daNumber || undefined, da_description: daDesc || undefined });
     setShowDa(false);
   }
@@ -560,11 +563,11 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
                 <>
                   <DdItem label="Unassign" active={!booking.agent}
                     left={<span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-[9px] text-gray-400 font-bold shrink-0">—</span>}
-                    onClick={() => { updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, agent_id: null } }); close(); }} />
+                    onClick={() => { onModified(booking.id); updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, agent_id: null } }); close(); }} />
                   {agents.map(a => (
                     <DdItem key={a.id} label={a.name} active={booking.agent?.id === a.id}
                       left={<div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[9px] font-bold shrink-0`}>{a.name.charAt(0).toUpperCase()}</div>}
-                      onClick={() => { updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, agent_id: a.id } }); close(); }} />
+                      onClick={() => { onModified(booking.id); updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, agent_id: a.id } }); close(); }} />
                   ))}
                 </>
               )}
@@ -582,7 +585,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
               >
                 <button
                   disabled={booking.status === 'Completed'}
-                  onClick={() => removeSupport({ id: booking.id, agent_id: a.id })}
+                  onClick={() => { onModified(booking.id); removeSupport({ id: booking.id, agent_id: a.id }); }}
                   className="relative group/sa shrink-0 disabled:cursor-default">
                   <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[10px] font-bold ring-2 ring-white shadow-sm`}>
                     {a.name.charAt(0).toUpperCase()}
@@ -613,7 +616,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
                 {close => availableForSupport.map(a => (
                   <DdItem key={a.id} label={a.name}
                     left={<div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[9px] font-bold shrink-0`}>{a.name.charAt(0).toUpperCase()}</div>}
-                    onClick={() => { addSupport({ id: booking.id, agent_id: a.id }); close(); }} />
+                    onClick={() => { onModified(booking.id); addSupport({ id: booking.id, agent_id: a.id }); close(); }} />
                 ))}
               </InlineDropdown>
             )}
@@ -665,7 +668,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
                 return (
                   <DdItem key={p.value} label={p.label} active={booking.priority === p.value}
                     left={<span className={`w-2 h-2 rounded-full shrink-0 ${cc.dot}`} />}
-                    onClick={() => { updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, priority: p.value } }); close(); }} />
+                    onClick={() => { onModified(booking.id); updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, priority: p.value } }); close(); }} />
                 );
               })}
             </InlineDropdown>
@@ -745,7 +748,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
                   <button key={tag.value}
                     onClick={() => {
                       const next = active ? activeTags.filter(t => t !== tag.value) : [...activeTags, tag.value];
-                      updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, tags: serializeTags(next) } });
+                      onModified(booking.id); updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, tags: serializeTags(next) } });
                       close();
                     }}
                     className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-medium transition-colors ${active ? `${c.bg} ${c.text}` : 'text-gray-600 hover:bg-gray-50'}`}>
@@ -894,9 +897,11 @@ export default function AllBookingsPage() {
     closed_after: CLOSED_MAP[closedAtFilter],
     page: currentPage,
     page_size: pageSize,
-  });
+  }, { pollingInterval: 10_000, refetchOnFocus: true });
 
   const allItems = data?.items ?? [];
+  const [recentMod, setRecentMod] = useState<Record<string, number>>({});
+  const markModified = (id: string) => setRecentMod(prev => ({ ...prev, [id]: Date.now() }));
 
   // Separate count queries so counts are always global, not filtered by current tab
   const cntBase = { priority, agent_id: agentId, sender_email: fromFilter === 'Any' ? undefined : fromFilter, created_after: CREATED_MAP[createdFilter], closed_after: CLOSED_MAP[closedAtFilter], page_size: 1 };
@@ -942,7 +947,10 @@ export default function AllBookingsPage() {
         const due = (x: BookingListItem) => new Date(x.received_at).getTime() + (SLA[x.priority] ?? 8) * 3_600_000;
         return due(a) - due(b);
       }
-      return new Date(b.received_at).getTime() - new Date(a.received_at).getTime();
+      const st = (x: BookingListItem) => { const t = new Date(x.updated_at ?? x.received_at).getTime(); return isNaN(t) ? 0 : t; };
+      const ta = Math.max(st(a), recentMod[a.id] ?? 0);
+      const tb = Math.max(st(b), recentMod[b.id] ?? 0);
+      return tb - ta;
     })
 ;
 
@@ -1136,7 +1144,7 @@ export default function AllBookingsPage() {
               ) : (
                 <div className="space-y-3">
                   {sorted.map(b => (
-                    <BookingRow key={b.id} booking={b} agents={agents} myUserEmail={user?.email} bookingConfig={bookingConfig} />
+                    <BookingRow key={b.id} booking={b} agents={agents} myUserEmail={user?.email} bookingConfig={bookingConfig} onModified={markModified} />
                   ))}
                 </div>
               )}
