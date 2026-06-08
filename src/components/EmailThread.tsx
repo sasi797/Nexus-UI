@@ -722,15 +722,21 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
     }
   }, [composeTab]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Scan raw text for all valid email addresses — handles "Name <email>", semicolons, newlines
+  const parseEmails = (raw: string): string[] =>
+    [...new Set(raw.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g) ?? [])];
+
   const commitToInput = () => {
     if (!toInput.trim()) return;
-    setExtraToChips(prev => [...prev, ...toInput.split(',').map(s => s.trim()).filter(Boolean)]);
+    const emails = parseEmails(toInput);
+    if (emails.length > 0) setExtraToChips(prev => [...prev, ...emails]);
     setToInput('');
   };
 
   const commitCcInput = () => {
     if (!ccInput.trim()) return;
-    setCcChips(prev => [...prev, ...ccInput.split(',').map(s => s.trim()).filter(Boolean)]);
+    const emails = parseEmails(ccInput);
+    if (emails.length > 0) setCcChips(prev => [...prev, ...emails]);
     setCcInput('');
   };
 
@@ -785,7 +791,16 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
 
     const result = await replyMessage({ bookingId, formData: fd });
     if ('error' in result) {
-      const errMsg = (result.error as { data?: { detail?: string } })?.data?.detail ?? 'Failed to send. Please try again.';
+      const raw = (result.error as { data?: { detail?: string } })?.data?.detail ?? '';
+      let errMsg = 'Failed to send. Please try again.';
+      if (raw) {
+        if (/InvalidRecipients?/i.test(raw) || /recipient.*not.*resolved/i.test(raw))
+          errMsg = 'One or more email addresses are invalid or could not be resolved. Please check the recipients.';
+        else if (/Unauthorized|401/i.test(raw))
+          errMsg = 'Session expired. Please refresh and try again.';
+        else if (raw.length < 120 && !raw.startsWith('{'))
+          errMsg = raw;
+      }
       setSendError(errMsg);
       return;
     }
@@ -995,6 +1010,14 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
                       }
                     }}
                     onBlur={commitToInput}
+                    onPaste={e => {
+                      const pasted = e.clipboardData.getData('text');
+                      const emails = parseEmails(pasted);
+                      if (emails.length > 1) {
+                        e.preventDefault();
+                        setExtraToChips(prev => [...prev, ...emails]);
+                      }
+                    }}
                     placeholder={baseToEmails.filter(e => !removedBaseEmails.has(e)).length === 0 && extraToChips.length === 0 ? 'Add recipient...' : 'Add more...'}
                     className="w-full text-[12px] text-gray-700 bg-transparent focus:outline-none placeholder:text-gray-300"
                   />
@@ -1036,6 +1059,14 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
                   }
                 }}
                 onBlur={commitCcInput}
+                onPaste={e => {
+                  const pasted = e.clipboardData.getData('text');
+                  const emails = parseEmails(pasted);
+                  if (emails.length > 1) {
+                    e.preventDefault();
+                    setCcChips(prev => [...prev, ...emails]);
+                  }
+                }}
                 placeholder={ccChips.length === 0 ? 'cc@example.com, another@example.com' : 'Add more...'}
                 className="w-full text-[12px] text-gray-700 bg-transparent focus:outline-none placeholder:text-gray-300"
               />
