@@ -121,10 +121,10 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
           className="hidden lg:flex flex-col items-end leading-none bg-gray-50 border border-gray-100 px-2.5 py-1.5 rounded-lg select-none hover:bg-indigo-50 hover:border-indigo-200 transition-colors cursor-pointer"
         >
           <div className="flex items-center gap-1">
-            <span className="text-[9px] font-bold text-indigo-400 uppercase">{tzLabel}</span>
-            <span className="text-[12.5px] font-bold text-gray-700 tabular-nums">{timeStr}</span>
+            <span className="text-[9px] font-bold text-indigo-500 uppercase">{tzLabel}</span>
+            <span className="text-[12.5px] font-bold text-gray-900 tabular-nums">{timeStr}</span>
           </div>
-          <span className="text-[9.5px] text-gray-400 font-medium mt-0.5">{dateStr}</span>
+          <span className="text-[9.5px] text-gray-700 font-medium mt-0.5">{dateStr}</span>
         </button>
 
         {/* Bell + dropdown */}
@@ -133,7 +133,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
             onClick={() => setOpen(v => !v)}
             whileHover={{ scale: 1.08 }}
             whileTap={{ scale: 0.93 }}
-            className={`relative p-2 rounded-xl transition-colors ${open ? 'text-indigo-600 bg-indigo-50' : 'text-gray-400 hover:text-indigo-600 hover:bg-indigo-50'}`}
+            className={`relative p-2 rounded-xl transition-colors ${open ? 'text-indigo-600 bg-indigo-50' : 'text-gray-700 hover:text-indigo-600 hover:bg-indigo-50'}`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -198,9 +198,9 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
                             {cfg.icon}
                           </span>
                           <div className="flex-1 min-w-0">
-                            <p className={`text-[12.5px] leading-snug ${n.is_read ? 'text-gray-600 font-medium' : 'text-gray-900 font-semibold'}`}>{n.title}</p>
-                            <p className="text-[11px] text-gray-400 truncate mt-0.5">{n.body}</p>
-                            <p className="text-[10px] text-gray-300 mt-0.5">{timeAgo(n.created_at)}</p>
+                            <p className={`text-[12.5px] leading-snug ${n.is_read ? 'text-gray-800 font-medium' : 'text-gray-900 font-semibold'}`}>{n.title}</p>
+                            <p className="text-[11px] text-gray-700 truncate mt-0.5">{n.body}</p>
+                            <p className="text-[10px] text-gray-500 mt-0.5">{timeAgo(n.created_at)}</p>
                           </div>
                           {!n.is_read && <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0 mt-1.5" />}
                         </button>
@@ -234,10 +234,10 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
             {user?.name?.charAt(0)?.toUpperCase() ?? '?'}
           </div>
           <div className="text-left hidden sm:block">
-            <p className="text-[12px] font-bold text-gray-700 leading-tight">{user?.name ?? '—'}</p>
-            <p className="text-[10px] text-gray-400 capitalize leading-tight">{user?.role ?? ''}</p>
+            <p className="text-[12px] font-bold text-gray-900 leading-tight">{user?.name ?? '—'}</p>
+            <p className="text-[10px] text-gray-700 capitalize leading-tight">{user?.role ?? ''}</p>
           </div>
-          <svg className="w-3 h-3 text-gray-300 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-3 h-3 text-gray-600 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
           </svg>
         </motion.button>

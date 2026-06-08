@@ -30,6 +30,19 @@ function avatarColor(str: string) {
   for (const c of str) h = (h * 31 + c.charCodeAt(0)) & 0xffff;
   return AVATAR_COLORS[h % AVATAR_COLORS.length];
 }
+const BADGE_STYLES = [
+  { bg: 'bg-sky-50',     border: 'border-sky-200',     text: 'text-sky-700',     hover: 'hover:bg-sky-100 hover:border-sky-300',     activeBg: 'bg-sky-100',     activeBorder: 'border-sky-300'     },
+  { bg: 'bg-violet-50',  border: 'border-violet-200',  text: 'text-violet-700',  hover: 'hover:bg-violet-100 hover:border-violet-300',  activeBg: 'bg-violet-100',  activeBorder: 'border-violet-300'  },
+  { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', hover: 'hover:bg-emerald-100 hover:border-emerald-300', activeBg: 'bg-emerald-100', activeBorder: 'border-emerald-300' },
+  { bg: 'bg-amber-50',   border: 'border-amber-200',   text: 'text-amber-700',   hover: 'hover:bg-amber-100 hover:border-amber-300',   activeBg: 'bg-amber-100',   activeBorder: 'border-amber-300'   },
+  { bg: 'bg-rose-50',    border: 'border-rose-200',    text: 'text-rose-700',    hover: 'hover:bg-rose-100 hover:border-rose-300',    activeBg: 'bg-rose-100',    activeBorder: 'border-rose-300'    },
+  { bg: 'bg-indigo-50',  border: 'border-indigo-200',  text: 'text-indigo-700',  hover: 'hover:bg-indigo-100 hover:border-indigo-300',  activeBg: 'bg-indigo-100',  activeBorder: 'border-indigo-300'  },
+];
+function badgeStyle(str: string) {
+  let h = 0;
+  for (const c of str) h = (h * 31 + c.charCodeAt(0)) & 0xffff;
+  return BADGE_STYLES[h % BADGE_STYLES.length];
+}
 function extractName(email: string) {
   return email.split('@')[0].split(/[._+]/).filter(Boolean)
     .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
@@ -468,16 +481,30 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: { booking: 
             </div>
           ) : (
             <InlineDropdown align="left"
-              trigger={(open, toggle) => (
+              trigger={(open, toggle) => {
+                const bs = booking.agent ? badgeStyle(booking.agent.email) : null;
+                const btnCls = !booking.agent
+                  ? `border border-dashed border-gray-200 text-gray-400 ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`
+                  : open
+                  ? `border ${bs!.activeBg} ${bs!.activeBorder} ${bs!.text}`
+                  : `border ${bs!.bg} ${bs!.border} ${bs!.text} ${bs!.hover}`;
+                return (
                 <button onClick={toggle}
-                  className={`flex items-center gap-1 text-[11px] font-medium text-gray-400 shrink-0 rounded-md px-1.5 py-0.5 transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
-                  <svg className="w-3 h-3 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
+                  className={`flex items-center gap-1 text-[11px] font-medium shrink-0 rounded-md px-1.5 py-0.5 transition-colors ${btnCls}`}>
+                  {booking.agent ? (
+                    <div className={`w-3.5 h-3.5 rounded-full bg-gradient-to-br ${avatarColor(booking.agent.email)} flex items-center justify-center text-white text-[8px] font-bold shrink-0`}>
+                      {booking.agent.name.charAt(0).toUpperCase()}
+                    </div>
+                  ) : (
+                    <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  )}
                   <span className="truncate max-w-[80px]">{booking.agent?.name ?? '—'}</span>
-                  <Chevron cls="text-gray-300" />
+                  <Chevron cls="shrink-0" />
                 </button>
-              )}>
+                );
+              }}>
               {close => (
                 <>
                   <DdItem label="Unassign" active={!booking.agent}
@@ -837,17 +864,6 @@ export default function MyBookingsPage() {
 
   return (
     <motion.div variants={pageTransition} initial="hidden" animate="visible" className="flex flex-col gap-3 h-full min-h-0">
-
-      {/* Bookings tab switcher */}
-      <div className="flex items-center border-b border-gray-200">
-        <Link href="/dashboard/all-bookings"
-          className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium text-gray-400 border-b-2 border-transparent -mb-px hover:text-gray-700 hover:border-gray-300 transition-all whitespace-nowrap">
-          🌐 All Bookings
-        </Link>
-        <span className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold text-indigo-600 border-b-2 border-indigo-500 -mb-px cursor-default whitespace-nowrap">
-          🎯 My Bookings
-        </span>
-      </div>
 
       {/* Status tabs + search + pagination + filter toggle — single row */}
       <motion.div variants={staggerItem} className="flex items-center gap-2">

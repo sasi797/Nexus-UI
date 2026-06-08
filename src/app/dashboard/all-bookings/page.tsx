@@ -30,6 +30,19 @@ function avatarColor(str: string) {
   for (const c of str) h = (h * 31 + c.charCodeAt(0)) & 0xffff;
   return AVATAR_COLORS[h % AVATAR_COLORS.length];
 }
+const BADGE_STYLES = [
+  { bg: 'bg-sky-50',     border: 'border-sky-200',     text: 'text-sky-700',     hover: 'hover:bg-sky-100 hover:border-sky-300',     activeBg: 'bg-sky-100',     activeBorder: 'border-sky-300'     },
+  { bg: 'bg-violet-50',  border: 'border-violet-200',  text: 'text-violet-700',  hover: 'hover:bg-violet-100 hover:border-violet-300',  activeBg: 'bg-violet-100',  activeBorder: 'border-violet-300'  },
+  { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', hover: 'hover:bg-emerald-100 hover:border-emerald-300', activeBg: 'bg-emerald-100', activeBorder: 'border-emerald-300' },
+  { bg: 'bg-amber-50',   border: 'border-amber-200',   text: 'text-amber-700',   hover: 'hover:bg-amber-100 hover:border-amber-300',   activeBg: 'bg-amber-100',   activeBorder: 'border-amber-300'   },
+  { bg: 'bg-rose-50',    border: 'border-rose-200',    text: 'text-rose-700',    hover: 'hover:bg-rose-100 hover:border-rose-300',    activeBg: 'bg-rose-100',    activeBorder: 'border-rose-300'    },
+  { bg: 'bg-indigo-50',  border: 'border-indigo-200',  text: 'text-indigo-700',  hover: 'hover:bg-indigo-100 hover:border-indigo-300',  activeBg: 'bg-indigo-100',  activeBorder: 'border-indigo-300'  },
+];
+function badgeStyle(str: string) {
+  let h = 0;
+  for (const c of str) h = (h * 31 + c.charCodeAt(0)) & 0xffff;
+  return BADGE_STYLES[h % BADGE_STYLES.length];
+}
 function extractName(email: string) {
   return email.split('@')[0].split(/[._+]/).filter(Boolean)
     .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
@@ -61,7 +74,8 @@ function elapsedCfg(ms: number) {
 }
 
 function ElapsedBadge({ booking }: { booking: BookingListItem }) {
-  const done = booking.status === 'Completed';
+  const st = booking.status.toLowerCase();
+  const done = st === 'completed' || st === 'ignored';
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     if (done) return;
@@ -181,8 +195,8 @@ const S_PATH: Record<string, string> = {
 };
 
 const P_PATH: Record<string, string> = {
-  'Very Urgent': 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
-  'Urgent':      'M5 10l7-7m0 0l7 7m-7-7v18',
+  'Very Urgent': 'M5 17l7-7 7 7M5 11l7-7 7 7',
+  'Urgent':      'M5 15l7-7 7 7',
   'Not Urgent':  'M20 12H4',
 };
 
@@ -313,11 +327,11 @@ function FilterDropdown({ value, options, onChange }: {
       <button
         onClick={() => setOpen(v => !v)}
         className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-[12px] font-medium bg-white border rounded-lg transition-all cursor-pointer ${
-          open ? 'border-indigo-400 ring-2 ring-indigo-100 text-gray-800' : 'border-gray-200 hover:border-gray-300 text-gray-700'
+          open ? 'border-indigo-400 ring-2 ring-indigo-100 text-gray-900' : 'border-gray-200 hover:border-gray-300 text-gray-900'
         }`}
       >
         <span className="truncate text-left">{value}</span>
-        <Chevron cls={`text-gray-400 shrink-0 transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
+        <Chevron cls={`text-gray-600 shrink-0 transition-transform duration-150 ${open ? 'rotate-180' : ''}`} />
       </button>
       <AnimatePresence>
         {open && (
@@ -335,7 +349,7 @@ function FilterDropdown({ value, options, onChange }: {
                 className={`w-full text-left px-3 py-2.5 text-[12px] font-medium transition-colors flex items-center gap-2 ${
                   value === opt
                     ? 'bg-blue-600 text-white'
-                    : 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
+                    : 'text-gray-900 hover:bg-blue-50 hover:text-blue-700'
                 }`}
               >
                 {value === opt && (
@@ -360,9 +374,9 @@ function FilterSection({ label, children }: { label: string; children: React.Rea
   return (
     <div className="space-y-1.5">
       <button onClick={() => setOpen(v => !v)}
-        className="flex items-center justify-between w-full text-[11px] font-bold text-gray-600 hover:text-gray-900 transition-colors">
+        className="flex items-center justify-between w-full text-[11px] font-bold text-gray-800 hover:text-gray-900 transition-colors">
         {label}
-        <Chevron cls={`text-gray-400 transition-transform duration-150 ${open ? '' : '-rotate-90'}`} />
+        <Chevron cls={`text-gray-600 transition-transform duration-150 ${open ? '' : '-rotate-90'}`} />
       </button>
       {open && <div className="mt-1">{children}</div>}
     </div>
@@ -374,7 +388,7 @@ function FilterSelect({ label, value, options, onChange }: {
 }) {
   return (
     <div className="space-y-1.5">
-      <p className="text-[11px] font-semibold text-gray-500">{label}</p>
+      <p className="text-[11px] font-semibold text-gray-800">{label}</p>
       <FilterDropdown value={value} options={options} onChange={onChange} />
     </div>
   );
@@ -392,7 +406,6 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
   const [showDa, setShowDa] = useState(false);
   const [daNumber, setDaNumber] = useState('');
   const [daDesc, setDaDesc] = useState('');
-  const [checked, setChecked] = useState(false);
   const busy = upd || pat;
 
   const cfgItems = bookingConfig ?? [];
@@ -403,6 +416,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
 
   const statusItem = statusCfg.find((s: BookingConfigItem) => s.value === booking.status);
   const sc = statusItem ? { dot: getColor(statusItem.color).dot, text: getColor(statusItem.color).text, bg: getColor(statusItem.color).bg, border: getColor(statusItem.color).border, label: statusItem.label, path: S_PATH[statusItem.value] ?? S_PATH.Pending } : { dot: 'bg-gray-400', text: 'text-gray-500', bg: 'bg-gray-100', border: 'border-gray-200', label: booking.status, path: S_PATH.Completed };
+
 
   const isMine = !!myUserEmail && booking.agent?.email === myUserEmail;
   const supportIds = new Set(booking.support_agents.map(a => a.id));
@@ -420,7 +434,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
     setShowDa(false);
   }
 
-  const isCompleted = booking.status === 'Completed';
+  const isCompleted = booking.status.toLowerCase() === 'completed';
 
   return (
     <>
@@ -460,17 +474,11 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
     </Link>
 
     {/* ── Desktop row (≥ md) ── */}
-    <div className={`hidden md:flex items-center gap-3 px-4 py-3 rounded-lg border shadow-sm hover:shadow-md transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${checked ? 'bg-indigo-50 border-indigo-300 ring-1 ring-indigo-100' : isCompleted ? 'bg-orange-50/70 border-orange-100 hover:border-orange-200' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
-
-      {/* Checkbox */}
-      <Tooltip label={checked ? 'Deselect booking' : 'Select booking'} sub={checked ? 'Row is highlighted' : 'Highlight this row'} className="shrink-0">
-        <input type="checkbox" checked={checked} onChange={e => setChecked(e.target.checked)} onClick={e => e.stopPropagation()}
-          className="w-4 h-4 rounded border-gray-300 text-indigo-600 cursor-pointer accent-indigo-600" />
-      </Tooltip>
+    <div className={`hidden md:flex items-center gap-4 px-3 py-2 rounded-xl border shadow-sm hover:shadow-lg transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${isCompleted ? 'bg-orange-50/70 border-orange-100 hover:border-orange-200' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
 
       {/* Avatar */}
       <Link href={`/dashboard/my-bookings/${booking.id}`} className="shrink-0">
-        <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${avatarColor(booking.sender_email)} flex items-center justify-center text-white text-[12px] font-bold shadow-sm`}>
+        <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${avatarColor(booking.sender_email)} flex items-center justify-center text-white text-[14px] font-bold shadow-sm`}>
           {booking.sender_email.charAt(0).toUpperCase()}
         </div>
       </Link>
@@ -480,23 +488,26 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
 
         {/* Rows 1 + 2: linked to detail */}
         <Link href={`/dashboard/my-bookings/${booking.id}`} className="block">
-          <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-            <span className="text-gray-400 text-[10px] font-bold">#</span>
-            <span className="text-[10px] font-bold text-gray-500 font-mono tracking-tight">{booking.id}</span>
-            {isCompleted && booking.da_number && <DaBadges daNumber={booking.da_number} />}
-            <TagBadges tags={parseTags(booking.tags, tagValues)} tagConfig={tagCfg} />
-          </div>
-          <p className="text-[12px] font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors leading-snug truncate">
-            <span className="mr-1">😊</span>{booking.subject}
+          {(isCompleted && booking.da_number || parseTags(booking.tags, tagValues).length > 0) && (
+            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+              {isCompleted && booking.da_number && <DaBadges daNumber={booking.da_number} />}
+              <TagBadges tags={parseTags(booking.tags, tagValues)} tagConfig={tagCfg} />
+            </div>
+          )}
+          <p className="text-[12px] font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors leading-snug truncate flex items-center gap-1.5">
+            <svg className="w-4 h-4 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+            {booking.subject}
           </p>
         </Link>
 
         {/* Row 3: email + agent + support — not inside link */}
-        <div className="flex items-center gap-2 mt-1.5" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-3 mt-2" onClick={e => e.stopPropagation()}>
 
           {/* Received time */}
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-md shrink-0 border border-gray-200">
-            <svg className="w-3 h-3 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-900 bg-gray-100 px-2 py-0.5 rounded-md shrink-0 border border-gray-200">
+            <svg className="w-3 h-3 text-gray-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             {formatReceivedAt(booking.received_at)}
@@ -504,25 +515,32 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
 
           {/* Agent */}
           {isMine ? (
-            <div className="flex items-center gap-1 text-[11px] text-gray-400 font-medium shrink-0">
-              <svg className="w-3 h-3 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center gap-1 text-[11px] text-gray-900 font-semibold shrink-0">
+              <svg className="w-3 h-3 text-gray-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
               <span>You</span>
-              <svg className="w-2.5 h-2.5 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-2.5 h-2.5 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
               </svg>
             </div>
           ) : (
             <InlineDropdown align="left"
-              trigger={(open, toggle) => (
+              trigger={(open, toggle) => {
+                const bs = booking.agent ? badgeStyle(booking.agent.email) : null;
+                const btnCls = !booking.agent
+                  ? 'border-dashed border-gray-500 bg-gray-200 text-gray-800 hover:border-gray-600 hover:bg-gray-300'
+                  : open
+                  ? `${bs!.activeBg} ${bs!.activeBorder} ${bs!.text}`
+                  : `${bs!.bg} ${bs!.border} ${bs!.text} ${bs!.hover}`;
+                return (
                 <Tooltip
                   label={booking.agent ? `Assigned to ${booking.agent.name}` : 'No agent assigned'}
                   sub={booking.agent ? 'Click to reassign' : 'Click to assign an agent'}
                   align="left" disabled={open}
                 >
                   <button onClick={toggle}
-                    className={`flex items-center gap-1.5 text-[11px] font-semibold shrink-0 rounded-md px-2 py-1 border transition-colors ${open ? 'bg-indigo-100 border-indigo-300 text-indigo-700' : booking.agent ? 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300' : 'border-dashed border-amber-300 bg-amber-50 text-amber-600 hover:border-amber-400 hover:bg-amber-100'}`}>
+                    className={`flex items-center gap-1.5 text-[11px] font-semibold shrink-0 rounded-md px-2 py-1 border transition-colors ${btnCls}`}>
                     {booking.agent ? (
                       <div className={`w-4 h-4 rounded-full bg-gradient-to-br ${avatarColor(booking.agent.email)} flex items-center justify-center text-white text-[8px] font-bold shrink-0`}>
                         {booking.agent.name.charAt(0).toUpperCase()}
@@ -536,7 +554,8 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
                     <Chevron cls="shrink-0" />
                   </button>
                 </Tooltip>
-              )}>
+                );
+              }}>
               {close => (
                 <>
                   <DdItem label="Unassign" active={!booking.agent}
@@ -583,7 +602,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
                     align="left" disabled={open}
                   >
                     <button onClick={toggle}
-                      className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[11px] font-medium transition-colors shrink-0 ${open ? 'border-violet-400 text-violet-600 bg-violet-50' : 'border-dashed border-gray-300 text-gray-400 hover:border-violet-400 hover:text-violet-500 hover:bg-violet-50'}`}>
+                      className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[11px] font-semibold transition-colors shrink-0 ${open ? 'border-violet-400 text-violet-600 bg-violet-50' : 'border-gray-400 text-gray-600 bg-gray-50 hover:border-violet-400 hover:text-violet-600 hover:bg-violet-50'}`}>
                       <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
                       </svg>
@@ -605,8 +624,8 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
 
       {/* Timer */}
       <Tooltip
-        label={isCompleted ? 'Resolution time' : 'Elapsed time'}
-        sub={isCompleted ? 'Total time taken to complete' : 'Time since received · updates live'}
+        label={isCompleted ? 'Resolution time' : booking.status.toLowerCase() === 'ignored' ? 'Ignored after' : 'Elapsed time'}
+        sub={isCompleted ? 'Total time taken to complete' : booking.status.toLowerCase() === 'ignored' ? 'Time elapsed before booking was ignored' : 'Time since received · updates live'}
         className="shrink-0"
       >
         <div className="flex flex-col items-center justify-center px-3 gap-1">
@@ -630,14 +649,14 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
                   align="right" disabled={open} className="w-full"
                 >
                   <button onClick={toggle}
-                    className={`flex items-center gap-1 px-2 py-1 rounded-lg w-full justify-end border transition-colors ${open ? `${pc.bg} ${pc.border}` : `border-gray-200 hover:${pc.bg} hover:${pc.border}`}`}>
-                    <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${pc.text}`}>
-                      <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    className={`flex items-center gap-1 px-2 py-1 rounded-lg w-full justify-end transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-900">
+                      <svg className={`w-3 h-3 shrink-0 ${pc.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={P_PATH[pItem?.value ?? ''] ?? P_PATH['Not Urgent']} />
                       </svg>
                       {pItem?.label ?? booking.priority}
                     </span>
-                    <Chevron cls="text-gray-300 ml-0.5" />
+                    <Chevron cls="text-gray-600 ml-0.5" />
                   </button>
                 </Tooltip>
               )}>
@@ -662,14 +681,14 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
               align="right" disabled={open} className="w-full"
             >
               <button onClick={toggle}
-                className={`flex items-center gap-1 px-2 py-1 rounded-lg w-full justify-end border transition-colors ${open ? `${sc.bg} ${sc.border}` : `border-gray-200 hover:${sc.bg} hover:${sc.border}`}`}>
-                <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${sc.text}`}>
-                  <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg w-full justify-end transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-900">
+                  <svg className={`w-3 h-3 shrink-0 ${sc.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sc.path} />
                   </svg>
                   {sc.label}
                 </span>
-                <Chevron cls="text-gray-300 ml-0.5" />
+                <Chevron cls="text-gray-600 ml-0.5" />
               </button>
             </Tooltip>
           )}>
@@ -695,12 +714,12 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
                 align="right" disabled={open} className="w-full"
               >
               <button onClick={toggle}
-                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg w-full justify-end border text-xs font-semibold transition-colors ${open ? 'bg-gray-100 border-gray-300' : activeTags.length > 0 ? 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 hover:border-gray-300' : 'border-dashed border-gray-200 text-gray-400 hover:border-gray-400 hover:bg-gray-50'}`}>
-                <svg className="w-3 h-3 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg w-full justify-end transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
+                <svg className="w-3 h-3 shrink-0 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                 </svg>
                 {activeTags.length === 0 ? (
-                  <span className="text-[11px] text-gray-400 font-medium">Tags</span>
+                  <span className="text-[11px] text-gray-900 font-medium">Tags</span>
                 ) : (
                   <span className="inline-flex items-center gap-1">
                     {activeTags.map(t => {
@@ -708,10 +727,10 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
                       const c = getColor(cfg?.color ?? 'gray');
                       return <span key={t} className={`w-2 h-2 rounded-full shrink-0 ${c.dot}`} />;
                     })}
-                    <span className="text-[11px] font-semibold text-gray-600 ml-0.5">{activeTags.length}</span>
+                    <span className="text-[11px] font-semibold text-gray-900 ml-0.5">{activeTags.length}</span>
                   </span>
                 )}
-                <Chevron cls="text-gray-400" />
+                <Chevron cls="text-gray-600" />
               </button>
               </Tooltip>
             );
@@ -840,11 +859,21 @@ export default function AllBookingsPage() {
     setCurrentPage(1);
   }, [activeTab, agentFilter, priorityFilter, fromFilter, createdFilter, closedAtFilter, sortBy, pageSize, debouncedSearch]);
 
-  const status = activeTab === 'All' ? undefined : activeTab;
   const { data: agents = [] } = useGetAgentsQuery();
   const { data: stats } = useGetDashboardStatsQuery(undefined, { refetchOnMountOrArgChange: true });
   const { data: bookingConfig } = useGetBookingConfigQuery();
 
+  // Resolve actual DB status value via bookingConfig (case-insensitive fallback so a config
+  // value of "ignored" still matches the tab key "Ignored").
+  const statusItems = bookingConfig?.filter(c => c.type === 'status') ?? [];
+  function resolveStatus(tabKey: string): string {
+    const exact = statusItems.find(s => s.value === tabKey);
+    if (exact) return exact.value;
+    const ci = statusItems.find(s => s.value.toLowerCase() === tabKey.toLowerCase());
+    return ci?.value ?? tabKey;
+  }
+
+  const status = activeTab === 'All' ? undefined : resolveStatus(activeTab);
   const agentId = agentFilter === 'Any agent' ? undefined : agents.find(a => a.name === agentFilter)?.id;
   const priority = priorityFilter === 'Any priority' ? undefined : priorityFilter;
 
@@ -869,14 +898,14 @@ export default function AllBookingsPage() {
 
   const allItems = data?.items ?? [];
 
-  // Separate count queries (no agent_id) so counts are always global, not user-scoped
+  // Separate count queries so counts are always global, not filtered by current tab
   const cntBase = { priority, agent_id: agentId, sender_email: fromFilter === 'Any' ? undefined : fromFilter, created_after: CREATED_MAP[createdFilter], closed_after: CLOSED_MAP[closedAtFilter], page_size: 1 };
   const cntOpts = { refetchOnMountOrArgChange: true };
-  const { data: cntAll  } = useGetBookingsQuery({ ...cntBase },                          cntOpts);
-  const { data: cntPend } = useGetBookingsQuery({ ...cntBase, status: 'Pending' },       cntOpts);
-  const { data: cntProg } = useGetBookingsQuery({ ...cntBase, status: 'In Progress' },   cntOpts);
-  const { data: cntDone } = useGetBookingsQuery({ ...cntBase, status: 'Completed' },     cntOpts);
-  const { data: cntIgn  } = useGetBookingsQuery({ ...cntBase, status: 'Ignored' },       cntOpts);
+  const { data: cntAll  } = useGetBookingsQuery({ ...cntBase },                                              cntOpts);
+  const { data: cntPend } = useGetBookingsQuery({ ...cntBase, status: resolveStatus('Pending') },       cntOpts);
+  const { data: cntProg } = useGetBookingsQuery({ ...cntBase, status: resolveStatus('In Progress') },   cntOpts);
+  const { data: cntDone } = useGetBookingsQuery({ ...cntBase, status: resolveStatus('Completed') },     cntOpts);
+  const { data: cntIgn  } = useGetBookingsQuery({ ...cntBase, status: resolveStatus('Ignored') },       cntOpts);
 
   const TAB_COUNTS: Record<Tab, number | undefined> = debouncedSearch ? {
     All:           activeTab === 'All'         ? currentData?.total : undefined,
@@ -935,17 +964,6 @@ export default function AllBookingsPage() {
   return (
     <motion.div variants={pageTransition} initial="hidden" animate="visible" className="flex flex-col gap-3 h-full min-h-0">
 
-      {/* Bookings tab switcher */}
-      <div className="flex items-center border-b border-gray-200">
-        <span className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold text-indigo-600 border-b-2 border-indigo-500 -mb-px cursor-default whitespace-nowrap">
-          🌐 All Bookings
-        </span>
-        <Link href="/dashboard/my-bookings"
-          className="flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-medium text-gray-400 border-b-2 border-transparent -mb-px hover:text-gray-700 hover:border-gray-300 transition-all whitespace-nowrap">
-          🎯 My Bookings
-        </Link>
-      </div>
-
       {/* Status tabs + search + pagination + hide filters — single top row */}
       <motion.div variants={staggerItem} className="flex items-center gap-2">
 
@@ -958,7 +976,7 @@ export default function AllBookingsPage() {
                 className={`flex items-center gap-1.5 px-4 py-2 text-[12.5px] font-semibold border-b-2 -mb-px transition-all duration-150 whitespace-nowrap shrink-0 ${
                   isActive
                     ? 'text-indigo-600 border-indigo-500'
-                    : 'text-gray-500 border-transparent hover:text-gray-700 hover:border-gray-300'
+                    : 'text-gray-700 border-transparent hover:text-gray-900 hover:border-gray-300'
                 }`}>
                 {tab === 'All' && <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>}
                 {tab === 'Pending' && <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>}
@@ -968,7 +986,7 @@ export default function AllBookingsPage() {
                 {TAB_LABEL[tab]}
                 {TAB_COUNTS[tab] !== undefined && (
                   <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none ${
-                    isActive ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-400'
+                    isActive ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-700'
                   }`}>
                     {TAB_COUNTS[tab]}
                   </span>
@@ -980,7 +998,7 @@ export default function AllBookingsPage() {
 
         {/* Search */}
         <div className="relative w-64 shrink-0 ml-auto">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
@@ -988,7 +1006,7 @@ export default function AllBookingsPage() {
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search by ID, subject, email, DA number, priority, status, tags, agent…"
-            className={`w-full pl-9 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 focus:bg-white transition-all ${searchQuery ? 'pr-28' : 'pr-4'}`}
+            className={`w-full pl-9 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 focus:bg-white transition-all ${searchQuery ? 'pr-28' : 'pr-4'}`}
           />
           {searchQuery && (
             <>
@@ -996,7 +1014,7 @@ export default function AllBookingsPage() {
                 {isFetching ? '…' : `${data?.total ?? 0} result${(data?.total ?? 0) !== 1 ? 's' : ''}`}
               </span>
               <button onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center rounded-full text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors">
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -1010,9 +1028,9 @@ export default function AllBookingsPage() {
           <InlineDropdown align="right"
             trigger={(open, toggle) => (
               <button onClick={toggle}
-                className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-gray-600 font-semibold bg-white hover:bg-gray-50 transition-colors shadow-sm text-[12px] ${open ? 'border-indigo-300 ring-2 ring-indigo-100' : 'border-gray-200'}`}>
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-gray-900 font-semibold bg-white hover:bg-gray-50 transition-colors shadow-sm text-[12px] ${open ? 'border-indigo-300 ring-2 ring-indigo-100' : 'border-gray-200'}`}>
                 {pageSize}/pg
-                <Chevron cls={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+                <Chevron cls={`text-gray-600 transition-transform ${open ? 'rotate-180' : ''}`} />
               </button>
             )}>
             {close => PAGE_SIZES.map(n => (
@@ -1023,16 +1041,16 @@ export default function AllBookingsPage() {
 
           {isFetching && <div className="w-2.5 h-2.5 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin" />}
 
-          <span className="text-gray-400 font-medium tabular-nums text-[12px] whitespace-nowrap">
+          <span className="text-gray-800 font-medium tabular-nums text-[12px] whitespace-nowrap">
             {totalCount === 0 ? '0' : `${startIdx}–${endIdx}`} of {totalCount}
           </span>
 
           <button disabled={currentPage <= 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-            className="p-0.5 rounded hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed">
+            className="p-0.5 rounded hover:bg-gray-100 transition-colors text-gray-700 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
           </button>
           <button disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-            className="p-0.5 rounded hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed">
+            className="p-0.5 rounded hover:bg-gray-100 transition-colors text-gray-700 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed">
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
           </button>
         </div>
@@ -1042,7 +1060,7 @@ export default function AllBookingsPage() {
           <button
             onClick={() => setFiltersOpen(v => !v)}
             className={`flex items-center justify-center w-8 h-8 rounded-lg border transition-colors ${
-              filtersOpen ? 'bg-indigo-50 border-indigo-200 text-indigo-600 hover:bg-indigo-100' : 'bg-white border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-gray-600'
+              filtersOpen ? 'bg-indigo-50 border-indigo-200 text-indigo-600 hover:bg-indigo-100' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900'
             }`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1116,7 +1134,7 @@ export default function AllBookingsPage() {
                   )}
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {sorted.map(b => (
                     <BookingRow key={b.id} booking={b} agents={agents} myUserEmail={user?.email} bookingConfig={bookingConfig} />
                   ))}
@@ -1135,9 +1153,9 @@ export default function AllBookingsPage() {
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-4 lg:sticky lg:top-0 max-h-[calc(100vh-7rem)] overflow-y-auto">
 
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold tracking-widest text-gray-400 uppercase">Filters</span>
+            <span className="text-[10px] font-bold tracking-widest text-gray-700 uppercase">Filters</span>
             <button className="p-1 rounded hover:bg-gray-100 transition-colors">
-              <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </button>
@@ -1168,19 +1186,19 @@ export default function AllBookingsPage() {
 
           {/* Assignment Rules */}
           <div className="border-t border-gray-100 pt-4 space-y-2">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Assignment Rules</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-700">Assignment Rules</p>
             <div className="space-y-2">
               <div className="flex items-start gap-2">
                 <svg className="w-3.5 h-3.5 text-indigo-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/>
                 </svg>
-                <p className="text-[11px] text-gray-500 leading-snug">You can assign any booking to yourself.</p>
+                <p className="text-[11px] text-gray-800 leading-snug">You can assign any booking to yourself.</p>
               </div>
               <div className="flex items-start gap-2">
-                <svg className="w-3.5 h-3.5 text-gray-300 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5 text-gray-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                 </svg>
-                <p className="text-[11px] text-gray-500 leading-snug">Your own bookings cannot be reassigned to others.</p>
+                <p className="text-[11px] text-gray-800 leading-snug">Your own bookings cannot be reassigned to others.</p>
               </div>
             </div>
           </div>
