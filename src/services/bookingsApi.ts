@@ -40,7 +40,7 @@ export interface BookingCreate {
 }
 
 export interface BookingUpdate extends Partial<BookingCreate> {
-  status?: string; agent_id?: string; tags?: string;
+  status?: string; agent_id?: string | null; tags?: string;
 }
 
 export interface BookingEvent {
@@ -99,6 +99,10 @@ export const bookingsApi = api.injectEndpoints({
       query: (id) => `/bookings/${id}/events`,
       providesTags: (_r, _e, id) => [{ type: 'Booking', id }],
     }),
+    assignAgent: build.mutation<Booking, { id: string; agent_id: string | null }>({
+      query: ({ id, agent_id }) => ({ url: `/bookings/${id}/assign`, method: 'PATCH', body: { agent_id } }),
+      invalidatesTags: (_r, _e, { id }) => [{ type: 'Booking', id }, 'Booking', 'Dashboard'],
+    }),
     addSupportAgent: build.mutation<Booking, { id: string; agent_id: string }>({
       query: ({ id, agent_id }) => ({ url: `/bookings/${id}/support-agents`, method: 'POST', body: { agent_id } }),
       invalidatesTags: (_r, _e, { id }) => [{ type: 'Booking', id }, 'Booking'],
@@ -114,5 +118,5 @@ export const bookingsApi = api.injectEndpoints({
 export const {
   useGetBookingsQuery, useGetBookingQuery, useCreateBookingMutation,
   useUpdateBookingMutation, usePatchBookingStatusMutation, useDeleteBookingMutation,
-  useGetBookingEventsQuery, useAddSupportAgentMutation, useRemoveSupportAgentMutation,
+  useGetBookingEventsQuery, useAssignAgentMutation, useAddSupportAgentMutation, useRemoveSupportAgentMutation,
 } = bookingsApi;

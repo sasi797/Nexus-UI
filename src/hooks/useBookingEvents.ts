@@ -34,7 +34,7 @@ export function useBookingEvents(token: string | null) {
         } else if (data.type === 'booking_event') {
           const bookingId: string | undefined = data.booking_id;
           const tags: Parameters<typeof api.util.invalidateTags>[0] = bookingId
-            ? [{ type: 'Booking', id: bookingId }, 'Dashboard']
+            ? [{ type: 'Booking', id: bookingId }, 'Booking', 'Dashboard']
             : ['Booking', 'Dashboard'];
           dispatch(api.util.invalidateTags(tags));
 

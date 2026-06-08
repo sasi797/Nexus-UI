@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { pageTransition, staggerItem } from '@/lib/animations';
 import {
   useGetBookingsQuery, useUpdateBookingMutation, usePatchBookingStatusMutation,
-  useAddSupportAgentMutation, useRemoveSupportAgentMutation,
+  useAssignAgentMutation, useAddSupportAgentMutation, useRemoveSupportAgentMutation,
   BookingListItem,
 } from '@/services/bookingsApi';
 import { useGetAgentsQuery, Agent } from '@/services/agentsApi';
@@ -365,6 +365,7 @@ function FilterSelect({ label, value, options, onChange }: {
 /* ── Booking row ── */
 function BookingRow({ booking, agents, myUserEmail, bookingConfig }: { booking: BookingListItem; agents: Agent[]; myUserEmail: string | undefined; bookingConfig: ReturnType<typeof useGetBookingConfigQuery>['data'] }) {
   const [updateBooking, { isLoading: upd }] = useUpdateBookingMutation();
+  const [assignAgent] = useAssignAgentMutation();
   const [patchStatus, { isLoading: pat }] = usePatchBookingStatusMutation();
   const [addSupport] = useAddSupportAgentMutation();
   const [removeSupport] = useRemoveSupportAgentMutation();
@@ -509,11 +510,11 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: { booking: 
                 <>
                   <DdItem label="Unassign" active={!booking.agent}
                     left={<span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-[9px] text-gray-400 font-bold shrink-0">—</span>}
-                    onClick={() => { updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, agent_id: undefined } }); close(); }} />
+                    onClick={() => { assignAgent({ id: booking.id, agent_id: null }); close(); }} />
                   {agents.map(a => (
                     <DdItem key={a.id} label={a.name} active={booking.agent?.id === a.id}
                       left={<div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[9px] font-bold shrink-0`}>{a.name.charAt(0).toUpperCase()}</div>}
-                      onClick={() => { updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, agent_id: a.id } }); close(); }} />
+                      onClick={() => { assignAgent({ id: booking.id, agent_id: a.id }); close(); }} />
                   ))}
                 </>
               )}

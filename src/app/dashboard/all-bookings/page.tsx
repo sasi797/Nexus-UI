@@ -560,7 +560,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig }: {
                 <>
                   <DdItem label="Unassign" active={!booking.agent}
                     left={<span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-[9px] text-gray-400 font-bold shrink-0">—</span>}
-                    onClick={() => { updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, agent_id: undefined } }); close(); }} />
+                    onClick={() => { updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, agent_id: null } }); close(); }} />
                   {agents.map(a => (
                     <DdItem key={a.id} label={a.name} active={booking.agent?.id === a.id}
                       left={<div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[9px] font-bold shrink-0`}>{a.name.charAt(0).toUpperCase()}</div>}

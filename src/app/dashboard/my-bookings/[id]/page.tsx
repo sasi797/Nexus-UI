@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { pageTransition, staggerItem } from '@/lib/animations';
 import {
   useGetBookingQuery, usePatchBookingStatusMutation,
-  useUpdateBookingMutation, useGetBookingEventsQuery,
+  useUpdateBookingMutation, useAssignAgentMutation, useGetBookingEventsQuery,
   useAddSupportAgentMutation, useRemoveSupportAgentMutation,
   BookingEvent,
 } from '@/services/bookingsApi';
@@ -117,7 +117,7 @@ function DaTagInput({ value, onChange }: { value: string; onChange: (v: string) 
 }
 
 function AgentPicker({ agents, value, onChange, disabled }: {
-  agents: Agent[]; value: string | null; onChange: (id: string) => void; disabled?: boolean;
+  agents: Agent[]; value: string | null; onChange: (id: string | null) => void; disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -150,7 +150,7 @@ function AgentPicker({ agents, value, onChange, disabled }: {
             exit={{ opacity: 0, y: -4, scale: 0.97 }} transition={{ duration: 0.1 }}
             className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden max-h-60 overflow-y-auto"
           >
-            <button onClick={() => { onChange(''); setOpen(false); }}
+            <button onClick={() => { onChange(null); setOpen(false); }}
               className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-left transition-colors ${!value ? 'bg-indigo-50' : 'hover:bg-gray-50'}`}>
               <span className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 text-[10px] font-bold shrink-0">—</span>
               <span className="flex-1 text-xs font-medium text-gray-400">Unassigned</span>
@@ -316,6 +316,7 @@ export default function BookingDetailPage() {
   const { data: bookingEvents = [] }             = useGetBookingEventsQuery(id, { pollingInterval: 30_000 });
   const [patchStatus,    { isLoading: patching }] = usePatchBookingStatusMutation();
   const [updateBooking,  { isLoading: saving }]   = useUpdateBookingMutation();
+  const [assignAgent]                             = useAssignAgentMutation();
   const [addSupport]                              = useAddSupportAgentMutation();
   const [removeSupport]                           = useRemoveSupportAgentMutation();
   const { data: agents = [] }                     = useGetAgentsQuery();
@@ -346,8 +347,8 @@ export default function BookingDetailPage() {
     await updateBooking({ id, body: { subject: b?.subject, sender_email: b?.sender_email, priority } });
     flashSaved('priority');
   };
-  const handleAgentChange = async (agent_id: string) => {
-    await updateBooking({ id, body: { subject: b?.subject, sender_email: b?.sender_email, agent_id: agent_id || undefined } });
+  const handleAgentChange = async (agent_id: string | null) => {
+    await assignAgent({ id, agent_id: agent_id || null });
     flashSaved('agent');
   };
 
