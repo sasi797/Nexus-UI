@@ -161,6 +161,201 @@ function SuggestionPortal({
   );
 }
 
+function FilePreviewModal({ file, onClose }: { file: File; onClose: () => void }) {
+  const isImage = file.type.startsWith('image/');
+  const isPdf   = file.type === 'application/pdf';
+  const isWord  = file.type.includes('word') || /\.docx?$/i.test(file.name);
+
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  const [docxHtml, setDocxHtml] = useState<string | null>(null);
+  const [docxLoading, setDocxLoading] = useState(false);
+  const [docxError, setDocxError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const url = URL.createObjectURL(file);
+    setObjectUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
+  useEffect(() => {
+    if (!isWord) return;
+    setDocxLoading(true);
+    setDocxError(null);
+    import('mammoth').then(async ({ default: mammoth }) => {
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.convertToHtml({ arrayBuffer });
+        setDocxHtml(result.value);
+      } catch {
+        setDocxError('Could not render this document.');
+      } finally {
+        setDocxLoading(false);
+      }
+    });
+  }, [file, isWord]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ duration: 0.15 }}
+        className="relative bg-white rounded-2xl shadow-2xl overflow-hidden max-w-3xl w-full max-h-[90vh] flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 shrink-0">
+          <p className="flex-1 text-sm font-semibold text-gray-800 truncate">{file.name}</p>
+          <span className="text-xs text-gray-400">{formatBytes(file.size)}</span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors shrink-0"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* Preview body */}
+        <div className="flex-1 overflow-auto min-h-0 bg-gray-50">
+          {isImage && objectUrl ? (
+            <div className="flex items-center justify-center p-4 h-full">
+              <img src={objectUrl} alt={file.name} className="max-w-full max-h-full object-contain" />
+            </div>
+          ) : isPdf && objectUrl ? (
+            <iframe
+              src={objectUrl}
+              title={file.name}
+              className="w-full min-h-[65vh]"
+              style={{ border: 'none' }}
+            />
+          ) : isWord ? (
+            docxLoading ? (
+              <div className="flex items-center justify-center gap-2 py-20 text-sm text-gray-400">
+                <svg className="w-4 h-4 animate-spin shrink-0" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                </svg>
+                Rendering document…
+              </div>
+            ) : docxError ? (
+              <div className="flex items-center justify-center py-20 text-sm text-red-400">{docxError}</div>
+            ) : (
+              <div
+                className="prose prose-sm max-w-none p-8 bg-white mx-auto my-4 rounded-xl shadow-sm border border-gray-100 [&_table]:border-collapse [&_td]:border [&_td]:border-gray-200 [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:border-gray-200 [&_th]:px-2 [&_th]:py-1"
+                dangerouslySetInnerHTML={{ __html: docxHtml ?? '' }}
+              />
+            )
+          ) : (
+            <div className="flex flex-col items-center gap-3 py-16 px-8 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center">
+                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+              </div>
+              <p className="text-sm font-semibold text-gray-700">{file.name}</p>
+              <p className="text-xs text-gray-400">Preview not available for this file type</p>
+              {objectUrl && (
+                <a
+                  href={objectUrl}
+                  download={file.name}
+                  className="mt-2 text-xs font-semibold px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                >
+                  Download
+                </a>
+              )}
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </div>,
+    document.body
+  );
+}
+
+function SelectedFileChip({ file, onRemove }: { file: File; onRemove: () => void }) {
+  const [showPreview, setShowPreview] = useState(false);
+
+  const isImage = file.type.startsWith('image/');
+  const isPdf   = file.type === 'application/pdf';
+  const isWord  = file.type.includes('word') || /\.docx?$/i.test(file.name);
+  const isExcel = file.type.includes('sheet') || file.type.includes('excel') || /\.xlsx?$/i.test(file.name);
+
+  const iconBg  = isImage ? 'bg-emerald-50' : isPdf ? 'bg-red-50' : isWord ? 'bg-blue-50' : isExcel ? 'bg-green-50' : 'bg-gray-100';
+  const iconClr = isImage ? 'text-emerald-500' : isPdf ? 'text-red-500' : isWord ? 'text-blue-500' : isExcel ? 'text-green-600' : 'text-gray-400';
+
+  const [thumbUrl, setThumbUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!isImage) return;
+    const url = URL.createObjectURL(file);
+    setThumbUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file, isImage]);
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setShowPreview(true)}
+        className="flex items-center gap-3 px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-indigo-300 hover:shadow-md transition-all w-full sm:w-auto sm:min-w-[200px] sm:max-w-[260px] text-left group"
+      >
+        <div className={`w-9 h-9 rounded-lg ${iconBg} ${iconClr} flex items-center justify-center shrink-0 overflow-hidden`}>
+          {isImage && thumbUrl ? (
+            <img src={thumbUrl} alt={file.name} className="w-full h-full object-cover" />
+          ) : isPdf ? (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+            </svg>
+          ) : isWord ? (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+          ) : isExcel ? (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 10h18M3 14h18M10 3v18M14 3v18M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"/>
+            </svg>
+          ) : (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+            </svg>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[12.5px] font-semibold text-gray-800 truncate leading-tight">{file.name}</p>
+          <p className="text-[11px] text-gray-400 mt-0.5">{formatBytes(file.size)}</p>
+        </div>
+        <button
+          type="button"
+          onClick={e => { e.stopPropagation(); onRemove(); }}
+          className="w-5 h-5 rounded-full bg-gray-100 hover:bg-red-100 flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors shrink-0"
+        >
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </button>
+
+      <AnimatePresence>
+        {showPreview && <FilePreviewModal file={file} onClose={() => setShowPreview(false)} />}
+      </AnimatePresence>
+    </>
+  );
+}
+
 function AttachmentChip({ att, token }: { att: EmailAttachment; token: string | null }) {
   const [loading, setLoading] = useState(false);
 
@@ -949,13 +1144,9 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
 
           {/* Selected files preview */}
           {selectedFiles.length > 0 && (
-            <div className="flex flex-wrap gap-2 pt-1">
+            <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-50">
               {selectedFiles.map((f, i) => (
-                <div key={i} className="flex items-center gap-2 px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-lg text-[13px] text-gray-600 font-medium">
-                  <span className="text-base leading-none">📎</span>
-                  <span className="truncate max-w-[160px]">{f.name}</span>
-                  <button onClick={() => removeFile(i)} className="text-gray-400 hover:text-gray-600 transition-colors leading-none ml-0.5 text-sm">✕</button>
-                </div>
+                <SelectedFileChip key={i} file={f} onRemove={() => removeFile(i)} />
               ))}
             </div>
           )}
