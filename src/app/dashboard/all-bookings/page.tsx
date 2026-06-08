@@ -7,6 +7,7 @@ import { pageTransition, staggerItem } from '@/lib/animations';
 import {
   useGetBookingsQuery, useUpdateBookingMutation, usePatchBookingStatusMutation,
   useAddSupportAgentMutation, useRemoveSupportAgentMutation,
+  useMarkBookingReadMutation, useMarkAllBookingsReadMutation,
   BookingListItem,
 } from '@/services/bookingsApi';
 import { useGetAgentsQuery, Agent } from '@/services/agentsApi';
@@ -395,11 +396,13 @@ function FilterSelect({ label, value, options, onChange }: {
 }
 
 /* ── Booking row ── */
-function BookingRow({ booking, agents, myUserEmail, bookingConfig, onModified }: {
+function BookingRow({ booking, agents, myUserEmail, bookingConfig, onModified, onMarkRead }: {
   booking: BookingListItem; agents: Agent[]; myUserEmail: string | undefined;
   bookingConfig: ReturnType<typeof useGetBookingConfigQuery>['data'];
   onModified: (id: string) => void;
+  onMarkRead: (id: string) => void;
 }) {
+  const isUnread = !booking.is_read;
   const [updateBooking, { isLoading: upd }] = useUpdateBookingMutation();
   const [patchStatus, { isLoading: pat }] = usePatchBookingStatusMutation();
   const [addSupport] = useAddSupportAgentMutation();
@@ -427,12 +430,12 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onModified }:
     close();
     if (s === booking.status) return;
     if (s === 'Completed') { setDaNumber(booking.da_number ?? ''); setDaDesc(booking.da_description ?? ''); setShowDa(true); return; }
-    onModified(booking.id);
+    onModified(booking.id); onMarkRead(booking.id);
     patchStatus({ id: booking.id, status: s });
   }
 
   function submitDa() {
-    onModified(booking.id);
+    onModified(booking.id); onMarkRead(booking.id);
     patchStatus({ id: booking.id, status: 'Completed', da_number: daNumber || undefined, da_description: daDesc || undefined });
     setShowDa(false);
   }
@@ -444,7 +447,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onModified }:
     {/* ── Mobile card (< md) ── */}
     <Link
       href={`/dashboard/my-bookings/${booking.id}`}
-      className={`md:hidden block rounded-lg border shadow-sm active:opacity-75 transition-all ${busy ? 'opacity-60 pointer-events-none' : ''} ${isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300' : 'bg-white border-gray-100'}`}
+      className={`md:hidden block rounded-lg border shadow-sm active:opacity-75 transition-all ${busy ? 'opacity-60 pointer-events-none' : ''} ${isUnread ? 'bg-gradient-to-br from-slate-100 to-gray-200 border-slate-400' : isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300' : 'bg-white border-gray-100'}`}
     >
       <div className="px-4 py-3.5">
         <div className="flex items-center justify-between mb-1.5">
@@ -473,11 +476,20 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onModified }:
             <DaBadges daNumber={booking.da_number} />
           </div>
         )}
+        {isUnread && (
+          <button
+            onClick={e => { e.preventDefault(); e.stopPropagation(); onMarkRead(booking.id); }}
+            className="mt-2 flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-500 text-[10px] font-medium transition-colors"
+          >
+            <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+            Mark read
+          </button>
+        )}
       </div>
     </Link>
 
     {/* ── Desktop row (≥ md) ── */}
-    <div className={`hidden md:flex items-center gap-4 px-3 py-2 rounded-xl border shadow-sm hover:shadow-lg transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300 hover:border-emerald-300' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
+    <div className={`hidden md:flex items-center gap-4 px-3 py-2 rounded-xl border shadow-sm hover:shadow-lg transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${isUnread ? 'bg-gradient-to-br from-slate-100 to-gray-200 border-slate-400 hover:border-slate-500' : isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300 hover:border-emerald-300' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
 
       {/* Avatar */}
       <Link href={`/dashboard/my-bookings/${booking.id}`} className="shrink-0">
@@ -762,6 +774,17 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onModified }:
           )}
         </InlineDropdown>
 
+        {/* Mark as read */}
+        {isUnread && (
+          <button
+            onClick={e => { e.preventDefault(); e.stopPropagation(); onMarkRead(booking.id); }}
+            className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-500 hover:text-slate-700 text-[10px] font-medium transition-colors self-end"
+          >
+            <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+            Mark read
+          </button>
+        )}
+
       </div>
     </div>
 
@@ -902,6 +925,8 @@ export default function AllBookingsPage() {
   const allItems = data?.items ?? [];
   const [recentMod, setRecentMod] = useState<Record<string, number>>({});
   const markModified = (id: string) => setRecentMod(prev => ({ ...prev, [id]: Date.now() }));
+  const [markBookingRead] = useMarkBookingReadMutation();
+  const [markAllBookingsRead] = useMarkAllBookingsReadMutation();
 
   // Separate count queries so counts are always global, not filtered by current tab
   const cntBase = { priority, agent_id: agentId, sender_email: fromFilter === 'Any' ? undefined : fromFilter, created_after: CREATED_MAP[createdFilter], closed_after: CLOSED_MAP[closedAtFilter], page_size: 1 };
@@ -1143,8 +1168,20 @@ export default function AllBookingsPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
+                  {(() => { const unreadCount = sorted.filter(b => !b.is_read).length; return unreadCount > 0 && (
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-[11px] text-slate-500 font-medium">{unreadCount} unread update{unreadCount > 1 ? 's' : ''}</span>
+                      <button
+                        onClick={() => markAllBookingsRead(sorted.map(b => b.id))}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 hover:text-slate-800 text-[11px] font-medium transition-colors"
+                      >
+                        <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                        Mark all read
+                      </button>
+                    </div>
+                  ); })()}
                   {sorted.map(b => (
-                    <BookingRow key={b.id} booking={b} agents={agents} myUserEmail={user?.email} bookingConfig={bookingConfig} onModified={markModified} />
+                    <BookingRow key={b.id} booking={b} agents={agents} myUserEmail={user?.email} bookingConfig={bookingConfig} onModified={markModified} onMarkRead={(id) => markBookingRead(id)} />
                   ))}
                 </div>
               )}

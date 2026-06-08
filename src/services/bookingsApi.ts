@@ -17,6 +17,7 @@ export interface BookingListItem {
   assigned_at: string | null;
   completed_at: string | null;
   updated_at: string;
+  is_read: boolean;
 }
 
 export interface PaginatedBookings {
@@ -112,6 +113,14 @@ export const bookingsApi = api.injectEndpoints({
       query: ({ id, agent_id }) => ({ url: `/bookings/${id}/support-agents/${agent_id}`, method: 'DELETE' }),
       invalidatesTags: (_r, _e, { id }) => [{ type: 'Booking', id }, 'Booking'],
     }),
+    markBookingRead: build.mutation<void, string>({
+      query: (id) => ({ url: `/bookings/${id}/mark-read`, method: 'POST' }),
+      invalidatesTags: (_r, _e, id) => [{ type: 'Booking', id }, 'Booking'],
+    }),
+    markAllBookingsRead: build.mutation<void, string[]>({
+      query: (booking_ids) => ({ url: '/bookings/mark-all-read', method: 'POST', body: booking_ids }),
+      invalidatesTags: ['Booking'],
+    }),
   }),
   overrideExisting: false,
 });
@@ -120,4 +129,5 @@ export const {
   useGetBookingsQuery, useGetBookingQuery, useCreateBookingMutation,
   useUpdateBookingMutation, usePatchBookingStatusMutation, useDeleteBookingMutation,
   useGetBookingEventsQuery, useAssignAgentMutation, useAddSupportAgentMutation, useRemoveSupportAgentMutation,
+  useMarkBookingReadMutation, useMarkAllBookingsReadMutation,
 } = bookingsApi;
