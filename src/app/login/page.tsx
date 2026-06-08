@@ -43,7 +43,7 @@ export default function LoginPage() {
     e.preventDefault();
     setErrorMsg('');
     try {
-      const tokens = await login({ email, password }).unwrap();
+      const tokens = await login({ email: email.toLowerCase(), password }).unwrap();
       const res  = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
         headers: { Authorization: `Bearer ${tokens.access_token}` },
       });
@@ -62,7 +62,7 @@ export default function LoginPage() {
     if (newPass !== confirmPass) { setErrorMsg('Passwords do not match'); return; }
     if (newPass.length < 6)      { setErrorMsg('Password must be at least 6 characters'); return; }
     try {
-      await resetPassword({ email, new_password: newPass, confirm_password: confirmPass }).unwrap();
+      await resetPassword({ email: email.toLowerCase(), new_password: newPass, confirm_password: confirmPass }).unwrap();
       setSuccessMsg('Password reset successfully! You can now sign in.');
       setNewPass(''); setConfirmPass('');
       setTimeout(() => { setView('login'); setSuccessMsg(''); }, 2000);
