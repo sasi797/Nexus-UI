@@ -55,8 +55,10 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
   const [markRead]    = useMarkReadMutation();
   const [markAllRead] = useMarkAllReadMutation();
 
-  const unread = data?.unread_count ?? 0;
-  const items  = data?.items ?? [];
+  const unread         = data?.unread_count ?? 0;
+  const unreadBookings = data?.unread_bookings ?? 0;
+  const badgeCount     = unreadBookings + unread;
+  const items          = data?.items ?? [];
 
   /* live clock */
   useEffect(() => {
@@ -140,16 +142,16 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
             <AnimatePresence>
-              {unread > 0 && (
+              {badgeCount > 0 && (
                 <motion.span
-                  key={unread}
+                  key={badgeCount}
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   exit={{ scale: 0 }}
                   transition={{ type: 'spring', stiffness: 500 }}
                   className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-white leading-none"
                 >
-                  {unread > 99 ? '99+' : unread}
+                  {badgeCount > 99 ? '99+' : badgeCount}
                 </motion.span>
               )}
             </AnimatePresence>
@@ -167,9 +169,9 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
                 <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-bold text-gray-900">Notifications</span>
-                    {unread > 0 && (
+                    {badgeCount > 0 && (
                       <span className="text-[10px] font-bold px-1.5 py-0.5 bg-indigo-100 text-indigo-600 rounded-full">
-                        {unread} new
+                        {badgeCount} new
                       </span>
                     )}
                   </div>
@@ -181,12 +183,26 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
                 </div>
 
                 <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
-                  {items.length === 0 ? (
+                  {unreadBookings > 0 && (
+                    <a
+                      href="/dashboard/all-bookings"
+                      onClick={() => setOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3 bg-sky-50 hover:bg-sky-100 transition-colors"
+                    >
+                      <span className="w-8 h-8 shrink-0 rounded-xl flex items-center justify-center text-sm bg-sky-100">📋</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12.5px] font-semibold text-sky-900">{unreadBookings} unread booking update{unreadBookings > 1 ? 's' : ''}</p>
+                        <p className="text-[11px] text-sky-600">Tap to view all bookings →</p>
+                      </div>
+                      <span className="w-2 h-2 rounded-full bg-sky-500 shrink-0" />
+                    </a>
+                  )}
+                  {items.length === 0 && unreadBookings === 0 ? (
                     <div className="py-10 text-center">
                       <p className="text-2xl mb-1">🔔</p>
                       <p className="text-xs font-medium text-gray-400">No notifications yet</p>
                     </div>
-                  ) : (
+                  ) : items.length === 0 ? null : (
                     items.slice(0, 10).map(n => {
                       const cfg = TYPE_ICON[n.type] ?? { bg: 'bg-gray-100', icon: '📌' };
                       return (

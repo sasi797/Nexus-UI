@@ -13,6 +13,7 @@ export interface NotificationItem {
 export interface NotificationsResponse {
   items: NotificationItem[];
   unread_count: number;
+  unread_bookings: number;
 }
 
 export const notificationsApi = api.injectEndpoints({

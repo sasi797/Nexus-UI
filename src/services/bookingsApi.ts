@@ -1,4 +1,5 @@
 import { api } from './api';
+import { notificationsApi } from './notificationsApi';
 
 export interface AgentBrief { id: string; name: string; email: string }
 
@@ -115,11 +116,27 @@ export const bookingsApi = api.injectEndpoints({
     }),
     markBookingRead: build.mutation<void, string>({
       query: (id) => ({ url: `/bookings/${id}/mark-read`, method: 'POST' }),
-      invalidatesTags: (_r, _e, id) => [{ type: 'Booking', id }, 'Booking'],
+      invalidatesTags: (_r, _e, id) => [{ type: 'Booking', id }, 'Booking', 'Notification'],
+      async onQueryStarted(_id, { dispatch, queryFulfilled }) {
+        const patch = dispatch(
+          notificationsApi.util.updateQueryData('getNotifications', undefined, (draft) => {
+            if (draft.unread_bookings > 0) draft.unread_bookings -= 1;
+          })
+        );
+        try { await queryFulfilled; } catch { patch.undo(); }
+      },
     }),
     markAllBookingsRead: build.mutation<void, string[]>({
       query: (booking_ids) => ({ url: '/bookings/mark-all-read', method: 'POST', body: booking_ids }),
-      invalidatesTags: ['Booking'],
+      invalidatesTags: ['Booking', 'Notification'],
+      async onQueryStarted(_ids, { dispatch, queryFulfilled }) {
+        const patch = dispatch(
+          notificationsApi.util.updateQueryData('getNotifications', undefined, (draft) => {
+            draft.unread_bookings = 0;
+          })
+        );
+        try { await queryFulfilled; } catch { patch.undo(); }
+      },
     }),
   }),
   overrideExisting: false,
