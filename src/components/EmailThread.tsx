@@ -12,6 +12,26 @@ import type { EmailMessage, EmailAttachment } from '@/services/emailApi';
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 const MAILBOX_EMAIL = (process.env.NEXT_PUBLIC_MAILBOX_EMAIL ?? '').toLowerCase();
 
+const PREDEFINED_CONTACTS: { name: string; email: string }[] = [
+  { name: 'bookingslhr',        email: 'bookingslhr@trilogylogistics.com' },
+  { name: 'GLA OPS',            email: 'glaops@trilogylogistics.com' },
+  { name: 'Rachel Medina',      email: 'rachel.m@trilogylogistics.com' },
+  { name: 'Steve Doohan',       email: 's.doohan@trilogylogistics.com' },
+  { name: 'Syrus Sharma',       email: 'syrus.sharma@trilogylogistics.com' },
+  { name: 'Shay Braham',        email: 'shay.braham@trilogylogistics.com' },
+  { name: 'Joe Berry',          email: 'joe.berry@trilogylogistics.com' },
+  { name: 'Farai Gonah',        email: 'farai.gonah@trilogylogistics.com' },
+  { name: 'Findlay Fyfe',       email: 'findlay.fyfe@trilogylogistics.com' },
+  { name: 'Andrew Whitington',  email: 'andrew.whitington@trilogylogistics.com' },
+  { name: 'Arran Finn',         email: 'arran.finn@trilogylogistics.com' },
+  { name: 'Georgie Fishpool',   email: 'georgie.fishpool@trilogylogistics.com' },
+  { name: 'LHR OPS',            email: 'lhrops@trilogylogistics.com' },
+  { name: 'Accounts',           email: 'accounts@trilogylogistics.com' },
+  { name: 'Customer Liaison LHR', email: 'customerliaisonlhr@trilogylogistics.com' },
+  { name: 'Annamalai AK',       email: 'ak@thelinkworks.com' },
+  { name: 'Trilogy User1',      email: 'Trilogy1@linkworks.in' },
+];
+
 type ComposeTab = 'Reply' | 'Reply All' | 'Forward';
 
 const AVATAR_COLORS = [
@@ -104,12 +124,14 @@ function splitQuotedContent(text: string): { main: string; quoted: string | null
   return { main: text.trim(), quoted: null };
 }
 
+type ContactSuggestion = { name: string; email: string };
+
 function SuggestionPortal({
   suggestions,
   anchorRef,
   onSelect,
 }: {
-  suggestions: string[];
+  suggestions: ContactSuggestion[];
   anchorRef: React.RefObject<HTMLElement | null>;
   onSelect: (email: string) => void;
 }) {
@@ -125,7 +147,7 @@ function SuggestionPortal({
         position: 'fixed',
         bottom: window.innerHeight - r.top + 2,
         left: r.left,
-        width: Math.max(288, r.width),
+        width: Math.max(300, r.width),
         zIndex: 9999,
       });
     };
@@ -143,17 +165,22 @@ function SuggestionPortal({
 
   return createPortal(
     <div style={style} className="bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
-      {suggestions.map(email => (
+      {suggestions.map(c => (
         <button
-          key={email}
+          key={c.email}
           type="button"
-          onMouseDown={e => { e.preventDefault(); onSelect(email); }}
-          className="w-full text-left px-3 py-2.5 text-[12px] text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors truncate flex items-center gap-2"
+          onMouseDown={e => { e.preventDefault(); onSelect(c.email); }}
+          className="w-full text-left px-3 py-2.5 hover:bg-indigo-50 transition-colors flex items-center gap-2.5"
         >
-          <svg className="w-3 h-3 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-          </svg>
-          {email}
+          <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
+            <span className="text-[10px] font-bold text-indigo-500 leading-none">
+              {c.name ? c.name.charAt(0).toUpperCase() : c.email.charAt(0).toUpperCase()}
+            </span>
+          </div>
+          <div className="flex-1 min-w-0">
+            {c.name && <p className="text-[12px] font-semibold text-gray-800 truncate leading-tight">{c.name}</p>}
+            <p className="text-[11px] text-gray-400 truncate">{c.email}</p>
+          </div>
         </button>
       ))}
     </div>,
@@ -576,6 +603,7 @@ interface Props {
 
 export default function EmailThread({ bookingId, senderEmail, replyRef, composeTab: controlledTab, onComposeTabChange, readOnly = false }: Props) {
   const accessToken = useSelector((s: RootState) => s.auth.accessToken);
+  const currentUser  = useSelector((s: RootState) => s.auth.user);
   const { data: messages = [], isLoading } = useGetMessagesQuery(bookingId, { pollingInterval: 20000 });
   const [replyMessage, { isLoading: sending }] = useReplyMessageMutation();
   const [syncEmails, { isLoading: syncing }] = useSyncEmailsMutation();
@@ -660,52 +688,59 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
 
   const baseToEmails = composeTab === 'Reply All' ? replyAllToEmails : replyToEmails;
 
-  // Collect all emails seen in this thread for autocomplete (used in suggestions below)
-  const knownEmails = useMemo(() => {
-    const s = new Set<string>();
-    const extractEmail = (raw: string): string | null => {
+  // Collect all contacts seen in this thread + predefined list for autocomplete
+  const knownContacts = useMemo((): ContactSuggestion[] => {
+    const byEmail = new Map<string, ContactSuggestion>();
+
+    // Predefined contacts take priority (they have names)
+    for (const c of PREDEFINED_CONTACTS) byEmail.set(c.email.toLowerCase(), c);
+
+    // Thread-extracted emails (no display name)
+    const addEmail = (raw: string) => {
       const angle = raw.match(/<([^>@\s]+@[^>@\s]+)>/);
-      if (angle) return angle[1].trim().toLowerCase();
-      const bare = raw.trim();
-      return bare.includes('@') ? bare.toLowerCase() : null;
+      const email = (angle ? angle[1] : raw).trim().toLowerCase();
+      if (email.includes('@') && !byEmail.has(email)) byEmail.set(email, { name: '', email });
     };
     for (const msg of messages) {
-      // From metadata fields
-      const e = extractEmail(msg.from_email ?? '');
-      if (e) s.add(e);
-      for (const field of [msg.to_email, msg.cc_emails]) {
-        field?.split(/[,;]/).forEach(part => { const e2 = extractEmail(part); if (e2) s.add(e2); });
-      }
-      // Scan body text/html for every email address (catches forwarded Cc/To headers)
+      addEmail(msg.from_email ?? '');
+      for (const field of [msg.to_email, msg.cc_emails])
+        field?.split(/[,;]/).forEach(addEmail);
       const emailRe = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
-      const bodyToScan = msg.body_text ?? (msg.body_html ?? '').replace(/<[^>]+>/g, ' ');
+      const body = msg.body_text ?? (msg.body_html ?? '').replace(/<[^>]+>/g, ' ');
       let m;
-      while ((m = emailRe.exec(bodyToScan)) !== null) s.add(m[0].toLowerCase());
+      while ((m = emailRe.exec(body)) !== null) addEmail(m[0]);
     }
-    s.delete(MAILBOX_EMAIL);
-    return [...s];
+    byEmail.delete(MAILBOX_EMAIL);
+    return [...byEmail.values()];
   }, [messages]);
 
   const toSuggestions = useMemo(() => {
     if (!toInput.trim()) return [];
     const q = toInput.toLowerCase();
-    const added = new Set([...baseToEmails.filter(e => !removedBaseEmails.has(e)), ...extraToChips]);
-    return knownEmails.filter(e => e.toLowerCase().includes(q) && !added.has(e)).slice(0, 5);
-  }, [toInput, knownEmails, baseToEmails, extraToChips, removedBaseEmails]);
+    const added = new Set([...baseToEmails.filter(e => !removedBaseEmails.has(e)), ...extraToChips].map(e => e.toLowerCase()));
+    return knownContacts
+      .filter(c => (c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q)) && !added.has(c.email.toLowerCase()))
+      .slice(0, 6);
+  }, [toInput, knownContacts, baseToEmails, extraToChips, removedBaseEmails]);
 
   const ccSuggestions = useMemo(() => {
     if (!ccInput.trim()) return [];
     const q = ccInput.toLowerCase();
-    return knownEmails.filter(e => e.toLowerCase().includes(q) && !ccChips.includes(e)).slice(0, 5);
-  }, [ccInput, knownEmails, ccChips]);
+    const added = new Set(ccChips.map(e => e.toLowerCase()));
+    return knownContacts
+      .filter(c => (c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q)) && !added.has(c.email.toLowerCase()))
+      .slice(0, 6);
+  }, [ccInput, knownContacts, ccChips]);
 
   const forwardToSuggestions = useMemo(() => {
     if (composeTab !== 'Forward' || !forwardTo.trim()) return [];
     const lastToken = forwardTo.split(',').pop()?.trim() ?? '';
     if (!lastToken) return [];
     const q = lastToken.toLowerCase();
-    return knownEmails.filter(e => e.toLowerCase().includes(q)).slice(0, 5);
-  }, [forwardTo, knownEmails, composeTab]);
+    return knownContacts
+      .filter(c => c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q))
+      .slice(0, 6);
+  }, [forwardTo, knownContacts, composeTab]);
 
   // Reset chip state and pre-fill CC on tab switch
   useEffect(() => {
@@ -726,16 +761,21 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
   const parseEmails = (raw: string): string[] =>
     [...new Set(raw.match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g) ?? [])];
 
+  const activeBaseEmails = () =>
+    new Set(baseToEmails.filter(e => !removedBaseEmails.has(e)).map(e => e.toLowerCase()));
+
   const commitToInput = () => {
     if (!toInput.trim()) return;
-    const emails = parseEmails(toInput);
+    const taken = new Set([...activeBaseEmails(), ...extraToChips.map(e => e.toLowerCase())]);
+    const emails = parseEmails(toInput).filter(e => !taken.has(e.toLowerCase()));
     if (emails.length > 0) setExtraToChips(prev => [...prev, ...emails]);
     setToInput('');
   };
 
   const commitCcInput = () => {
     if (!ccInput.trim()) return;
-    const emails = parseEmails(ccInput);
+    const taken = new Set(ccChips.map(e => e.toLowerCase()));
+    const emails = parseEmails(ccInput).filter(e => !taken.has(e.toLowerCase()));
     if (emails.length > 0) setCcChips(prev => [...prev, ...emails]);
     setCcInput('');
   };
@@ -1015,7 +1055,9 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
                       const emails = parseEmails(pasted);
                       if (emails.length > 1) {
                         e.preventDefault();
-                        setExtraToChips(prev => [...prev, ...emails]);
+                        const taken = new Set([...activeBaseEmails(), ...extraToChips.map(e => e.toLowerCase())]);
+                        const fresh = emails.filter(e => !taken.has(e.toLowerCase()));
+                        if (fresh.length > 0) setExtraToChips(prev => [...prev, ...fresh]);
                       }
                     }}
                     placeholder={baseToEmails.filter(e => !removedBaseEmails.has(e)).length === 0 && extraToChips.length === 0 ? 'Add recipient...' : 'Add more...'}
@@ -1064,7 +1106,9 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
                   const emails = parseEmails(pasted);
                   if (emails.length > 1) {
                     e.preventDefault();
-                    setCcChips(prev => [...prev, ...emails]);
+                    const taken = new Set(ccChips.map(e => e.toLowerCase()));
+                    const fresh = emails.filter(e => !taken.has(e.toLowerCase()));
+                    if (fresh.length > 0) setCcChips(prev => [...prev, ...fresh]);
                   }
                 }}
                 placeholder={ccChips.length === 0 ? 'cc@example.com, another@example.com' : 'Add more...'}
@@ -1243,7 +1287,8 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
                           type="button"
                           onClick={() => {
                             if (editorRef.current) {
-                              editorRef.current.innerHTML = t.body.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+                              const filled = t.body.replace(/<_+>/g, currentUser?.name ?? '');
+                              editorRef.current.innerHTML = filled.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
                               setEditorEmpty(false);
                             }
                             setShowTemplatePicker(false);
