@@ -47,7 +47,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
 
   const [open, setOpen]   = useState(false);
   const [clock, setClock] = useState(() => new Date());
-  const [tz, setTz]       = useState<'Asia/Kolkata' | 'Europe/London'>('Asia/Kolkata');
+  const [tz, setTz]       = useState<'Asia/Kolkata' | 'Europe/London'>('Europe/London');
   const ref = useRef<HTMLDivElement>(null);
 
   const { data }      = useGetNotificationsQuery(undefined, { pollingInterval: 60_000 });
