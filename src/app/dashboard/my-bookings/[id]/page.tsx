@@ -39,10 +39,10 @@ const STATUS_PILL_ON: Record<string, string> = {
   Pending: 'bg-amber-50 text-amber-700 border-amber-300',
   'In Progress': 'bg-blue-50 text-blue-700 border-blue-300',
   Completed: 'bg-red-50 text-red-600 border-red-300',
-  Ignored: 'bg-slate-50 text-slate-600 border-slate-300',
+  Ignored: 'bg-slate-100 text-slate-700 border-slate-400',
 };
 const STATUS_DOT: Record<string, string> = {
-  Pending: 'bg-amber-400', 'In Progress': 'bg-blue-500', Completed: 'bg-red-400', Ignored: 'bg-slate-400',
+  Pending: 'bg-amber-400', 'In Progress': 'bg-blue-500', Completed: 'bg-red-400', Ignored: 'bg-slate-500',
 };
 
 const AVATAR_COLORS = [
@@ -615,12 +615,12 @@ export default function BookingDetailPage() {
                       disabled={saving || patching || !isOpen}
                       onClick={() => handleStatusChange(s)}
                       className={`flex items-center justify-center gap-1 text-[10.5px] font-bold py-1.5 rounded-lg border transition-all disabled:opacity-50 ${
-                        b.status === s
+                        b.status.toLowerCase() === s.toLowerCase()
                           ? STATUS_PILL_ON[s]
                           : 'border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600 hover:bg-gray-50'
                       }`}
                     >
-                      <span className={`w-2 h-2 rounded-full shrink-0 ${b.status === s ? STATUS_DOT[s] : 'bg-gray-300'}`} />
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${b.status.toLowerCase() === s.toLowerCase() ? STATUS_DOT[s] : 'bg-gray-300'}`} />
                       {s === 'Pending' ? 'Open' : s}
                     </button>
                   ))}
