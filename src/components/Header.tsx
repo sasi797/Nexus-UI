@@ -153,7 +153,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
                   transition={{ type: 'spring', stiffness: 500 }}
                   className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-white leading-none"
                 >
-                  {badgeCount > 99 ? '99+' : badgeCount}
+                  {badgeCount >= 50 ? '50+' : badgeCount}
                 </motion.span>
               )}
             </AnimatePresence>
@@ -173,7 +173,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
                     <span className="text-sm font-bold text-gray-900">Notifications</span>
                     {badgeCount > 0 && (
                       <span className="text-[10px] font-bold px-1.5 py-0.5 bg-indigo-100 text-indigo-600 rounded-full">
-                        {badgeCount} new
+                        {badgeCount >= 50 ? '50+' : badgeCount} new
                       </span>
                     )}
                   </div>

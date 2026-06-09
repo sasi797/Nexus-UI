@@ -56,7 +56,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const [logoutApi] = useLogoutMutation();
   const { data: notifData } = useGetNotificationsQuery(undefined, { pollingInterval: 60_000 });
   const unreadCount = notifData?.unread_count ?? 0;
-  const badgeLabel  = unreadCount > 99 ? '99+' : String(unreadCount);
+  const badgeLabel  = unreadCount >= 50 ? '50+' : String(unreadCount);
 
   const handleLogout = async () => {
     try { await logoutApi().unwrap(); } catch { /* ignore */ }
