@@ -396,10 +396,9 @@ function FilterSelect({ label, value, options, onChange }: {
 }
 
 /* ── Booking row ── */
-function BookingRow({ booking, agents, myUserEmail, bookingConfig, onModified, onMarkRead }: {
+function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead }: {
   booking: BookingListItem; agents: Agent[]; myUserEmail: string | undefined;
   bookingConfig: ReturnType<typeof useGetBookingConfigQuery>['data'];
-  onModified: (id: string) => void;
   onMarkRead: (id: string) => void;
 }) {
   const isUnread = !booking.is_read;
@@ -430,12 +429,12 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onModified, o
     close();
     if (s === booking.status) return;
     if (s === 'Completed') { setDaNumber(booking.da_number ?? ''); setDaDesc(booking.da_description ?? ''); setShowDa(true); return; }
-    onModified(booking.id); onMarkRead(booking.id);
+    onMarkRead(booking.id);
     patchStatus({ id: booking.id, status: s });
   }
 
   function submitDa() {
-    onModified(booking.id); onMarkRead(booking.id);
+    onMarkRead(booking.id);
     patchStatus({ id: booking.id, status: 'Completed', da_number: daNumber || undefined, da_description: daDesc || undefined });
     setShowDa(false);
   }
@@ -575,11 +574,11 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onModified, o
                 <>
                   <DdItem label="Unassign" active={!booking.agent}
                     left={<span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-[9px] text-gray-400 font-bold shrink-0">—</span>}
-                    onClick={() => { onModified(booking.id); updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, agent_id: null } }); close(); }} />
+                    onClick={() => { updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, agent_id: null } }); close(); }} />
                   {agents.map(a => (
                     <DdItem key={a.id} label={a.name} active={booking.agent?.id === a.id}
                       left={<div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[9px] font-bold shrink-0`}>{a.name.charAt(0).toUpperCase()}</div>}
-                      onClick={() => { onModified(booking.id); updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, agent_id: a.id } }); close(); }} />
+                      onClick={() => { updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, agent_id: a.id } }); close(); }} />
                   ))}
                 </>
               )}
@@ -597,7 +596,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onModified, o
               >
                 <button
                   disabled={booking.status === 'Completed'}
-                  onClick={() => { onModified(booking.id); removeSupport({ id: booking.id, agent_id: a.id }); }}
+                  onClick={() => { removeSupport({ id: booking.id, agent_id: a.id }); }}
                   className="relative group/sa shrink-0 disabled:cursor-default">
                   <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[10px] font-bold ring-2 ring-white shadow-sm`}>
                     {a.name.charAt(0).toUpperCase()}
@@ -628,7 +627,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onModified, o
                 {close => availableForSupport.map(a => (
                   <DdItem key={a.id} label={a.name}
                     left={<div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[9px] font-bold shrink-0`}>{a.name.charAt(0).toUpperCase()}</div>}
-                    onClick={() => { onModified(booking.id); addSupport({ id: booking.id, agent_id: a.id }); close(); }} />
+                    onClick={() => { addSupport({ id: booking.id, agent_id: a.id }); close(); }} />
                 ))}
               </InlineDropdown>
             )}
@@ -680,7 +679,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onModified, o
                 return (
                   <DdItem key={p.value} label={p.label} active={booking.priority === p.value}
                     left={<span className={`w-2 h-2 rounded-full shrink-0 ${cc.dot}`} />}
-                    onClick={() => { onModified(booking.id); updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, priority: p.value } }); close(); }} />
+                    onClick={() => { updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, priority: p.value } }); close(); }} />
                 );
               })}
             </InlineDropdown>
@@ -760,7 +759,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onModified, o
                   <button key={tag.value}
                     onClick={() => {
                       const next = active ? activeTags.filter(t => t !== tag.value) : [...activeTags, tag.value];
-                      onModified(booking.id); updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, tags: serializeTags(next) } });
+                      updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, tags: serializeTags(next) } });
                       close();
                     }}
                     className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-medium transition-colors ${active ? `${c.bg} ${c.text}` : 'text-gray-600 hover:bg-gray-50'}`}>
@@ -923,8 +922,6 @@ export default function AllBookingsPage() {
   }, { pollingInterval: 10_000, refetchOnFocus: true });
 
   const allItems = data?.items ?? [];
-  const [recentMod, setRecentMod] = useState<Record<string, number>>({});
-  const markModified = (id: string) => setRecentMod(prev => ({ ...prev, [id]: Date.now() }));
   const [markBookingRead] = useMarkBookingReadMutation();
   const [markAllBookingsRead] = useMarkAllBookingsReadMutation();
 
@@ -972,10 +969,16 @@ export default function AllBookingsPage() {
         const due = (x: BookingListItem) => new Date(x.received_at).getTime() + (SLA[x.priority] ?? 8) * 3_600_000;
         return due(a) - due(b);
       }
-      const st = (x: BookingListItem) => { const t = new Date(x.updated_at ?? x.received_at).getTime(); return isNaN(t) ? 0 : t; };
-      const ta = Math.max(st(a), recentMod[a.id] ?? 0);
-      const tb = Math.max(st(b), recentMod[b.id] ?? 0);
-      return tb - ta;
+      const aUnread = a.is_read ? 0 : 1;
+      const bUnread = b.is_read ? 0 : 1;
+      if (aUnread !== bUnread) return bUnread - aUnread;
+      if (aUnread && bUnread) {
+        const ta = new Date(a.updated_at ?? a.received_at).getTime();
+        const tb = new Date(b.updated_at ?? b.received_at).getTime();
+        return tb - ta;
+      }
+      const st = (x: BookingListItem) => { const t = new Date(x.received_at).getTime(); return isNaN(t) ? 0 : t; };
+      return st(b) - st(a);
     })
 ;
 
@@ -1181,7 +1184,7 @@ export default function AllBookingsPage() {
                     </div>
                   ); })()}
                   {sorted.map(b => (
-                    <BookingRow key={b.id} booking={b} agents={agents} myUserEmail={user?.email} bookingConfig={bookingConfig} onModified={markModified} onMarkRead={(id) => markBookingRead(id)} />
+                    <BookingRow key={b.id} booking={b} agents={agents} myUserEmail={user?.email} bookingConfig={bookingConfig} onMarkRead={(id) => markBookingRead(id)} />
                   ))}
                 </div>
               )}
