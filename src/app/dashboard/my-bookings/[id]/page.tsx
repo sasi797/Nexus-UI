@@ -440,14 +440,14 @@ export default function BookingDetailPage() {
                   onClick={() => prevId && router.push(`/dashboard/my-bookings/${prevId}`)}
                   disabled={!prevId}
                   title="Previous booking"
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-gray-600 bg-gray-100 hover:bg-indigo-100 hover:text-indigo-700 border border-gray-300 hover:border-indigo-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
                   </svg>
                   Prev
                 </button>
                 {currentIdx >= 0 && bookingIds.length > 0 && (
-                  <span className="text-[10px] text-gray-300 font-medium tabular-nums px-1">
+                  <span className="text-[11px] text-gray-500 font-semibold tabular-nums px-1 bg-gray-100 rounded py-0.5 border border-gray-200">
                     {currentIdx + 1} / {bookingIds.length}
                   </span>
                 )}
@@ -455,7 +455,7 @@ export default function BookingDetailPage() {
                   onClick={() => nextId && router.push(`/dashboard/my-bookings/${nextId}`)}
                   disabled={!nextId}
                   title="Next booking"
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-gray-600 bg-gray-100 hover:bg-indigo-100 hover:text-indigo-700 border border-gray-300 hover:border-indigo-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all">
                   Next
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
@@ -466,7 +466,7 @@ export default function BookingDetailPage() {
                 <button
                   onClick={() => setSidebarOpen(o => !o)}
                   title={sidebarOpen ? 'Hide ticket details' : 'Show ticket details'}
-                  className="flex items-center justify-center w-7 h-7 rounded-lg border border-gray-200 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 transition-all ml-1">
+                  className="flex items-center justify-center w-7 h-7 rounded-lg border border-gray-300 bg-gray-100 text-gray-600 hover:text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 transition-all ml-1">
                   {sidebarOpen ? (
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <rect x="3" y="3" width="18" height="18" rx="2" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
@@ -501,10 +501,10 @@ export default function BookingDetailPage() {
           </div>
 
           {/* Action bar */}
-          <div className="px-4 py-2 border-b border-gray-100 flex flex-wrap items-center gap-1.5">
+          <div className="px-4 py-2.5 border-b border-gray-100 flex flex-wrap items-center gap-2">
             <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
               onClick={() => focusCompose('Reply')}
-              className="flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all shadow-sm">
+              className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 hover:shadow-sm transition-all">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
               </svg>
@@ -513,7 +513,7 @@ export default function BookingDetailPage() {
 
             <button
               onClick={() => focusCompose('Reply All')}
-              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 border border-gray-200 rounded-lg text-gray-500 hover:text-indigo-700 hover:border-indigo-200 hover:bg-indigo-50 transition-all">
+              className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 hover:shadow-sm transition-all">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6M8 10h5" />
               </svg>
@@ -522,7 +522,7 @@ export default function BookingDetailPage() {
 
             <button
               onClick={() => focusCompose('Forward')}
-              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 border border-gray-200 rounded-lg text-gray-500 hover:text-gray-700 hover:border-gray-300 hover:bg-gray-50 transition-all">
+              className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 hover:shadow-sm transition-all">
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
@@ -536,13 +536,13 @@ export default function BookingDetailPage() {
               whileTap={isOpen ? { scale: 0.97 } : {}}
               disabled={!isOpen || patching}
               onClick={isOpen ? handleClose : undefined}
-              className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 border rounded-lg transition-all ${
+              className={`flex items-center gap-2 text-xs font-bold px-4 py-1.5 rounded-lg transition-all ${
                 isOpen
-                  ? 'border-gray-200 text-gray-600 hover:border-emerald-300 hover:text-emerald-700 hover:bg-emerald-50 disabled:opacity-60'
-                  : 'border-emerald-200 text-emerald-600 bg-emerald-50 opacity-60 cursor-not-allowed'
+                  ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-md hover:shadow-lg disabled:opacity-60'
+                  : 'bg-emerald-50 text-emerald-500 border border-emerald-200 opacity-60 cursor-not-allowed'
               }`}>
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
               </svg>
               {patching ? 'Completing…' : isOpen ? 'Complete' : 'Completed'}
             </motion.button>
