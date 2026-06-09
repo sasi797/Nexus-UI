@@ -60,10 +60,12 @@ function formatHMS(ms: number): string {
 
 function formatReceivedAt(iso: string): string {
   const d = new Date(iso);
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mo = String(d.getMonth() + 1).padStart(2, '0');
   const day = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
   const hh = String(d.getHours()).padStart(2, '0');
   const mm = String(d.getMinutes()).padStart(2, '0');
-  return `${day} ${hh}:${mm}`;
+  return `${dd}/${mo} - ${day} ${hh}:${mm}`;
 }
 
 function formatDuration(ms: number): string {
