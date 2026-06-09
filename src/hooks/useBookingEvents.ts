@@ -24,10 +24,10 @@ export function useBookingEvents(token: string | null) {
           const bookingId: string | undefined = data.booking_id;
           const reopened: boolean = data.reopened === true;
           const tags: Parameters<typeof api.util.invalidateTags>[0] = bookingId
-            ? [{ type: 'EmailMessage', id: bookingId }, { type: 'Booking', id: bookingId }]
-            : ['EmailMessage', 'Booking'];
+            ? [{ type: 'EmailMessage', id: bookingId }, { type: 'Booking', id: bookingId }, 'Booking', 'Notification']
+            : ['EmailMessage', 'Booking', 'Notification'];
           if (reopened) {
-            (tags as unknown[]).push('Booking', 'Dashboard');
+            (tags as unknown[]).push('Dashboard');
           }
           dispatch(api.util.invalidateTags(tags));
 
