@@ -273,14 +273,14 @@ function InlineDropdown({ trigger, children, align = 'right' }: {
   );
 }
 
-function DdItem({ label, active, onClick, left }: {
-  label: React.ReactNode; active?: boolean; onClick: () => void; left?: React.ReactNode;
+function DdItem({ label, active, onClick, left, disabled }: {
+  label: React.ReactNode; active?: boolean; onClick: () => void; left?: React.ReactNode; disabled?: boolean;
 }) {
   return (
-    <button onClick={onClick}
-      className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-medium transition-colors ${active ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}>
+    <button onClick={disabled ? undefined : onClick} disabled={disabled}
+      className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-medium transition-colors ${disabled ? 'opacity-40 cursor-not-allowed text-gray-400' : active ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}>
       {left}{label}
-      {active && <svg className="w-3 h-3 ml-auto text-indigo-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>}
+      {active && !disabled && <svg className="w-3 h-3 ml-auto text-indigo-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>}
     </button>
   );
 }
@@ -580,14 +580,14 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead }:
         {/* Priority */}
         <InlineDropdown
           trigger={(open, toggle) => {
-            const pi = priorityCfg.find((p: BookingConfigItem) => p.value === booking.priority);
+            const pi = priorityCfg.find((p: BookingConfigItem) => p.label === booking.priority || p.value === booking.priority);
             const pc = getColor(pi?.color ?? 'gray');
             return (
               <button onClick={toggle}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg w-full justify-end transition-colors ${(pi?.value === 'Very Urgent' || pi?.value === 'Urgent') ? (open ? 'bg-red-200' : 'bg-red-100 hover:bg-red-200') : (open ? 'bg-gray-100' : 'hover:bg-gray-50')}`}>
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg w-full justify-end transition-colors ${(pi?.label === 'Very Urgent' || pi?.label === 'Urgent') ? (open ? 'bg-red-200' : 'bg-red-100 hover:bg-red-200') : (open ? 'bg-gray-100' : 'hover:bg-gray-50')}`}>
                 <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${pc.text}`}>
                   <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={P_PATH[pi?.value ?? ''] ?? P_PATH['Not Urgent']} />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={P_PATH[pi?.label ?? ''] ?? P_PATH['Not Urgent']} />
                   </svg>
                   {pi?.label ?? booking.priority}
                 </span>
@@ -598,9 +598,9 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead }:
           {close => priorityCfg.map((p: BookingConfigItem) => {
             const cc = getColor(p.color);
             return (
-              <DdItem key={p.value} label={p.label} active={booking.priority === p.value}
+              <DdItem key={p.value} label={p.label} active={booking.priority === p.label || booking.priority === p.value}
                 left={<span className={`w-2 h-2 rounded-full shrink-0 ${cc.dot}`} />}
-                onClick={() => { updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, priority: p.value } }); close(); }} />
+                onClick={() => { updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, priority: p.label } }); close(); }} />
             );
           })}
         </InlineDropdown>
@@ -1125,7 +1125,7 @@ export default function MyBookingsPage() {
             <div className="border-t border-gray-100" />
 
             <FilterSelect label="Priority" value={priorityFilter}
-              options={['Any priority', 'Very Urgent', 'Urgent', 'Not Urgent']} onChange={setPriorityFilter} />
+              options={['Any priority', ...(bookingConfig?.filter(c => c.type === 'priority').sort((a, b) => a.order_index - b.order_index).map(c => c.label) ?? ['Very Urgent', 'Urgent', 'Not Urgent'])]} onChange={setPriorityFilter} />
             <FilterSelect label="Created" value={createdFilter}
               options={['Anytime', 'Today', 'Last 7 days', 'Last 30 days']} onChange={setCreatedFilter} />
             <FilterSelect label="Closed at" value={closedAtFilter}
