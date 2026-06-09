@@ -151,7 +151,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
                   animate={{ scale: 1 }}
                   exit={{ scale: 0 }}
                   transition={{ type: 'spring', stiffness: 500 }}
-                  className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-white leading-none"
+                  className="absolute -top-1 -right-1 min-w-[16px] h-4 px-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center ring-2 ring-white leading-none"
                 >
                   {badgeCount >= 50 ? '50+' : badgeCount}
                 </motion.span>
