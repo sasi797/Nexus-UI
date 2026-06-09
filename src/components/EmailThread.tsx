@@ -1287,7 +1287,7 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
                           type="button"
                           onClick={() => {
                             if (editorRef.current) {
-                              const filled = t.body.replace(/<_+>/g, currentUser?.name ?? '');
+                              const filled = t.body.replace(/(Thanks and Best Regards,?\s*\n)<_+>/gi, `$1${currentUser?.name ?? ''}`);
                               editorRef.current.innerHTML = filled.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
                               setEditorEmpty(false);
                             }
