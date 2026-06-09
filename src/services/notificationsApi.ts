@@ -10,10 +10,16 @@ export interface NotificationItem {
   created_at: string;
 }
 
+export interface LatestUnreadBooking {
+  id: string;
+  subject: string;
+}
+
 export interface NotificationsResponse {
   items: NotificationItem[];
   unread_count: number;
   unread_bookings: number;
+  latest_unread_booking?: LatestUnreadBooking | null;
 }
 
 export const notificationsApi = api.injectEndpoints({

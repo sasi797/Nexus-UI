@@ -29,6 +29,7 @@ const TYPE_ICON: Record<string, { bg: string; icon: string }> = {
   booking_assigned:  { bg: 'bg-blue-100',    icon: '👤' },
   booking_completed: { bg: 'bg-emerald-100', icon: '✅' },
   status_changed:    { bg: 'bg-amber-100',   icon: '🔄' },
+  priority_changed:  { bg: 'bg-orange-100',  icon: '🎯' },
   email_reply:       { bg: 'bg-sky-100',     icon: '✉️' },
 };
 
@@ -55,10 +56,11 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
   const [markRead]    = useMarkReadMutation();
   const [markAllRead] = useMarkAllReadMutation();
 
-  const unread         = data?.unread_count ?? 0;
-  const unreadBookings = data?.unread_bookings ?? 0;
-  const badgeCount     = unreadBookings + unread;
-  const items          = data?.items ?? [];
+  const unread              = data?.unread_count ?? 0;
+  const unreadBookings      = data?.unread_bookings ?? 0;
+  const latestUnreadBooking = data?.latest_unread_booking ?? null;
+  const badgeCount          = unread + (unreadBookings > 0 && unread === 0 ? 1 : 0);
+  const items               = data?.items ?? [];
 
   /* live clock */
   useEffect(() => {
@@ -191,8 +193,14 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
                     >
                       <span className="w-8 h-8 shrink-0 rounded-xl flex items-center justify-center text-sm bg-sky-100">📋</span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[12.5px] font-semibold text-sky-900">{unreadBookings} unread booking update{unreadBookings > 1 ? 's' : ''}</p>
-                        <p className="text-[11px] text-sky-600">Tap to view all bookings →</p>
+                        <p className="text-[12.5px] font-semibold text-sky-900">
+                          {unreadBookings} unread booking update{unreadBookings > 1 ? 's' : ''}
+                        </p>
+                        <p className="text-[11px] text-sky-600 truncate">
+                          {unreadBookings === 1 && latestUnreadBooking
+                            ? `"${latestUnreadBooking.subject}" was updated →`
+                            : 'Tap to view all bookings →'}
+                        </p>
                       </div>
                       <span className="w-2 h-2 rounded-full bg-sky-500 shrink-0" />
                     </a>

@@ -10,6 +10,7 @@ import {
   useDeleteNotificationMutation,
   NotificationItem,
 } from '@/services/notificationsApi';
+import Link from 'next/link';
 
 /* ── type config ── */
 const TYPE_CFG: Record<string, { accent: string; iconBg: string; iconColor: string; icon: React.ReactNode; label: string }> = {
@@ -65,6 +66,17 @@ const TYPE_CFG: Record<string, { accent: string; iconBg: string; iconColor: stri
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+      </svg>
+    ),
+  },
+  priority_changed: {
+    accent: 'bg-orange-500',
+    iconBg: 'bg-orange-50',
+    iconColor: 'text-orange-600',
+    label: 'Priority Update',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
       </svg>
     ),
   },
@@ -180,10 +192,12 @@ export default function NotificationsPage() {
   const [deleteNotif] = useDeleteNotificationMutation();
   const [filter, setFilter] = useState<Filter>('all');
 
-  const allItems = data?.items ?? [];
-  const unread = data?.unread_count ?? 0;
-  const total = allItems.length;
-  const readCount = total - unread;
+  const allItems           = data?.items ?? [];
+  const unread             = data?.unread_count ?? 0;
+  const unreadBookings     = data?.unread_bookings ?? 0;
+  const latestUnread       = data?.latest_unread_booking ?? null;
+  const total              = allItems.length;
+  const readCount          = total - unread;
 
   const filtered = useMemo(() => {
     if (filter === 'unread') return allItems.filter(n => !n.is_read);
@@ -254,6 +268,29 @@ export default function NotificationsPage() {
 
       {/* ── Right: notification list ── */}
       <div className="flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        {unreadBookings > 0 && (
+          <Link
+            href="/dashboard/all-bookings"
+            className="flex items-center gap-3 px-5 py-3.5 bg-sky-50 hover:bg-sky-100 border-b border-sky-100 transition-colors"
+          >
+            <div className="w-9 h-9 shrink-0 rounded-xl bg-sky-100 flex items-center justify-center text-sky-600">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-semibold text-sky-900">
+                {unreadBookings} unread booking update{unreadBookings > 1 ? 's' : ''}
+              </p>
+              <p className="text-[11.5px] text-sky-600 truncate">
+                {unreadBookings === 1 && latestUnread
+                  ? `"${latestUnread.subject}" was updated →`
+                  : 'Tap to view all bookings →'}
+              </p>
+            </div>
+            <span className="w-2.5 h-2.5 rounded-full bg-sky-400 shrink-0" />
+          </Link>
+        )}
         {isLoading ? (
           <div className="p-5 space-y-4">
             {Array.from({ length: 4 }).map((_, i) => (
