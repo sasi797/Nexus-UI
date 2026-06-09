@@ -68,6 +68,23 @@ function formatReceivedAt(iso: string): string {
   return `${dd}/${mo} - ${day} ${hh}:${mm}`;
 }
 
+function dayKey(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function dayLabel(key: string): string {
+  const today = dayKey(new Date().toISOString());
+  const yesterday = dayKey(new Date(Date.now() - 86400000).toISOString());
+  if (key === today) return 'Today';
+  if (key === yesterday) return 'Yesterday';
+  const d = new Date(key);
+  const day = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mo = String(d.getMonth() + 1).padStart(2, '0');
+  return `${day}, ${dd}/${mo}`;
+}
+
 function formatDuration(ms: number): string {
   const totalMins = Math.floor(ms / 60_000);
   const mins = totalMins % 60;
@@ -366,7 +383,7 @@ function FilterSelect({ label, value, options, onChange }: {
 }
 
 /* ── Booking row ── */
-function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead }: { booking: BookingListItem; agents: Agent[]; myUserEmail: string | undefined; bookingConfig: ReturnType<typeof useGetBookingConfigQuery>['data']; onMarkRead: (id: string) => void }) {
+function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, highlighted }: { booking: BookingListItem; agents: Agent[]; myUserEmail: string | undefined; bookingConfig: ReturnType<typeof useGetBookingConfigQuery>['data']; onMarkRead: (id: string) => void; highlighted?: boolean }) {
   const isUnread = !booking.is_read;
   const [updateBooking, { isLoading: upd }] = useUpdateBookingMutation();
   const [assignAgent] = useAssignAgentMutation();
@@ -451,14 +468,14 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead }:
     </Link>
 
     {/* ── Desktop row (≥ md) ── */}
-    <div className={`hidden md:flex items-center gap-2 px-3 pt-3 pb-2.5 rounded-lg border shadow-sm hover:shadow-md transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${isUnread ? 'bg-gradient-to-br from-slate-100 to-gray-200 border-slate-400 hover:border-slate-500' : isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300 hover:border-emerald-300' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
+    <div className={`hidden md:flex items-center gap-2 px-3 pt-3 pb-2.5 rounded-lg border shadow-sm hover:shadow-md transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${highlighted ? 'ring-2 ring-indigo-400 ring-offset-1' : ''} ${isUnread ? 'bg-gradient-to-br from-slate-100 to-gray-200 border-slate-400 hover:border-slate-500' : isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300 hover:border-emerald-300' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
 
       {/* Checkbox */}
       <input type="checkbox" onClick={e => e.stopPropagation()}
         className="w-4 h-4 rounded border-gray-300 text-indigo-600 cursor-pointer shrink-0 accent-indigo-600 opacity-30 group-hover:opacity-100 transition-opacity" />
 
       {/* Avatar */}
-      <Link href={`/dashboard/my-bookings/${booking.id}`} className="shrink-0">
+      <Link href={`/dashboard/my-bookings/${booking.id}`} className="shrink-0" onClick={() => { sessionStorage.setItem('bts:scroll-y', String(document.getElementById('main-scroll')?.scrollTop ?? 0)); sessionStorage.setItem('bts:last-booking', booking.id); }}>
         <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${avatarColor(booking.sender_email)} flex items-center justify-center text-white text-[12px] font-bold shadow-sm`}>
           {booking.sender_email.charAt(0).toUpperCase()}
         </div>
@@ -467,7 +484,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead }:
       {/* Content */}
       <div className="flex-1 min-w-0">
         {/* Rows 1+2 — linked to detail */}
-        <Link href={`/dashboard/my-bookings/${booking.id}`} className="block">
+        <Link href={`/dashboard/my-bookings/${booking.id}`} className="block" onClick={() => { sessionStorage.setItem('bts:scroll-y', String(document.getElementById('main-scroll')?.scrollTop ?? 0)); sessionStorage.setItem('bts:last-booking', booking.id); }}>
           <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
             <span className="text-[10px] font-bold text-gray-400 font-mono tracking-tight">{booking.id}</span>
             {isCompleted && booking.da_number && <DaBadges daNumber={booking.da_number} />}
@@ -767,6 +784,19 @@ export default function MyBookingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>('All');
   const [tabDir, setTabDir] = useState(0);
   const prevTabIdx = useRef(0);
+  const [lastClickedId, setLastClickedId] = useState<string | null>(null);
+  const scrollRestored = useRef(false);
+  const pendingScroll = useRef<{ y: number; id: string | null } | null>(null);
+
+  useEffect(() => {
+    if (scrollRestored.current) return;
+    scrollRestored.current = true;
+    const y = sessionStorage.getItem('bts:scroll-y');
+    const id = sessionStorage.getItem('bts:last-booking');
+    sessionStorage.removeItem('bts:scroll-y');
+    sessionStorage.removeItem('bts:last-booking');
+    if (y) pendingScroll.current = { y: Number(y), id };
+  }, []);
 
   function handleTabChange(tab: Tab) {
     const newIdx = TABS.indexOf(tab);
@@ -890,6 +920,19 @@ export default function MyBookingsPage() {
     if (sorted.length > 0) {
       sessionStorage.setItem('bts:booking-nav', JSON.stringify(sorted.map(b => b.id)));
       sessionStorage.setItem('bts:booking-origin', '/dashboard/my-bookings');
+    }
+  }, [sorted]);
+
+  /* Restore scroll position after list renders */
+  useEffect(() => {
+    if (!pendingScroll.current || sorted.length === 0) return;
+    const { y, id } = pendingScroll.current;
+    pendingScroll.current = null;
+    const el = document.getElementById('main-scroll');
+    if (el) el.scrollTop = y;
+    if (id) {
+      setLastClickedId(id);
+      setTimeout(() => setLastClickedId(null), 5000);
     }
   }, [sorted]);
 
@@ -1092,7 +1135,29 @@ export default function MyBookingsPage() {
                         </button>
                       </div>
                     ); })()}
-                    {sorted.map(b => <BookingRow key={b.id} booking={b} agents={agents} myUserEmail={user?.email} bookingConfig={bookingConfig} onMarkRead={(id) => markBookingRead(id)} />)}
+                    {(() => {
+                      const groups: { key: string; items: typeof sorted }[] = [];
+                      for (const b of sorted) {
+                        const k = dayKey(b.received_at);
+                        const last = groups[groups.length - 1];
+                        if (last && last.key === k) last.items.push(b);
+                        else groups.push({ key: k, items: [b] });
+                      }
+                      return groups.map(({ key, items }) => (
+                        <div key={key}>
+                          <div className="flex items-center gap-2 px-1 py-1 mt-2 mb-1">
+                            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide whitespace-nowrap">{dayLabel(key)}</span>
+                            <div className="flex-1 h-px bg-slate-200" />
+                            <span className="text-[11px] text-slate-300 font-medium">{items.length}</span>
+                          </div>
+                          <div className="space-y-2">
+                            {items.map(b => (
+                              <BookingRow key={b.id} booking={b} agents={agents} myUserEmail={user?.email} bookingConfig={bookingConfig} onMarkRead={(id) => markBookingRead(id)} highlighted={lastClickedId === b.id} />
+                            ))}
+                          </div>
+                        </div>
+                      ));
+                    })()}
                   </div>
                 )}
               </motion.div>
