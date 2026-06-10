@@ -247,10 +247,11 @@ function TagBadges({ tags, tagConfig }: { tags: string[]; tagConfig: { value: st
 }
 
 /* ── InlineDropdown ── */
-function InlineDropdown({ trigger, children, align = 'right' }: {
+function InlineDropdown({ trigger, children, align = 'right', direction = 'down' }: {
   trigger: (open: boolean, toggle: () => void) => React.ReactNode;
   children: (close: () => void) => React.ReactNode;
   align?: 'left' | 'right';
+  direction?: 'down' | 'up';
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -266,9 +267,9 @@ function InlineDropdown({ trigger, children, align = 'right' }: {
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: -4, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.97 }} transition={{ duration: 0.1 }}
-            className={`absolute ${align === 'left' ? 'left-0' : 'right-0'} top-full mt-1.5 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1 min-w-[160px]`}
+            initial={{ opacity: 0, y: direction === 'up' ? 4 : -4, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: direction === 'up' ? 4 : -4, scale: 0.97 }} transition={{ duration: 0.1 }}
+            className={`absolute ${align === 'left' ? 'left-0' : 'right-0'} ${direction === 'up' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'} bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1 min-w-[160px]`}
           >
             {children(() => setOpen(false))}
           </motion.div>
@@ -558,7 +559,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
               </svg>
             </div>
           ) : (
-            <InlineDropdown align="left"
+            <InlineDropdown align="left" direction="up"
               trigger={(open, toggle) => {
                 const bs = booking.agent ? badgeStyle(booking.agent.email) : null;
                 const btnCls = !booking.agent
@@ -627,7 +628,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
               </Tooltip>
             ))}
             {availableForSupport.length > 0 && booking.status !== 'Completed' && (
-              <InlineDropdown align="left"
+              <InlineDropdown align="left" direction="up"
                 trigger={(open, toggle) => (
                   <Tooltip
                     label="Add support agent"
@@ -674,7 +675,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
           const pItem = priorityCfg.find((p: BookingConfigItem) => p.label === booking.priority || p.value === booking.priority);
           const pc = getColor(pItem?.color ?? 'gray');
           return (
-            <InlineDropdown
+            <InlineDropdown direction="up"
               trigger={(open, toggle) => (
                 <Tooltip
                   label={`Priority: ${pItem?.label ?? booking.priority}`}
@@ -706,7 +707,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
         })()}
 
         {/* Status */}
-        <InlineDropdown
+        <InlineDropdown direction="up"
           trigger={(open, toggle) => (
             <Tooltip
               label={`Status: ${sc.label}`}
@@ -736,7 +737,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
         </InlineDropdown>
 
         {/* Tags — multi-select */}
-        <InlineDropdown align="right"
+        <InlineDropdown align="right" direction="up"
           trigger={(open, toggle) => {
             const activeTags = parseTags(booking.tags, tagValues);
             const tagLabels = activeTags.map(t => tagCfg.find((c: BookingConfigItem) => c.value === t)?.label ?? t);
@@ -769,7 +770,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
             );
           }}>
           {close => (
-            <div className="py-1 min-w-[140px]">
+            <div className="py-1 min-w-[140px] max-h-52 overflow-y-auto">
               {tagCfg.map((tag: BookingConfigItem) => {
                 const activeTags = parseTags(booking.tags, tagValues);
                 const active = activeTags.includes(tag.value);
@@ -917,7 +918,7 @@ export default function AllBookingsPage() {
   }, [activeTab, agentFilter, priorityFilter, fromFilter, createdFilter, closedAtFilter, sortBy, pageSize, debouncedSearch]);
 
   const { data: agents = [] } = useGetAgentsQuery();
-  const { data: stats } = useGetDashboardStatsQuery(undefined, { refetchOnMountOrArgChange: true });
+  useGetDashboardStatsQuery(undefined, { refetchOnMountOrArgChange: true });
   const { data: bookingConfig } = useGetBookingConfigQuery();
 
   // Resolve actual DB status value via bookingConfig (case-insensitive fallback so a config
