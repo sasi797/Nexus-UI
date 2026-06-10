@@ -9,6 +9,7 @@ import DashboardGuard from '@/components/DashboardGuard';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   return (
     <ErrorBoundary>
@@ -17,7 +18,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* Desktop sidebar — inline in flex flow at lg+ */}
           <div className="hidden lg:block shrink-0">
-            <Sidebar />
+            <Sidebar
+              collapsed={sidebarCollapsed}
+              onToggleCollapse={() => setSidebarCollapsed(v => !v)}
+            />
           </div>
 
           {/* Mobile/tablet overlay sidebar — only mounts when open */}
