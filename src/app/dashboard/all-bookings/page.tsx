@@ -460,13 +460,14 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
   }
 
   const isCompleted = booking.status.toLowerCase() === 'completed';
+  const isIgnored = booking.status.toLowerCase() === 'ignored';
 
   return (
     <>
     {/* ── Mobile card (< md) ── */}
     <Link
       href={`/dashboard/my-bookings/${booking.id}`}
-      className={`md:hidden block rounded-lg border shadow-sm active:opacity-75 transition-all ${busy ? 'opacity-60 pointer-events-none' : ''} ${isUnread ? 'bg-gradient-to-br from-slate-100 to-gray-200 border-slate-400' : isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300' : 'bg-white border-gray-100'}`}
+      className={`md:hidden block rounded-lg border shadow-sm active:opacity-75 transition-all ${busy ? 'opacity-60 pointer-events-none' : ''} ${isUnread ? 'bg-gradient-to-br from-slate-100 to-gray-200 border-slate-400' : isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300' : isIgnored ? 'bg-gradient-to-br from-rose-50 to-rose-200 border-rose-300' : 'bg-white border-gray-100'}`}
     >
       <div className="px-4 py-3.5">
         <div className="flex items-center justify-between mb-1.5">
@@ -508,7 +509,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
     </Link>
 
     {/* ── Desktop row (≥ md) ── */}
-    <div className={`hidden md:flex items-center gap-4 px-3 py-2 rounded-xl border shadow-sm hover:shadow-lg transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${highlighted ? 'ring-2 ring-indigo-400 ring-offset-1' : ''} ${isUnread ? 'bg-gradient-to-br from-slate-100 to-gray-200 border-slate-400 hover:border-slate-500' : isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300 hover:border-emerald-300' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
+    <div className={`hidden md:flex items-center gap-4 px-3 py-2 rounded-xl border shadow-sm hover:shadow-lg transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${highlighted ? 'ring-2 ring-indigo-400 ring-offset-1' : ''} ${isUnread ? 'bg-gradient-to-br from-slate-100 to-gray-200 border-slate-400 hover:border-slate-500' : isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300 hover:border-emerald-300' : isIgnored ? 'bg-gradient-to-br from-rose-50 to-rose-200 border-rose-300 hover:border-rose-400' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
 
       {/* Avatar */}
       <Link href={`/dashboard/my-bookings/${booking.id}`} className="shrink-0" onClick={() => { sessionStorage.setItem('bts:scroll-y', String(document.getElementById('main-scroll')?.scrollTop ?? 0)); sessionStorage.setItem('bts:last-booking', booking.id); }}>
