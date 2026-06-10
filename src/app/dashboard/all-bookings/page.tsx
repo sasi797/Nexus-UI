@@ -247,29 +247,40 @@ function TagBadges({ tags, tagConfig }: { tags: string[]; tagConfig: { value: st
 }
 
 /* ── InlineDropdown ── */
-function InlineDropdown({ trigger, children, align = 'right', direction = 'down' }: {
+function InlineDropdown({ trigger, children, align = 'right', direction = 'auto' }: {
   trigger: (open: boolean, toggle: () => void) => React.ReactNode;
   children: (close: () => void) => React.ReactNode;
   align?: 'left' | 'right';
-  direction?: 'down' | 'up';
+  direction?: 'down' | 'up' | 'auto';
 }) {
   const [open, setOpen] = useState(false);
+  const [resolvedDir, setResolvedDir] = useState<'up' | 'down'>('down');
   const ref = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!open) return;
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      if (direction === 'up') setResolvedDir(spaceAbove >= 220 ? 'up' : 'down');
+      else if (direction === 'down') setResolvedDir(spaceBelow >= 220 ? 'down' : 'up');
+      else setResolvedDir(spaceBelow >= 220 || spaceBelow >= spaceAbove ? 'down' : 'up');
+    }
     const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
-  }, [open]);
+  }, [open, direction]);
+
   return (
     <div ref={ref} className="relative" onClick={e => e.stopPropagation()}>
       {trigger(open, () => setOpen(v => !v))}
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: direction === 'up' ? 4 : -4, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: direction === 'up' ? 4 : -4, scale: 0.97 }} transition={{ duration: 0.1 }}
-            className={`absolute ${align === 'left' ? 'left-0' : 'right-0'} ${direction === 'up' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'} bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1 min-w-[160px]`}
+            initial={{ opacity: 0, y: resolvedDir === 'up' ? 4 : -4, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: resolvedDir === 'up' ? 4 : -4, scale: 0.97 }} transition={{ duration: 0.1 }}
+            className={`absolute ${align === 'left' ? 'left-0' : 'right-0'} ${resolvedDir === 'up' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'} bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1 min-w-[160px]`}
           >
             {children(() => setOpen(false))}
           </motion.div>
@@ -560,7 +571,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
               </svg>
             </div>
           ) : (
-            <InlineDropdown align="left" direction="up"
+            <InlineDropdown align="left" direction="auto"
               trigger={(open, toggle) => {
                 const bs = booking.agent ? badgeStyle(booking.agent.email) : null;
                 const btnCls = !booking.agent
@@ -596,11 +607,13 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
                   <DdItem label="Unassign" active={!booking.agent}
                     left={<span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-[9px] text-gray-400 font-bold shrink-0">—</span>}
                     onClick={() => { updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, agent_id: null } }); close(); }} />
-                  {agents.map(a => (
-                    <DdItem key={a.id} label={a.name} active={booking.agent?.id === a.id}
-                      left={<div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[9px] font-bold shrink-0`}>{a.name.charAt(0).toUpperCase()}</div>}
-                      onClick={() => { updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, agent_id: a.id } }); close(); }} />
-                  ))}
+                  <div className="max-h-48 overflow-y-auto">
+                    {agents.map(a => (
+                      <DdItem key={a.id} label={a.name} active={booking.agent?.id === a.id}
+                        left={<div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[9px] font-bold shrink-0`}>{a.name.charAt(0).toUpperCase()}</div>}
+                        onClick={() => { updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, agent_id: a.id } }); close(); }} />
+                    ))}
+                  </div>
                 </>
               )}
             </InlineDropdown>
@@ -629,7 +642,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
               </Tooltip>
             ))}
             {availableForSupport.length > 0 && booking.status !== 'Completed' && (
-              <InlineDropdown align="left" direction="up"
+              <InlineDropdown align="left" direction="auto"
                 trigger={(open, toggle) => (
                   <Tooltip
                     label="Add support agent"
@@ -645,11 +658,15 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
                     </button>
                   </Tooltip>
                 )}>
-                {close => availableForSupport.map(a => (
-                  <DdItem key={a.id} label={a.name}
-                    left={<div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[9px] font-bold shrink-0`}>{a.name.charAt(0).toUpperCase()}</div>}
-                    onClick={() => { addSupport({ id: booking.id, agent_id: a.id }); close(); }} />
-                ))}
+                {close => (
+                  <div className="max-h-48 overflow-y-auto">
+                    {availableForSupport.map(a => (
+                      <DdItem key={a.id} label={a.name}
+                        left={<div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[9px] font-bold shrink-0`}>{a.name.charAt(0).toUpperCase()}</div>}
+                        onClick={() => { addSupport({ id: booking.id, agent_id: a.id }); close(); }} />
+                    ))}
+                  </div>
+                )}
               </InlineDropdown>
             )}
           </div>}
@@ -676,7 +693,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
           const pItem = priorityCfg.find((p: BookingConfigItem) => p.label === booking.priority || p.value === booking.priority);
           const pc = getColor(pItem?.color ?? 'gray');
           return (
-            <InlineDropdown direction="up"
+            <InlineDropdown direction="auto"
               trigger={(open, toggle) => (
                 <Tooltip
                   label={`Priority: ${pItem?.label ?? booking.priority}`}
@@ -708,7 +725,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
         })()}
 
         {/* Status */}
-        <InlineDropdown direction="up"
+        <InlineDropdown direction="auto"
           trigger={(open, toggle) => (
             <Tooltip
               label={`Status: ${sc.label}`}
@@ -738,7 +755,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
         </InlineDropdown>
 
         {/* Tags — multi-select */}
-        <InlineDropdown align="right" direction="up"
+        <InlineDropdown align="right" direction="auto"
           trigger={(open, toggle) => {
             const activeTags = parseTags(booking.tags, tagValues);
             const tagLabels = activeTags.map(t => tagCfg.find((c: BookingConfigItem) => c.value === t)?.label ?? t);
