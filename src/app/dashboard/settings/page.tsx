@@ -785,22 +785,22 @@ export default function SettingsPage() {
                       {(['tag', 'status', 'priority'] as const).map(t => (
                         <button key={t} onClick={() => { setBookingsTab(t); setEditingConfigId(null); }}
                           className={`relative px-4 py-2 text-sm font-semibold transition-colors capitalize rounded-t-lg ${bookingsTab === t ? 'text-indigo-600 bg-indigo-50' : 'text-gray-400 hover:text-gray-700'}`}>
-                          {t === 'tag' ? 'Tags' : t === 'status' ? 'Statuses' : 'Priorities'}
+                          {t === 'tag' ? 'Tags' : t === 'status' ? 'Status' : 'Priorities'}
                           {bookingsTab === t && <motion.div layoutId="cfg-tab-line" className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-500 rounded-full" />}
                         </button>
                       ))}
                     </div>
 
-                    {/* Add form */}
-                    <div className="px-4 md:px-8 py-4 border-b border-gray-100 bg-gray-50/60">
+                    {/* Add form — hidden for status tab (statuses are fixed) */}
+                    {bookingsTab !== 'status' && <div className="px-4 md:px-8 py-4 border-b border-gray-100 bg-gray-50/60">
                       <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-3">
-                        Add New {bookingsTab === 'tag' ? 'Tag' : bookingsTab === 'status' ? 'Status' : 'Priority'}
+                        Add New {bookingsTab === 'tag' ? 'Tag' : 'Priority'}
                       </p>
                       <div className="flex flex-wrap gap-3 items-end">
                         <div className="flex-1 min-w-[140px]">
                           <label className="block text-[11px] font-semibold text-gray-500 mb-1">Label</label>
                           <input type="text"
-                            placeholder={bookingsTab === 'tag' ? 'e.g. Express' : bookingsTab === 'status' ? 'e.g. On Hold' : 'e.g. Critical'}
+                            placeholder={bookingsTab === 'tag' ? 'e.g. Express' : 'e.g. Critical'}
                             value={newConfigItem.value}
                             onChange={e => setNewConfigItem(p => ({ ...p, value: e.target.value, label: e.target.value }))}
                             className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white w-full" />
@@ -826,10 +826,10 @@ export default function SettingsPage() {
                             setNewConfigItem({ value: '', label: '', color: 'sky' });
                           }}
                           className="text-sm font-semibold bg-indigo-600 text-white px-5 py-2 rounded-lg disabled:opacity-50 flex items-center gap-1.5 self-end">
-                          {creatingConfig ? 'Adding…' : `+ Add ${bookingsTab === 'tag' ? 'Tag' : bookingsTab === 'status' ? 'Status' : 'Priority'}`}
+                          {creatingConfig ? 'Adding…' : `+ Add ${bookingsTab === 'tag' ? 'Tag' : 'Priority'}`}
                         </motion.button>
                       </div>
-                    </div>
+                    </div>}
 
                     {/* Items list */}
                     <div className="px-4 md:px-8 py-5 space-y-2">
@@ -877,6 +877,7 @@ export default function SettingsPage() {
                                     {item.label}
                                   </span>
                                   {!isTagTab && <span className="text-xs text-gray-400 font-mono">{item.value}</span>}
+                                  {bookingsTab !== 'status' && (
                                   <div className="ml-auto flex items-center gap-1.5">
                                     <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
                                       onClick={() => { setEditingConfigId(item.id); setEditConfigForm({ value: item.value, label: item.label, color: item.color }); }}
@@ -889,6 +890,7 @@ export default function SettingsPage() {
                                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                                     </motion.button>
                                   </div>
+                                  )}
                                 </>
                               )}
                             </motion.div>
