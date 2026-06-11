@@ -40,7 +40,12 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
             api.dispatch(setTokens({ accessToken: access_token, refreshToken: refresh_token }));
             result = await rawBaseQuery(args, api, extraOptions);
           } else {
-            api.dispatch(logout());
+            // Only force logout on explicit auth rejection, not network/server errors
+            const status = refreshResult.error?.status;
+            if (status === 401 || status === 403) {
+              api.dispatch(logout());
+            }
+            // For network errors (status === 'FETCH_ERROR') or 5xx, keep the session alive
           }
         } else {
           api.dispatch(logout());
