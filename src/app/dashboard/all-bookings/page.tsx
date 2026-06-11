@@ -427,10 +427,11 @@ function FilterSelect({ label, value, options, onChange }: {
 }
 
 /* ── Booking row ── */
-function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, highlighted }: {
+function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, highlighted, isOpened, onOpen, onClose }: {
   booking: BookingListItem; agents: Agent[]; myUserEmail: string | undefined;
   bookingConfig: ReturnType<typeof useGetBookingConfigQuery>['data'];
   onMarkRead: (id: string) => void; highlighted?: boolean;
+  isOpened?: boolean; onOpen: () => void; onClose: () => void;
 }) {
   const isUnread = !booking.is_read;
   const [updateBooking, { isLoading: upd }] = useUpdateBookingMutation();
@@ -478,6 +479,9 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
     {/* ── Mobile card (< md) ── */}
     <Link
       href={`/dashboard/my-bookings/${booking.id}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={onOpen}
       className={`md:hidden block rounded-lg border shadow-sm active:opacity-75 transition-all ${busy ? 'opacity-60 pointer-events-none' : ''} ${isUnread ? 'bg-gradient-to-br from-slate-100 to-gray-200 border-slate-400' : isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300' : isIgnored ? 'bg-gradient-to-br from-rose-50 to-rose-200 border-rose-300' : 'bg-white border-gray-100'}`}
     >
       <div className="px-4 py-3.5">
@@ -520,10 +524,19 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
     </Link>
 
     {/* ── Desktop row (≥ md) ── */}
-    <div className={`hidden md:flex items-center gap-4 px-3 py-2 rounded-xl border shadow-sm hover:shadow-lg transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${highlighted ? 'ring-2 ring-indigo-400 ring-offset-1' : ''} ${isUnread ? 'bg-gradient-to-br from-slate-100 to-gray-200 border-slate-400 hover:border-slate-500' : isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300 hover:border-emerald-300' : isIgnored ? 'bg-gradient-to-br from-rose-50 to-rose-200 border-rose-300 hover:border-rose-400' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
+    <div className={`relative hidden md:flex items-center gap-4 px-3 py-2 rounded-xl border shadow-sm hover:shadow-lg transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${isOpened ? 'ring-2 ring-violet-400 ring-offset-1' : highlighted ? 'ring-2 ring-indigo-400 ring-offset-1' : ''} ${isUnread ? 'bg-gradient-to-br from-slate-100 to-gray-200 border-slate-400 hover:border-slate-500' : isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300 hover:border-emerald-300' : isIgnored ? 'bg-gradient-to-br from-rose-50 to-rose-200 border-rose-300 hover:border-rose-400' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
+      {isOpened && (
+        <div className="absolute top-1.5 right-2 z-10 flex items-center gap-1 px-2 py-0.5 rounded-md bg-violet-500 text-white text-[10px] font-bold shadow" onClick={e => e.stopPropagation()}>
+          <svg className="w-2.5 h-2.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+          Opened in new tab
+          <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClose(); }} className="ml-0.5 w-3.5 h-3.5 flex items-center justify-center rounded hover:bg-violet-600 transition-colors">
+            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+      )}
 
       {/* Avatar */}
-      <Link href={`/dashboard/my-bookings/${booking.id}`} className="shrink-0" onClick={() => { sessionStorage.setItem('bts:scroll-y', String(document.getElementById('main-scroll')?.scrollTop ?? 0)); sessionStorage.setItem('bts:last-booking', booking.id); }}>
+      <Link href={`/dashboard/my-bookings/${booking.id}`} target="_blank" rel="noopener noreferrer" onClick={onOpen} className="shrink-0">
         <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${avatarColor(booking.sender_email)} flex items-center justify-center text-white text-[14px] font-bold shadow-sm`}>
           {booking.sender_email.charAt(0).toUpperCase()}
         </div>
@@ -533,7 +546,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
       <div className="flex-1 min-w-0">
 
         {/* Rows 1 + 2: linked to detail */}
-        <Link href={`/dashboard/my-bookings/${booking.id}`} className="block" onClick={() => { sessionStorage.setItem('bts:scroll-y', String(document.getElementById('main-scroll')?.scrollTop ?? 0)); sessionStorage.setItem('bts:last-booking', booking.id); }}>
+        <Link href={`/dashboard/my-bookings/${booking.id}`} target="_blank" rel="noopener noreferrer" onClick={onOpen} className="block">
           {(isCompleted && booking.da_number || parseTags(booking.tags, tagValues).length > 0) && (
             <div className="flex items-center gap-1.5 mb-1 flex-wrap">
               {isCompleted && booking.da_number && <DaBadges daNumber={booking.da_number} />}
@@ -895,6 +908,7 @@ export default function AllBookingsPage() {
   const [tabDir, setTabDir] = useState(0);
   const prevTabIdx = useRef(0);
   const [lastClickedId, setLastClickedId] = useState<string | null>(null);
+  const [openedBookingId, setOpenedBookingId] = useState<string | null>(null);
   const scrollRestored = useRef(false);
   const pendingScroll = useRef<{ y: number; id: string | null } | null>(null);
 
@@ -1264,7 +1278,7 @@ export default function AllBookingsPage() {
                         </div>
                         <div className="space-y-2">
                           {items.map(b => (
-                            <BookingRow key={b.id} booking={b} agents={agents} myUserEmail={user?.email} bookingConfig={bookingConfig} onMarkRead={(id) => markBookingRead(id)} highlighted={lastClickedId === b.id} />
+                            <BookingRow key={b.id} booking={b} agents={agents} myUserEmail={user?.email} bookingConfig={bookingConfig} onMarkRead={(id) => markBookingRead(id)} highlighted={lastClickedId === b.id} isOpened={openedBookingId === b.id} onOpen={() => setOpenedBookingId(b.id)} onClose={() => setOpenedBookingId(null)} />
                           ))}
                         </div>
                       </div>
