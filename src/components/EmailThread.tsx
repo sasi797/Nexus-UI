@@ -54,6 +54,8 @@ function extractName(email: string) {
     .join(' ');
 }
 
+const MAX_ATTACH_BYTES = 20 * 1024 * 1024; // 20 MB
+
 function formatBytes(n: number | null) {
   if (!n) return '';
   if (n < 1024) return `${n} B`;
@@ -635,6 +637,11 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
     e.preventDefault();
     setIsDragOver(false);
     const files = Array.from(e.dataTransfer.files);
+    const tooBig = files.filter(f => f.size > MAX_ATTACH_BYTES);
+    if (tooBig.length > 0) {
+      setSendError(`File too large: ${tooBig.map(f => f.name).join(', ')}. Maximum attachment size is 20 MB.`);
+      return;
+    }
     if (files.length > 0) setSelectedFiles(prev => [...prev, ...files]);
   };
 
@@ -783,9 +790,12 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     e.target.value = '';
-    if (files.length > 0) {
-      setSelectedFiles(prev => [...prev, ...files]);
+    const tooBig = files.filter(f => f.size > MAX_ATTACH_BYTES);
+    if (tooBig.length > 0) {
+      setSendError(`File too large: ${tooBig.map(f => f.name).join(', ')}. Maximum attachment size is 20 MB.`);
+      return;
     }
+    if (files.length > 0) setSelectedFiles(prev => [...prev, ...files]);
   };
 
   const removeFile = (idx: number) => setSelectedFiles(prev => prev.filter((_, i) => i !== idx));
