@@ -261,28 +261,38 @@ function TagBadges({ tags, tagConfig }: { tags: string[]; tagConfig: { value: st
 }
 
 /* ── InlineDropdown ── */
-function InlineDropdown({ trigger, children, align = 'right' }: {
+function InlineDropdown({ trigger, children, align = 'right', direction = 'auto' }: {
   trigger: (open: boolean, toggle: () => void) => React.ReactNode;
   children: (close: () => void) => React.ReactNode;
   align?: 'left' | 'right';
+  direction?: 'down' | 'up' | 'auto';
 }) {
   const [open, setOpen] = useState(false);
+  const [resolvedDir, setResolvedDir] = useState<'up' | 'down'>('down');
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      if (direction === 'up') setResolvedDir(spaceAbove >= 220 ? 'up' : 'down');
+      else if (direction === 'down') setResolvedDir(spaceBelow >= 220 ? 'down' : 'up');
+      else setResolvedDir(spaceBelow >= 220 || spaceBelow >= spaceAbove ? 'down' : 'up');
+    }
     const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
-  }, [open]);
+  }, [open, direction]);
   return (
     <div ref={ref} className="relative" onClick={e => e.stopPropagation()}>
       {trigger(open, () => setOpen(v => !v))}
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: -4, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.97 }} transition={{ duration: 0.1 }}
-            className={`absolute ${align === 'left' ? 'left-0' : 'right-0'} top-full mt-1.5 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1 min-w-[160px]`}
+            initial={{ opacity: 0, y: resolvedDir === 'up' ? 4 : -4, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: resolvedDir === 'up' ? 4 : -4, scale: 0.97 }} transition={{ duration: 0.1 }}
+            className={`absolute ${align === 'left' ? 'left-0' : 'right-0'} ${resolvedDir === 'up' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'} bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1 min-w-[160px]`}
           >
             {children(() => setOpen(false))}
           </motion.div>
@@ -366,6 +376,39 @@ function FilterDropdown({ value, options, onChange }: {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+/* ── Tooltip ── */
+function Tooltip({
+  label, sub, children, className = '', align = 'center', disabled = false,
+}: {
+  label: string; sub?: string; children: React.ReactNode;
+  className?: string; align?: 'center' | 'left' | 'right'; disabled?: boolean;
+}) {
+  const boxAlign =
+    align === 'left'  ? 'left-0' :
+    align === 'right' ? 'right-0' :
+    'left-1/2 -translate-x-1/2';
+  const arrowAlign =
+    align === 'left'  ? 'left-3' :
+    align === 'right' ? 'right-3' :
+    'left-1/2 -translate-x-1/2';
+  return (
+    <div className={`relative group/tt ${className}`}>
+      {children}
+      {!disabled && (
+        <div className={`pointer-events-none absolute bottom-full mb-2.5 z-[300] opacity-0 group-hover/tt:opacity-100 translate-y-1 group-hover/tt:translate-y-0 transition-all duration-150 ${boxAlign}`}>
+          <div className="bg-gray-950 text-white rounded-xl shadow-2xl overflow-hidden min-w-max border border-white/10">
+            <div className="px-3 py-2">
+              <p className="text-[11px] font-semibold leading-none">{label}</p>
+              {sub && <p className="text-[10px] text-gray-400 mt-1.5 leading-none">{sub}</p>}
+            </div>
+          </div>
+          <div className={`absolute -bottom-1 w-2 h-2 bg-gray-950 rotate-45 rounded-sm border-r border-b border-white/10 ${arrowAlign}`} />
+        </div>
+      )}
     </div>
   );
 }
@@ -468,15 +511,11 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
     </Link>
 
     {/* ── Desktop row (≥ md) ── */}
-    <div className={`hidden md:flex items-center gap-2 px-3 pt-3 pb-2.5 rounded-lg border shadow-sm hover:shadow-md transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${highlighted ? 'ring-2 ring-indigo-400 ring-offset-1' : ''} ${isUnread ? 'bg-gradient-to-br from-slate-100 to-gray-200 border-slate-400 hover:border-slate-500' : isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300 hover:border-emerald-300' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
-
-      {/* Checkbox */}
-      <input type="checkbox" onClick={e => e.stopPropagation()}
-        className="w-4 h-4 rounded border-gray-300 text-indigo-600 cursor-pointer shrink-0 accent-indigo-600 opacity-30 group-hover:opacity-100 transition-opacity" />
+    <div className={`hidden md:flex items-center gap-4 px-3 py-2 rounded-xl border shadow-sm hover:shadow-lg transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${highlighted ? 'ring-2 ring-indigo-400 ring-offset-1' : ''} ${isUnread ? 'bg-gradient-to-br from-slate-100 to-gray-200 border-slate-400 hover:border-slate-500' : isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300 hover:border-emerald-300' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
 
       {/* Avatar */}
       <Link href={`/dashboard/my-bookings/${booking.id}`} className="shrink-0" onClick={() => { sessionStorage.setItem('bts:scroll-y', String(document.getElementById('main-scroll')?.scrollTop ?? 0)); sessionStorage.setItem('bts:last-booking', booking.id); }}>
-        <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${avatarColor(booking.sender_email)} flex items-center justify-center text-white text-[12px] font-bold shadow-sm`}>
+        <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${avatarColor(booking.sender_email)} flex items-center justify-center text-white text-[14px] font-bold shadow-sm`}>
           {booking.sender_email.charAt(0).toUpperCase()}
         </div>
       </Link>
@@ -485,20 +524,29 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
       <div className="flex-1 min-w-0">
         {/* Rows 1+2 — linked to detail */}
         <Link href={`/dashboard/my-bookings/${booking.id}`} className="block" onClick={() => { sessionStorage.setItem('bts:scroll-y', String(document.getElementById('main-scroll')?.scrollTop ?? 0)); sessionStorage.setItem('bts:last-booking', booking.id); }}>
-          <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-            <span className="text-[10px] font-bold text-gray-400 font-mono tracking-tight">{booking.id}</span>
-            {isCompleted && booking.da_number && <DaBadges daNumber={booking.da_number} />}
-            <TagBadges tags={parseTags(booking.tags, tagValues)} tagConfig={tagCfg} />
-          </div>
-          <p className="text-[12px] font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors leading-snug truncate">
-            <span className="mr-1">😊</span>{booking.subject}
+          {(isCompleted && booking.da_number || parseTags(booking.tags, tagValues).length > 0) && (
+            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+              {isCompleted && booking.da_number && <DaBadges daNumber={booking.da_number} />}
+              <TagBadges tags={parseTags(booking.tags, tagValues)} tagConfig={tagCfg} />
+            </div>
+          )}
+          <p className="text-[12px] font-semibold text-gray-900 group-hover:text-indigo-700 transition-colors leading-snug truncate flex items-center gap-1.5">
+            <svg className="w-4 h-4 text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+            {booking.subject}
           </p>
         </Link>
 
         {/* Row 3: agent + support — not inside link */}
-        <div className="flex items-center gap-2 mt-0.5" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-3 mt-2" onClick={e => e.stopPropagation()}>
           {/* Received time */}
-          <span className="text-[11px] text-gray-400 font-medium shrink-0">{formatReceivedAt(booking.received_at)}</span>
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-900 bg-gray-100 px-2 py-0.5 rounded-md shrink-0 border border-gray-200">
+            <svg className="w-3 h-3 text-gray-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            {formatReceivedAt(booking.received_at)}
+          </span>
           {/* Agent */}
           {isMine ? (
             <div className="flex items-center gap-1 text-[11px] font-semibold text-indigo-900 bg-indigo-200 border border-indigo-400 rounded-md px-1.5 py-0.5 shrink-0">
@@ -541,11 +589,13 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
                   <DdItem label="Unassign" active={!booking.agent}
                     left={<span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-[9px] text-gray-400 font-bold shrink-0">—</span>}
                     onClick={() => { assignAgent({ id: booking.id, agent_id: null }); close(); }} />
-                  {agents.map(a => (
-                    <DdItem key={a.id} label={a.name} active={booking.agent?.id === a.id}
-                      left={<div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[9px] font-bold shrink-0`}>{a.name.charAt(0).toUpperCase()}</div>}
-                      onClick={() => { assignAgent({ id: booking.id, agent_id: a.id }); close(); }} />
-                  ))}
+                  <div className="max-h-48 overflow-y-auto">
+                    {agents.map(a => (
+                      <DdItem key={a.id} label={a.name} active={booking.agent?.id === a.id}
+                        left={<div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[9px] font-bold shrink-0`}>{a.name.charAt(0).toUpperCase()}</div>}
+                        onClick={() => { assignAgent({ id: booking.id, agent_id: a.id }); close(); }} />
+                    ))}
+                  </div>
                 </>
               )}
             </InlineDropdown>
@@ -570,18 +620,29 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
             {availableForSupport.length > 0 && booking.status !== 'Completed' && (
               <InlineDropdown align="left"
                 trigger={(open, toggle) => (
-                  <button onClick={toggle} title="Add support agent"
-                    className={`w-5 h-5 rounded-full border border-dashed flex items-center justify-center transition-colors shrink-0 ${open ? 'border-violet-400 text-violet-500 bg-violet-50' : 'border-gray-300 text-gray-400 hover:border-violet-400 hover:text-violet-500'}`}>
-                    <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                    </svg>
-                  </button>
+                  <Tooltip
+                    label="Add support agent"
+                    sub={`${availableForSupport.length} agent${availableForSupport.length > 1 ? 's' : ''} available`}
+                    align="left" disabled={open}
+                  >
+                    <button onClick={toggle}
+                      className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[11px] font-semibold transition-colors shrink-0 ${open ? 'border-violet-400 text-violet-600 bg-violet-50' : 'border-gray-400 text-gray-600 bg-gray-50 hover:border-violet-400 hover:text-violet-600 hover:bg-violet-50'}`}>
+                      <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                      </svg>
+                      <span>Add</span>
+                    </button>
+                  </Tooltip>
                 )}>
-                {close => availableForSupport.map(a => (
-                  <DdItem key={a.id} label={a.name}
-                    left={<div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[9px] font-bold shrink-0`}>{a.name.charAt(0).toUpperCase()}</div>}
-                    onClick={() => { addSupport({ id: booking.id, agent_id: a.id }); close(); }} />
-                ))}
+                {close => (
+                  <div className="max-h-48 overflow-y-auto">
+                    {availableForSupport.map(a => (
+                      <DdItem key={a.id} label={a.name}
+                        left={<div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[9px] font-bold shrink-0`}>{a.name.charAt(0).toUpperCase()}</div>}
+                        onClick={() => { addSupport({ id: booking.id, agent_id: a.id }); close(); }} />
+                    ))}
+                  </div>
+                )}
               </InlineDropdown>
             )}
           </div>
@@ -589,54 +650,74 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
       </div>
 
       {/* Timer */}
-      <div className="flex flex-col items-center justify-center shrink-0 px-3 gap-1">
-        <ElapsedBadge booking={booking} />
-      </div>
+      <Tooltip
+        label={isCompleted ? 'Resolution time' : 'Elapsed time'}
+        sub={isCompleted ? 'Total time taken to complete' : 'Time since received · updates live'}
+        className="shrink-0"
+      >
+        <div className="flex flex-col items-center justify-center px-3 gap-1">
+          <ElapsedBadge booking={booking} />
+        </div>
+      </Tooltip>
 
       {/* Right meta — priority / status / tags */}
-      <div className="flex flex-col items-end gap-0.5 shrink-0 min-w-[110px]">
+      <div className="flex flex-col items-end gap-1 shrink-0 min-w-[130px]">
 
         {/* Priority */}
-        <InlineDropdown
-          trigger={(open, toggle) => {
-            const pi = priorityCfg.find((p: BookingConfigItem) => p.label === booking.priority || p.value === booking.priority);
-            const pc = getColor(pi?.color ?? 'gray');
-            return (
-              <button onClick={toggle}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg w-full justify-end transition-colors ${(pi?.label === 'Very Urgent' || pi?.label === 'Urgent') ? (open ? 'bg-red-200' : 'bg-red-100 hover:bg-red-200') : (open ? 'bg-gray-100' : 'hover:bg-gray-50')}`}>
-                <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${pc.text}`}>
-                  <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={P_PATH[pi?.label ?? ''] ?? P_PATH['Not Urgent']} />
-                  </svg>
-                  {pi?.label ?? booking.priority}
-                </span>
-                <Chevron cls="text-gray-300 ml-0.5" />
-              </button>
-            );
-          }}>
-          {close => priorityCfg.map((p: BookingConfigItem) => {
-            const cc = getColor(p.color);
-            return (
-              <DdItem key={p.value} label={p.label} active={booking.priority === p.label || booking.priority === p.value}
-                left={<span className={`w-2 h-2 rounded-full shrink-0 ${cc.dot}`} />}
-                onClick={() => { updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, priority: p.label } }); close(); }} />
-            );
-          })}
-        </InlineDropdown>
+        {(() => {
+          const pi = priorityCfg.find((p: BookingConfigItem) => p.label === booking.priority || p.value === booking.priority);
+          const pc = getColor(pi?.color ?? 'gray');
+          return (
+            <InlineDropdown direction="auto"
+              trigger={(open, toggle) => (
+                <Tooltip
+                  label={`Priority: ${pi?.label ?? booking.priority}`}
+                  sub="Click to change priority"
+                  align="right" disabled={open} className="w-full"
+                >
+                  <button onClick={toggle}
+                    className={`flex items-center gap-1 px-2 py-1 rounded-lg w-full justify-end transition-colors ${(pi?.label === 'Very Urgent' || pi?.label === 'Urgent') ? (open ? 'bg-red-200' : 'bg-red-100 hover:bg-red-200') : (open ? 'bg-gray-100' : 'hover:bg-gray-50')}`}>
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-900">
+                      <svg className={`w-3 h-3 shrink-0 ${pc.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={P_PATH[pi?.label ?? ''] ?? P_PATH['Not Urgent']} />
+                      </svg>
+                      {pi?.label ?? booking.priority}
+                    </span>
+                    <Chevron cls="text-gray-600 ml-0.5" />
+                  </button>
+                </Tooltip>
+              )}>
+              {close => priorityCfg.map((p: BookingConfigItem) => {
+                const cc = getColor(p.color);
+                return (
+                  <DdItem key={p.value} label={p.label} active={booking.priority === p.label || booking.priority === p.value}
+                    left={<span className={`w-2 h-2 rounded-full shrink-0 ${cc.dot}`} />}
+                    onClick={() => { updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, priority: p.label } }); close(); }} />
+                );
+              })}
+            </InlineDropdown>
+          );
+        })()}
 
         {/* Status */}
-        <InlineDropdown
+        <InlineDropdown direction="auto"
           trigger={(open, toggle) => (
-            <button onClick={toggle}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg w-full justify-end transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
-              <span className={`inline-flex items-center gap-1 text-[11px] font-semibold ${sc.text}`}>
-                <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sc.path} />
-                </svg>
-                {sc.label}
-              </span>
-              <Chevron cls="text-gray-300 ml-0.5" />
-            </button>
+            <Tooltip
+              label={`Status: ${sc.label}`}
+              sub="Click to change status"
+              align="right" disabled={open} className="w-full"
+            >
+              <button onClick={toggle}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg w-full justify-end transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-900">
+                  <svg className={`w-3 h-3 shrink-0 ${sc.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sc.path} />
+                  </svg>
+                  {sc.label}
+                </span>
+                <Chevron cls="text-gray-600 ml-0.5" />
+              </button>
+            </Tooltip>
           )}>
           {close => statusCfg.map((s: BookingConfigItem) => {
             const cc = getColor(s.color);
@@ -649,37 +730,40 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
         </InlineDropdown>
 
         {/* Tags */}
-        <InlineDropdown align="right"
+        <InlineDropdown align="right" direction="auto"
           trigger={(open, toggle) => {
             const activeTags = parseTags(booking.tags, tagValues);
+            const tagLabels = activeTags.map(t => tagCfg.find((c: BookingConfigItem) => c.value === t)?.label ?? t);
             return (
+              <Tooltip
+                label={tagLabels.length > 0 ? tagLabels.join(', ') : 'No tags assigned'}
+                sub="Click to manage tags"
+                align="right" disabled={open} className="w-full"
+              >
               <button onClick={toggle}
-                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg w-full justify-end text-xs font-semibold transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'} text-gray-500`}>
-                <svg className="w-3 h-3 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg w-full justify-end transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
+                <svg className="w-3 h-3 shrink-0 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                 </svg>
                 {activeTags.length === 0 ? (
-                  <span className="text-gray-300">Tags</span>
+                  <span className="text-[11px] text-gray-900 font-medium">Tags</span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 flex-wrap">
+                  <span className="inline-flex items-center gap-1">
                     {activeTags.map(t => {
                       const cfg = tagCfg.find((c: BookingConfigItem) => c.value === t);
                       const c = getColor(cfg?.color ?? 'gray');
-                      return (
-                        <span key={t} className={`inline-flex items-center gap-1 text-[11px] font-semibold ${c.text}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${c.dot}`} />
-                          {cfg?.label ?? t}
-                        </span>
-                      );
+                      return <span key={t} className={`w-2 h-2 rounded-full shrink-0 ${c.dot}`} />;
                     })}
+                    <span className="text-[11px] font-semibold text-gray-900 ml-0.5">{activeTags.length}</span>
                   </span>
                 )}
-                <Chevron cls="text-gray-300 ml-0.5" />
+                <Chevron cls="text-gray-600" />
               </button>
+              </Tooltip>
             );
           }}>
           {_close => (
-            <div className="py-1 min-w-[140px]">
+            <div className="py-1 min-w-[140px] max-h-52 overflow-y-auto">
               {tagCfg.map((tag: BookingConfigItem) => {
                 const activeTags = parseTags(booking.tags, tagValues);
                 const active = activeTags.includes(tag.value);
