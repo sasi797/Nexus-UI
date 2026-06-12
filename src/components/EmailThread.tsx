@@ -462,6 +462,36 @@ function AttachmentChip({ att, token }: { att: EmailAttachment; token: string | 
 function MessageCard({ msg, token, defaultOpen }: { msg: EmailMessage; token: string | null; defaultOpen: boolean }) {
   const isInbound = msg.direction === 'inbound';
   const [collapsed, setCollapsed] = useState(!defaultOpen);
+  const [resolvedHtml, setResolvedHtml] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (collapsed || !msg.body_html || !/cid:/i.test(msg.body_html)) return;
+    if (resolvedHtml !== null) return;
+    let cancelled = false;
+    (async () => {
+      let html = msg.body_html!;
+      const seen = new Set<string>();
+      const cidRe = /cid:([^"'\s>]+)/gi;
+      let m: RegExpExecArray | null;
+      while ((m = cidRe.exec(html)) !== null) seen.add(m[1]);
+      for (const cid of seen) {
+        const filename = cid.split('@')[0];
+        const att = msg.attachments.find(a => a.filename.toLowerCase() === filename.toLowerCase());
+        if (!att) continue;
+        try {
+          const res = await fetch(`${API_BASE}/email-attachments/${att.id}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          if (!res.ok) continue;
+          const { url } = await res.json();
+          const escaped = cid.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          html = html.replace(new RegExp(`cid:${escaped}`, 'gi'), url);
+        } catch { /* leave cid: in place */ }
+      }
+      if (!cancelled) setResolvedHtml(html);
+    })();
+    return () => { cancelled = true; };
+  }, [collapsed, msg.body_html, msg.attachments, token, resolvedHtml]);
 
   const senderName = isInbound ? extractName(msg.from_email) : 'GCC Support';
   const senderEmail = isInbound ? msg.from_email : '';
@@ -562,7 +592,7 @@ function MessageCard({ msg, token, defaultOpen }: { msg: EmailMessage; token: st
                   // Outbound with HTML — render formatted reply (user may have used B/I/U)
                   <div
                     className="prose prose-sm max-w-none text-gray-700 [&_*]:max-w-full [&_img]:max-w-full"
-                    dangerouslySetInnerHTML={{ __html: splitHtmlQuotedContent(msg.body_html).main }}
+                    dangerouslySetInnerHTML={{ __html: splitHtmlQuotedContent(resolvedHtml ?? msg.body_html).main }}
                   />
                 ) : msg.body_text ? (
                   isInbound ? (
@@ -576,12 +606,12 @@ function MessageCard({ msg, token, defaultOpen }: { msg: EmailMessage; token: st
                   isInbound ? (
                     <div
                       className="prose prose-sm max-w-none text-gray-700 [&_*]:max-w-full [&_img]:max-w-full"
-                      dangerouslySetInnerHTML={{ __html: msg.body_html }}
+                      dangerouslySetInnerHTML={{ __html: resolvedHtml ?? msg.body_html }}
                     />
                   ) : (
                     <div
                       className="prose prose-sm max-w-none text-gray-700 [&_*]:max-w-full [&_img]:max-w-full"
-                      dangerouslySetInnerHTML={{ __html: splitHtmlQuotedContent(msg.body_html).main }}
+                      dangerouslySetInnerHTML={{ __html: splitHtmlQuotedContent(resolvedHtml ?? msg.body_html).main }}
                     />
                   )
                 ) : <span className="text-[12px] italic text-gray-400">(No text content)</span>}
@@ -913,6 +943,29 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
 
   return (
     <div className="space-y-3">
+      {/* Full-screen sending overlay — blocks all interaction during API call */}
+      {sending && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4 bg-white rounded-2xl shadow-2xl px-10 py-8">
+            {/* Orbital spinner */}
+            <div className="relative w-14 h-14">
+              <div className="absolute inset-0 rounded-full border-4 border-indigo-100" />
+              <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-indigo-600 animate-spin" />
+              <div className="absolute inset-1.5 rounded-full border-4 border-transparent border-t-violet-400 animate-spin [animation-direction:reverse] [animation-duration:600ms]" />
+              <div className="absolute inset-3 rounded-full bg-indigo-50 flex items-center justify-center">
+                <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+              </div>
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-bold text-gray-800 tracking-wide">Sending…</p>
+              <p className="text-xs text-gray-400 mt-0.5">Please wait while your message is being sent</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Message cards */}
       {isLoading ? (
         <div className="space-y-3">
@@ -1297,7 +1350,7 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
                           type="button"
                           onClick={() => {
                             if (editorRef.current) {
-                              const filled = t.body.replace(/(Thanks and Best Regards,?\s*\n)<_+>/gi, `$1${currentUser?.name ?? ''}`);
+                              const filled = t.body.replace(/(Thanks and Best Regards,?\s*\n)(<_+>)?/gi, `$1${currentUser?.name ?? ''}`);
                               editorRef.current.innerHTML = filled.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
                               setEditorEmpty(false);
                             }

@@ -828,9 +828,27 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 8 }} transition={{ duration: 0.15 }}
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4"
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4 relative overflow-hidden"
             onClick={e => e.stopPropagation()}
           >
+            {/* Completing overlay */}
+            {pat && (
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/90 backdrop-blur-[2px] rounded-2xl">
+                <div className="relative w-14 h-14">
+                  <div className="absolute inset-0 rounded-full border-4 border-emerald-100" />
+                  <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-emerald-600 animate-spin" />
+                  <div className="absolute inset-1.5 rounded-full border-4 border-transparent border-t-teal-400 animate-spin [animation-direction:reverse] [animation-duration:600ms]" />
+                  <div className="absolute inset-3 rounded-full bg-emerald-50 flex items-center justify-center">
+                    <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                </div>
+                <p className="mt-4 text-sm font-bold text-gray-800">Completing Booking…</p>
+                <p className="text-xs text-gray-400 mt-0.5">Please wait</p>
+              </div>
+            )}
+
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
                 <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

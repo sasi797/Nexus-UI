@@ -834,8 +834,26 @@ export default function BookingDetailPage() {
               exit={{ opacity: 0, scale: 0.95, y: 12 }}
               transition={{ type: 'spring', stiffness: 320, damping: 28 }}
               onClick={e => e.stopPropagation()}
-              className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-md mx-4 overflow-hidden"
+              className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-md mx-4 overflow-hidden relative"
             >
+              {/* Completing overlay */}
+              {patching && (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/90 backdrop-blur-[2px] rounded-2xl">
+                  <div className="relative w-14 h-14">
+                    <div className="absolute inset-0 rounded-full border-4 border-emerald-100" />
+                    <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-emerald-600 animate-spin" />
+                    <div className="absolute inset-1.5 rounded-full border-4 border-transparent border-t-teal-400 animate-spin [animation-direction:reverse] [animation-duration:600ms]" />
+                    <div className="absolute inset-3 rounded-full bg-emerald-50 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  </div>
+                  <p className="mt-4 text-sm font-bold text-gray-800">Completing Booking…</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Please wait</p>
+                </div>
+              )}
+
               {/* Modal header */}
               <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
