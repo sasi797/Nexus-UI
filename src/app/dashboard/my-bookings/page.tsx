@@ -136,13 +136,20 @@ function ElapsedBadge({ booking }: { booking: BookingListItem }) {
 
 function DaTagInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [inputVal, setInputVal] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+  const inputValRef = useRef('');
   const tags = value.split(',').map(s => s.trim()).filter(Boolean);
+
+  function setInput(v: string) {
+    inputValRef.current = v;
+    setInputVal(v);
+  }
 
   function addTag(raw: string) {
     const tag = raw.trim();
-    if (!tag || tags.includes(tag)) { setInputVal(''); return; }
+    if (!tag || tags.includes(tag)) { setInput(''); return; }
     onChange([...tags, tag].join(', '));
-    setInputVal('');
+    setInput('');
   }
 
   function removeTag(idx: number) {
@@ -152,8 +159,9 @@ function DaTagInput({ value, onChange }: { value: string; onChange: (v: string) 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter' || e.key === ',' || e.key === 'Tab') {
       e.preventDefault();
-      addTag(inputVal);
-    } else if (e.key === 'Backspace' && !inputVal && tags.length > 0) {
+      addTag(inputValRef.current);
+      setTimeout(() => inputRef.current?.focus(), 0);
+    } else if (e.key === 'Backspace' && !inputValRef.current && tags.length > 0) {
       removeTag(tags.length - 1);
     }
   }
@@ -161,7 +169,7 @@ function DaTagInput({ value, onChange }: { value: string; onChange: (v: string) 
   return (
     <div
       className="min-h-[44px] w-full px-2 py-1.5 border border-gray-200 rounded-lg focus-within:ring-2 focus-within:ring-emerald-300 focus-within:border-emerald-400 flex flex-wrap gap-1.5 items-center cursor-text transition-all"
-      onClick={e => (e.currentTarget.querySelector('input') as HTMLInputElement | null)?.focus()}
+      onClick={() => inputRef.current?.focus()}
     >
       {tags.map((tag, i) => (
         <span key={i} className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700 text-[11px] font-mono font-semibold shrink-0">
@@ -175,10 +183,11 @@ function DaTagInput({ value, onChange }: { value: string; onChange: (v: string) 
         </span>
       ))}
       <input
+        ref={inputRef}
         value={inputVal}
-        onChange={e => setInputVal(e.target.value)}
+        onChange={e => setInput(e.target.value)}
         onKeyDown={handleKeyDown}
-        onBlur={() => addTag(inputVal)}
+        onBlur={() => addTag(inputValRef.current)}
         placeholder={tags.length === 0 ? 'Type DA number, press Enter to add…' : '+ Add another'}
         className="flex-1 min-w-[160px] text-sm outline-none bg-transparent placeholder:text-gray-300 font-mono py-0.5"
       />
