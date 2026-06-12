@@ -848,8 +848,8 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
           errMsg = 'One or more email addresses are invalid or could not be resolved. Please check the recipients.';
         else if (/Unauthorized|401/i.test(raw))
           errMsg = 'Session expired. Please refresh and try again.';
-        else if (raw.length < 120 && !raw.startsWith('{'))
-          errMsg = raw;
+        else if (!raw.startsWith('{'))
+          errMsg = raw.length <= 300 ? raw : raw.slice(0, 297) + '…';
       }
       setSendError(errMsg);
       return;
