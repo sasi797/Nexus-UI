@@ -1052,14 +1052,7 @@ export default function AllBookingsPage() {
         const due = (x: BookingListItem) => new Date(x.received_at).getTime() + (SLA[x.priority] ?? 8) * 3_600_000;
         return due(a) - due(b);
       }
-      const aUnread = a.is_read ? 0 : 1;
-      const bUnread = b.is_read ? 0 : 1;
-      if (aUnread !== bUnread) return bUnread - aUnread;
-      if (aUnread && bUnread) {
-        const ta = new Date(a.updated_at ?? a.received_at).getTime();
-        const tb = new Date(b.updated_at ?? b.received_at).getTime();
-        return tb - ta;
-      }
+      // Sort newest-first by received_at (Outlook-style: unread items are highlighted, not repositioned)
       const st = (x: BookingListItem) => { const t = new Date(x.received_at).getTime(); return isNaN(t) ? 0 : t; };
       return st(b) - st(a);
     })
