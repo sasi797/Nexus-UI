@@ -1009,8 +1009,8 @@ export default function MyBookingsPage() {
         const due = (x: BookingListItem) => new Date(x.received_at).getTime() + (SLA[x.priority] ?? 8) * 3_600_000;
         return due(a) - due(b);
       }
-      // Sort by latest activity (updated_at > received_at) so threads with new replies float to top
-      const st = (x: BookingListItem) => { const t = new Date(x.updated_at ?? x.received_at).getTime(); return isNaN(t) ? 0 : t; };
+      // Sort by last email time so threads with new replies float to top (Outlook-style)
+      const st = (x: BookingListItem) => { const t = new Date(x.last_email_at ?? x.received_at).getTime(); return isNaN(t) ? 0 : t; };
       return st(b) - st(a);
     })
 ;
@@ -1251,7 +1251,7 @@ export default function MyBookingsPage() {
                     {(() => {
                       const groups: { key: string; items: typeof sorted }[] = [];
                       for (const b of sorted) {
-                        const k = dayKey(b.updated_at ?? b.received_at);
+                        const k = dayKey(b.last_email_at ?? b.received_at);
                         const last = groups[groups.length - 1];
                         if (last && last.key === k) last.items.push(b);
                         else groups.push({ key: k, items: [b] });

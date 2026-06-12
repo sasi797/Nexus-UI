@@ -18,6 +18,7 @@ export interface BookingListItem {
   assigned_at: string | null;
   completed_at: string | null;
   updated_at: string;
+  last_email_at: string;
   is_read: boolean;
   has_reply: boolean;
 }
