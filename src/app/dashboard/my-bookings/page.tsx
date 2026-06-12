@@ -447,6 +447,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
   const [showDa, setShowDa] = useState(false);
   const [daNumber, setDaNumber] = useState('');
   const [daDesc, setDaDesc] = useState('');
+  const [daError, setDaError] = useState('');
   const busy = upd || pat;
 
   const cfgItems = bookingConfig ?? [];
@@ -468,9 +469,14 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
     patchStatus({ id: booking.id, status: s });
   }
 
-  function submitDa() {
-    patchStatus({ id: booking.id, status: 'Completed', da_number: daNumber || undefined, da_description: daDesc || undefined });
-    setShowDa(false);
+  async function submitDa() {
+    setDaError('');
+    try {
+      await patchStatus({ id: booking.id, status: 'Completed', da_number: daNumber || undefined, da_description: daDesc || undefined }).unwrap();
+      setShowDa(false);
+    } catch {
+      setDaError('Failed to complete booking. Please try again.');
+    }
   }
 
   const isCompleted = booking.status === 'Completed';
@@ -853,14 +859,17 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
               </div>
             </div>
 
+            {daError && (
+              <p className="text-[11px] text-red-500 font-medium -mb-1">{daError}</p>
+            )}
             <div className="flex gap-2 pt-1">
-              <button onClick={() => setShowDa(false)}
+              <button onClick={() => { setShowDa(false); setDaError(''); }}
                 className="flex-1 px-4 py-2 rounded-lg border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
                 Cancel
               </button>
-              <button onClick={submitDa}
-                className="flex-1 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-colors">
-                Confirm
+              <button onClick={submitDa} disabled={pat}
+                className="flex-1 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors">
+                {pat ? 'Saving…' : 'Confirm'}
               </button>
             </div>
           </motion.div>
