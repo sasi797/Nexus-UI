@@ -19,6 +19,7 @@ export interface BookingListItem {
   completed_at: string | null;
   updated_at: string;
   is_read: boolean;
+  has_reply: boolean;
 }
 
 export interface PaginatedBookings {

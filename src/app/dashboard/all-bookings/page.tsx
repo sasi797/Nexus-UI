@@ -15,6 +15,7 @@ import { useGetDashboardStatsQuery } from '@/services/dashboardApi';
 import { useGetBookingConfigQuery, getColor, BookingConfigItem } from '@/services/bookingConfigApi';
 import { useAppSelector } from '@/store/hooks';
 import ApiErrorState from '@/components/ApiErrorState';
+import { useAlertSound } from '@/hooks/useAlertSound';
 
 type Tab = 'All' | 'Pending' | 'In Progress' | 'Completed' | 'Ignored';
 const TABS: Tab[] = ['All', 'Pending', 'In Progress', 'Completed', 'Ignored'];
@@ -434,6 +435,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
   isOpened?: boolean; onOpen: () => void; onClose: () => void;
 }) {
   const isUnread = !booking.is_read;
+  const isReply = booking.has_reply;
   const [updateBooking, { isLoading: upd }] = useUpdateBookingMutation();
   const [patchStatus, { isLoading: pat }] = usePatchBookingStatusMutation();
   const [addSupport] = useAddSupportAgentMutation();
@@ -482,7 +484,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
       target="_blank"
       rel="noopener noreferrer"
       onClick={onOpen}
-      className={`md:hidden block rounded-lg border shadow-sm active:opacity-75 transition-all ${busy ? 'opacity-60 pointer-events-none' : ''} ${isUnread ? 'bg-gradient-to-br from-slate-100 to-gray-200 border-slate-400' : isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300' : isIgnored ? 'bg-gradient-to-br from-rose-50 to-rose-200 border-rose-300' : 'bg-white border-gray-100'}`}
+      className={`md:hidden block rounded-lg border shadow-sm active:opacity-75 transition-all ${busy ? 'opacity-60 pointer-events-none' : ''} ${isUnread ? (isReply ? 'bg-gradient-to-br from-amber-50 to-orange-100 border-amber-400' : 'bg-gradient-to-br from-slate-100 to-gray-200 border-slate-400') : isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300' : isIgnored ? 'bg-gradient-to-br from-rose-50 to-rose-200 border-rose-300' : 'bg-white border-gray-100'}`}
     >
       <div className="px-4 py-3.5">
         <div className="flex items-center justify-between mb-1.5">
@@ -514,7 +516,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
         {isUnread && (
           <button
             onClick={e => { e.preventDefault(); e.stopPropagation(); onMarkRead(booking.id); }}
-            className="mt-2 flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-500 text-[10px] font-medium transition-colors"
+            className={`mt-2 flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-medium transition-colors ${isReply ? 'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-700' : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-500'}`}
           >
             <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
             Mark read
@@ -524,7 +526,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
     </Link>
 
     {/* ── Desktop row (≥ md) ── */}
-    <div className={`relative hidden md:flex items-center gap-4 px-3 py-2 rounded-xl border shadow-sm hover:shadow-lg transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${isOpened ? 'ring-2 ring-violet-400 ring-offset-1' : highlighted ? 'ring-2 ring-indigo-400 ring-offset-1' : ''} ${isUnread ? 'bg-gradient-to-br from-slate-100 to-gray-200 border-slate-400 hover:border-slate-500' : isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300 hover:border-emerald-300' : isIgnored ? 'bg-gradient-to-br from-rose-50 to-rose-200 border-rose-300 hover:border-rose-400' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
+    <div className={`relative hidden md:flex items-center gap-4 px-3 py-2 rounded-xl border shadow-sm hover:shadow-lg transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${isOpened ? 'ring-2 ring-violet-400 ring-offset-1' : highlighted ? 'ring-2 ring-indigo-400 ring-offset-1' : ''} ${isUnread ? (isReply ? 'bg-gradient-to-br from-amber-50 to-orange-100 border-amber-400 hover:border-amber-500' : 'bg-gradient-to-br from-slate-100 to-gray-200 border-slate-400 hover:border-slate-500') : isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300 hover:border-emerald-300' : isIgnored ? 'bg-gradient-to-br from-rose-50 to-rose-200 border-rose-300 hover:border-rose-400' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
       {isOpened && (
         <div className="absolute top-1.5 right-2 z-10 flex items-center gap-1 px-2 py-0.5 rounded-md bg-violet-500 text-white text-[10px] font-bold shadow" onClick={e => e.stopPropagation()}>
           <svg className="w-2.5 h-2.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
@@ -828,7 +830,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
         {isUnread && (
           <button
             onClick={e => { e.preventDefault(); e.stopPropagation(); onMarkRead(booking.id); }}
-            className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-500 hover:text-slate-700 text-[10px] font-medium transition-colors self-end"
+            className={`flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-medium transition-colors self-end ${isReply ? 'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-700 hover:text-amber-800' : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-500 hover:text-slate-700'}`}
           >
             <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
             Mark read
@@ -989,6 +991,9 @@ export default function AllBookingsPage() {
   const allItems = data?.items ?? [];
   const [markBookingRead] = useMarkBookingReadMutation();
   const [markAllBookingsRead] = useMarkAllBookingsReadMutation();
+
+  const unreadIds = allItems.filter(b => !b.is_read).map(b => b.id);
+  const { isMuted, toggleMute } = useAlertSound(unreadIds);
 
   // Separate count queries so counts are always global, not filtered by current tab
   const cntBase = { priority, agent_id: agentId, sender_email: fromFilter === 'Any' ? undefined : fromFilter, created_after: CREATED_MAP[createdFilter], closed_after: CLOSED_MAP[closedAtFilter], page_size: 1 };
@@ -1252,13 +1257,26 @@ export default function AllBookingsPage() {
                   {(() => { const unreadCount = sorted.filter(b => !b.is_read).length; return unreadCount > 0 && (
                     <div className="flex items-center justify-between px-1">
                       <span className="text-[11px] text-slate-500 font-medium">{unreadCount} unread update{unreadCount > 1 ? 's' : ''}</span>
-                      <button
-                        onClick={() => markAllBookingsRead(sorted.map(b => b.id))}
-                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 hover:text-slate-800 text-[11px] font-medium transition-colors"
-                      >
-                        <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
-                        Mark all read
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={toggleMute}
+                          title={isMuted ? 'Unmute alerts' : 'Mute alerts'}
+                          className={`flex items-center justify-center w-6 h-6 rounded-md border transition-colors ${isMuted ? 'bg-rose-50 border-rose-200 text-rose-400 hover:bg-rose-100' : 'bg-slate-100 border-slate-200 text-slate-500 hover:bg-slate-200'}`}
+                        >
+                          {isMuted ? (
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/></svg>
+                          ) : (
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072M12 6v12m0 0l-3.536-3.536M12 18l3.536-3.536M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => markAllBookingsRead(sorted.map(b => b.id))}
+                          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 hover:text-slate-800 text-[11px] font-medium transition-colors"
+                        >
+                          <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                          Mark all read
+                        </button>
+                      </div>
                     </div>
                   ); })()}
                   {(() => {
