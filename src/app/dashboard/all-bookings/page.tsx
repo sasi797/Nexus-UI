@@ -401,32 +401,6 @@ function FilterDropdown({ value, options, onChange }: {
   );
 }
 
-/* ── Filter panel helpers ── */
-function FilterSection({ label, children }: { label: string; children: React.ReactNode }) {
-  const [open, setOpen] = useState(true);
-  return (
-    <div className="space-y-1.5">
-      <button onClick={() => setOpen(v => !v)}
-        className="flex items-center justify-between w-full text-[11px] font-bold text-gray-800 hover:text-gray-900 transition-colors">
-        {label}
-        <Chevron cls={`text-gray-600 transition-transform duration-150 ${open ? '' : '-rotate-90'}`} />
-      </button>
-      {open && <div className="mt-1">{children}</div>}
-    </div>
-  );
-}
-
-function FilterSelect({ label, value, options, onChange }: {
-  label: string; value: string; options: string[]; onChange: (v: string) => void;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <p className="text-[11px] font-semibold text-gray-800">{label}</p>
-      <FilterDropdown value={value} options={options} onChange={onChange} />
-    </div>
-  );
-}
-
 /* ── Booking row ── */
 function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, highlighted }: {
   booking: BookingListItem; agents: Agent[]; myUserEmail: string | undefined;
@@ -932,7 +906,23 @@ export default function AllBookingsPage() {
   const [agentFilter, setAgentFilter] = useState<string>((savedFilters.agentFilter as string) ?? 'Any agent');
   const [priorityFilter, setPriorityFilter] = useState<string>((savedFilters.priorityFilter as string) ?? 'Any priority');
   const [createdFilter, setCreatedFilter] = useState<string>((savedFilters.createdFilter as string) ?? 'Anytime');
+  const [dateText, setDateText] = useState<string>(() => {
+    const cf = savedFilters.createdFilter as string;
+    if (cf?.startsWith('date:')) {
+      const [yyyy, mm, dd] = cf.slice(5).split('-');
+      return `${dd}/${mm}/${yyyy}`;
+    }
+    return '';
+  });
   const [closedAtFilter, setClosedAtFilter] = useState<string>((savedFilters.closedAtFilter as string) ?? 'Anytime');
+  const [closedAtText, setClosedAtText] = useState<string>(() => {
+    const cf = savedFilters.closedAtFilter as string;
+    if (cf?.startsWith('date:')) {
+      const [yyyy, mm, dd] = cf.slice(5).split('-');
+      return `${dd}/${mm}/${yyyy}`;
+    }
+    return '';
+  });
   const [fromFilter, setFromFilter] = useState<string>((savedFilters.fromFilter as string) ?? 'Any');
   const [pageSize, setPageSize] = useState<number>((savedFilters.pageSize as number) ?? 25);
   const [currentPage, setCurrentPage] = useState(1);
@@ -945,6 +935,14 @@ export default function AllBookingsPage() {
       activeTab, agentFilter, priorityFilter, createdFilter, closedAtFilter, fromFilter, pageSize,
     }));
   }, [activeTab, agentFilter, priorityFilter, createdFilter, closedAtFilter, fromFilter, pageSize]);
+
+  // Clear date text when a chip preset is selected
+  useEffect(() => {
+    if (!createdFilter.startsWith('date:')) setDateText('');
+  }, [createdFilter]);
+  useEffect(() => {
+    if (!closedAtFilter.startsWith('date:')) setClosedAtText('');
+  }, [closedAtFilter]);
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
     return () => clearTimeout(t);
@@ -973,7 +971,8 @@ export default function AllBookingsPage() {
   const priority = priorityFilter === 'Any priority' ? undefined : priorityFilter;
 
   const CREATED_MAP: Record<string, string | undefined> = {
-    'Today': 'today', 'Last 7 days': '7d', 'Last 30 days': '30d', 'Anytime': undefined,
+    'Anytime': undefined, 'Today': 'today', 'Yesterday': 'yesterday',
+    '2 days ago': '2d', 'Last 7 days': '7d', 'Last 30 days': '30d',
   };
   const CLOSED_MAP: Record<string, string | undefined> = {
     'Today': 'today', 'This week': 'week', 'This month': 'month', 'Anytime': undefined,
@@ -985,8 +984,8 @@ export default function AllBookingsPage() {
     sender_email: fromFilter === 'Any' ? undefined : fromFilter,
     agent_id: agentId,
     search: debouncedSearch || undefined,
-    created_after: CREATED_MAP[createdFilter],
-    closed_after: CLOSED_MAP[closedAtFilter],
+    created_after: createdFilter.startsWith('date:') ? createdFilter : CREATED_MAP[createdFilter],
+    closed_after: closedAtFilter.startsWith('date:') ? closedAtFilter : CLOSED_MAP[closedAtFilter],
     page: currentPage,
     page_size: pageSize,
   }, { pollingInterval: 10_000, refetchOnFocus: true });
@@ -999,7 +998,9 @@ export default function AllBookingsPage() {
   const { isMuted, toggleMute } = useAlertSound(unreadIds);
 
   // Separate count queries so counts are always global, not filtered by current tab
-  const cntBase = { priority, agent_id: agentId, sender_email: fromFilter === 'Any' ? undefined : fromFilter, created_after: CREATED_MAP[createdFilter], closed_after: CLOSED_MAP[closedAtFilter], page_size: 1 };
+  const resolvedCreatedAfter = createdFilter.startsWith('date:') ? createdFilter : CREATED_MAP[createdFilter];
+  const resolvedClosedAfter = closedAtFilter.startsWith('date:') ? closedAtFilter : CLOSED_MAP[closedAtFilter];
+  const cntBase = { priority, agent_id: agentId, sender_email: fromFilter === 'Any' ? undefined : fromFilter, created_after: resolvedCreatedAfter, closed_after: resolvedClosedAfter, page_size: 1 };
   const cntOpts = { refetchOnMountOrArgChange: true };
   const { data: cntAll  } = useGetBookingsQuery({ ...cntBase },                                              cntOpts);
   const { data: cntPend } = useGetBookingsQuery({ ...cntBase, status: resolveStatus('Pending') },       cntOpts);
@@ -1082,6 +1083,52 @@ export default function AllBookingsPage() {
   const endIdx     = Math.min(currentPage * pageSize, totalCount);
 
   const agentOpts = ['Any agent', ...agents.map(a => a.name)];
+
+  function handleClosedAtTextInput(raw: string) {
+    const digits = raw.replace(/\D/g, '').slice(0, 8);
+    let formatted = digits;
+    if (digits.length >= 3) formatted = digits.slice(0, 2) + '/' + digits.slice(2);
+    if (digits.length >= 5) formatted = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4);
+    setClosedAtText(formatted);
+    if (digits.length === 8) {
+      const dd = digits.slice(0, 2), mm = digits.slice(2, 4), yyyy = digits.slice(4, 8);
+      const date = new Date(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd));
+      const today = new Date(); today.setHours(23, 59, 59, 999);
+      if (
+        date.getFullYear() === parseInt(yyyy) &&
+        date.getMonth() === parseInt(mm) - 1 &&
+        date.getDate() === parseInt(dd) &&
+        date <= today
+      ) {
+        setClosedAtFilter(`date:${yyyy}-${mm}-${dd}`);
+      }
+    } else if (closedAtFilter.startsWith('date:')) {
+      setClosedAtFilter('Anytime');
+    }
+  }
+
+  function handleDateTextInput(raw: string) {
+    const digits = raw.replace(/\D/g, '').slice(0, 8);
+    let formatted = digits;
+    if (digits.length >= 3) formatted = digits.slice(0, 2) + '/' + digits.slice(2);
+    if (digits.length >= 5) formatted = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4);
+    setDateText(formatted);
+    if (digits.length === 8) {
+      const dd = digits.slice(0, 2), mm = digits.slice(2, 4), yyyy = digits.slice(4, 8);
+      const date = new Date(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd));
+      const today = new Date(); today.setHours(23, 59, 59, 999);
+      if (
+        date.getFullYear() === parseInt(yyyy) &&
+        date.getMonth() === parseInt(mm) - 1 &&
+        date.getDate() === parseInt(dd) &&
+        date <= today
+      ) {
+        setCreatedFilter(`date:${yyyy}-${mm}-${dd}`);
+      }
+    } else if (createdFilter.startsWith('date:')) {
+      setCreatedFilter('Anytime');
+    }
+  }
 
   const activeFilterCount = [
     agentFilter !== 'Any agent',
@@ -1368,7 +1415,7 @@ export default function AllBookingsPage() {
                 <div className="flex items-center gap-1.5">
                   {activeFilterCount > 0 && (
                     <button
-                      onClick={() => { handleTabChange('All'); setAgentFilter('Any agent'); setPriorityFilter('Any priority'); setCreatedFilter('Anytime'); setClosedAtFilter('Anytime'); setFromFilter('Any'); }}
+                      onClick={() => { handleTabChange('All'); setAgentFilter('Any agent'); setPriorityFilter('Any priority'); setCreatedFilter('Anytime'); setDateText(''); setClosedAtFilter('Anytime'); setClosedAtText(''); setFromFilter('Any'); }}
                       className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 transition-colors px-2 py-1 rounded-md hover:bg-indigo-50"
                     >
                       Reset
@@ -1386,63 +1433,205 @@ export default function AllBookingsPage() {
               </div>
 
               {/* Scrollable filter body */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
 
-                <FilterSelect label="From" value={fromFilter} options={uniqueSenders} onChange={setFromFilter} />
+                {/* From */}
+                <div className="p-4 space-y-2.5">
+                  <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    From
+                  </p>
+                  <FilterDropdown value={fromFilter} options={uniqueSenders} onChange={setFromFilter} />
+                </div>
 
-                <div className="border-t border-gray-100" />
+                {/* Status */}
+                <div className="p-4 space-y-2.5">
+                  <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Status
+                  </p>
+                  <FilterDropdown
+                    value={activeTab}
+                    options={['All', 'Pending', 'In Progress', 'Completed', 'Ignored']}
+                    onChange={(v) => handleTabChange(v as typeof activeTab)}
+                  />
+                </div>
 
-                <FilterSelect
-                  label="Status"
-                  value={activeTab}
-                  options={['All', 'Pending', 'In Progress', 'Completed', 'Ignored']}
-                  onChange={(v) => handleTabChange(v as typeof activeTab)}
-                />
-
-                <div className="border-t border-gray-100" />
-
-                <FilterSection label="Agents">
+                {/* Agent */}
+                <div className="p-4 space-y-2.5">
+                  <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    Agent
+                  </p>
                   <FilterDropdown value={agentFilter} options={agentOpts} onChange={setAgentFilter} />
-                </FilterSection>
+                </div>
 
-                <div className="border-t border-gray-100" />
+                {/* Priority */}
+                <div className="p-4 space-y-2.5">
+                  <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 17l7-7 7 7M5 11l7-7 7 7" />
+                    </svg>
+                    Priority
+                  </p>
+                  <FilterDropdown
+                    value={priorityFilter}
+                    options={['Any priority', ...(bookingConfig?.filter(c => c.type === 'priority').sort((a, b) => a.order_index - b.order_index).map(c => c.label) ?? ['Very Urgent', 'Urgent', 'Not Urgent'])]}
+                    onChange={setPriorityFilter}
+                  />
+                </div>
 
-                <FilterSelect
-                  label="Priority"
-                  value={priorityFilter}
-                  options={['Any priority', ...(bookingConfig?.filter(c => c.type === 'priority').sort((a, b) => a.order_index - b.order_index).map(c => c.label) ?? ['Very Urgent', 'Urgent', 'Not Urgent'])]}
-                  onChange={setPriorityFilter}
-                />
+                {/* Created — date chip grid */}
+                <div className="p-4 space-y-2.5">
+                  <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Created
+                  </p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {(['Anytime', 'Today', 'Yesterday', '2 days ago', 'Last 7 days', 'Last 30 days'] as const).map(opt => (
+                      <button
+                        key={opt}
+                        onClick={() => setCreatedFilter(opt)}
+                        className={`px-3 py-2 rounded-lg text-[11px] font-semibold transition-all text-center border ${
+                          createdFilter === opt
+                            ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                            : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700'
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
 
-                <FilterSelect
-                  label="Created"
-                  value={createdFilter}
-                  options={['Anytime', 'Today', 'Last 7 days', 'Last 30 days']}
-                  onChange={setCreatedFilter}
-                />
+                  {/* Specific date — type DD/MM/YYYY or click calendar icon to pick */}
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-gray-400 font-medium">Or pick a specific date</p>
+                    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${createdFilter.startsWith('date:') ? 'border-indigo-400 ring-2 ring-indigo-100 bg-indigo-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                      {/* Calendar icon — hidden date input sits on top so clicking it opens the picker */}
+                      <div className="relative shrink-0">
+                        <svg className={`w-3.5 h-3.5 ${createdFilter.startsWith('date:') ? 'text-indigo-500' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <input
+                          type="date"
+                          max={new Date().toISOString().split('T')[0]}
+                          value={createdFilter.startsWith('date:') ? createdFilter.slice(5) : ''}
+                          onChange={e => {
+                            if (e.target.value) {
+                              const [yyyy, mm, dd] = e.target.value.split('-');
+                              setDateText(`${dd}/${mm}/${yyyy}`);
+                              setCreatedFilter(`date:${e.target.value}`);
+                            }
+                          }}
+                          className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                        />
+                      </div>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="DD/MM/YYYY"
+                        value={dateText}
+                        onChange={e => handleDateTextInput(e.target.value)}
+                        className="flex-1 text-[12px] font-medium text-gray-800 bg-transparent outline-none placeholder:text-gray-300 w-0"
+                      />
+                      {createdFilter.startsWith('date:') && (
+                        <button onClick={() => { setCreatedFilter('Anytime'); setDateText(''); }} className="text-indigo-400 hover:text-indigo-700 transition-colors shrink-0">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
-                <FilterSelect
-                  label="Closed at"
-                  value={closedAtFilter}
-                  options={['Anytime', 'Today', 'This week', 'This month']}
-                  onChange={setClosedAtFilter}
-                />
+                {/* Closed at */}
+                <div className="p-4 space-y-2.5">
+                  <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-500">
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Closed at
+                  </p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {(['Anytime', 'Today', 'This week', 'This month'] as const).map(opt => (
+                      <button
+                        key={opt}
+                        onClick={() => setClosedAtFilter(opt)}
+                        className={`px-3 py-2 rounded-lg text-[11px] font-semibold transition-all text-center border ${
+                          closedAtFilter === opt
+                            ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm'
+                            : 'bg-gray-50 border-gray-200 text-gray-600 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700'
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                  {/* Specific date — type DD/MM/YYYY or click calendar icon to pick */}
+                  <div className="space-y-1">
+                    <p className="text-[10px] text-gray-400 font-medium">Or pick a specific date</p>
+                    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all ${closedAtFilter.startsWith('date:') ? 'border-indigo-400 ring-2 ring-indigo-100 bg-indigo-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                      <div className="relative shrink-0">
+                        <svg className={`w-3.5 h-3.5 ${closedAtFilter.startsWith('date:') ? 'text-indigo-500' : 'text-gray-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <input
+                          type="date"
+                          max={new Date().toISOString().split('T')[0]}
+                          value={closedAtFilter.startsWith('date:') ? closedAtFilter.slice(5) : ''}
+                          onChange={e => {
+                            if (e.target.value) {
+                              const [yyyy, mm, dd] = e.target.value.split('-');
+                              setClosedAtText(`${dd}/${mm}/${yyyy}`);
+                              setClosedAtFilter(`date:${e.target.value}`);
+                            }
+                          }}
+                          className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                        />
+                      </div>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="DD/MM/YYYY"
+                        value={closedAtText}
+                        onChange={e => handleClosedAtTextInput(e.target.value)}
+                        className="flex-1 text-[12px] font-medium text-gray-800 bg-transparent outline-none placeholder:text-gray-300 w-0"
+                      />
+                      {closedAtFilter.startsWith('date:') && (
+                        <button onClick={() => { setClosedAtFilter('Anytime'); setClosedAtText(''); }} className="text-indigo-400 hover:text-indigo-700 transition-colors shrink-0">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
                 {/* Assignment Rules */}
-                <div className="border-t border-gray-100 pt-4 space-y-2">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-700">Assignment Rules</p>
+                <div className="p-4 space-y-2.5">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Assignment Rules</p>
                   <div className="space-y-2">
                     <div className="flex items-start gap-2">
                       <svg className="w-3.5 h-3.5 text-indigo-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/>
                       </svg>
-                      <p className="text-[11px] text-gray-800 leading-snug">You can assign any booking to yourself.</p>
+                      <p className="text-[11px] text-gray-600 leading-snug">You can assign any booking to yourself.</p>
                     </div>
                     <div className="flex items-start gap-2">
-                      <svg className="w-3.5 h-3.5 text-gray-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                       </svg>
-                      <p className="text-[11px] text-gray-800 leading-snug">Your own bookings cannot be reassigned to others.</p>
+                      <p className="text-[11px] text-gray-600 leading-snug">Your own bookings cannot be reassigned to others.</p>
                     </div>
                   </div>
                 </div>
