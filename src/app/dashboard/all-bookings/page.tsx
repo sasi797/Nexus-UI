@@ -428,11 +428,10 @@ function FilterSelect({ label, value, options, onChange }: {
 }
 
 /* ── Booking row ── */
-function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, highlighted, isOpened, onOpen, onClose }: {
+function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, highlighted }: {
   booking: BookingListItem; agents: Agent[]; myUserEmail: string | undefined;
   bookingConfig: ReturnType<typeof useGetBookingConfigQuery>['data'];
   onMarkRead: (id: string) => void; highlighted?: boolean;
-  isOpened?: boolean; onOpen: () => void; onClose: () => void;
 }) {
   const isUnread = !booking.is_read;
   const isReply = booking.has_reply;
@@ -481,9 +480,6 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
     {/* ── Mobile card (< md) ── */}
     <Link
       href={`/dashboard/my-bookings/${booking.id}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={onOpen}
       className={`md:hidden block rounded-lg border shadow-sm active:opacity-75 transition-all ${busy ? 'opacity-60 pointer-events-none' : ''} ${isUnread ? (isReply ? 'bg-gradient-to-br from-amber-50 to-orange-100 border-amber-400' : 'bg-gradient-to-br from-slate-100 to-gray-200 border-slate-400') : isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300' : isIgnored ? 'bg-gradient-to-br from-rose-50 to-rose-200 border-rose-300' : 'bg-white border-gray-100'}`}
     >
       <div className="px-4 py-3.5">
@@ -526,19 +522,10 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
     </Link>
 
     {/* ── Desktop row (≥ md) ── */}
-    <div className={`relative hidden md:flex items-center gap-4 px-3 py-2 rounded-xl border shadow-sm hover:shadow-lg transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${isOpened ? 'ring-2 ring-violet-400 ring-offset-1' : highlighted ? 'ring-2 ring-indigo-400 ring-offset-1' : ''} ${isUnread ? (isReply ? 'bg-gradient-to-br from-amber-50 to-orange-100 border-amber-400 hover:border-amber-500' : 'bg-gradient-to-br from-slate-100 to-gray-200 border-slate-400 hover:border-slate-500') : isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300 hover:border-emerald-300' : isIgnored ? 'bg-gradient-to-br from-rose-50 to-rose-200 border-rose-300 hover:border-rose-400' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
-      {isOpened && (
-        <div className="absolute top-1.5 right-2 z-10 flex items-center gap-1 px-2 py-0.5 rounded-md bg-violet-500 text-white text-[10px] font-bold shadow" onClick={e => e.stopPropagation()}>
-          <svg className="w-2.5 h-2.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-          Opened in new tab
-          <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClose(); }} className="ml-0.5 w-3.5 h-3.5 flex items-center justify-center rounded hover:bg-violet-600 transition-colors">
-            <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
-        </div>
-      )}
+    <div className={`relative hidden md:flex items-center gap-4 px-3 py-2 rounded-xl border shadow-sm hover:shadow-lg transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${highlighted ? 'ring-2 ring-indigo-400 ring-offset-1' : ''} ${isUnread ? (isReply ? 'bg-gradient-to-br from-amber-50 to-orange-100 border-amber-400 hover:border-amber-500' : 'bg-gradient-to-br from-slate-100 to-gray-200 border-slate-400 hover:border-slate-500') : isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300 hover:border-emerald-300' : isIgnored ? 'bg-gradient-to-br from-rose-50 to-rose-200 border-rose-300 hover:border-rose-400' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
 
       {/* Avatar */}
-      <Link href={`/dashboard/my-bookings/${booking.id}`} target="_blank" rel="noopener noreferrer" onClick={onOpen} className="shrink-0">
+      <Link href={`/dashboard/my-bookings/${booking.id}`} className="shrink-0">
         <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${avatarColor(booking.sender_email)} flex items-center justify-center text-white text-[14px] font-bold shadow-sm`}>
           {booking.sender_email.charAt(0).toUpperCase()}
         </div>
@@ -548,7 +535,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
       <div className="flex-1 min-w-0">
 
         {/* Rows 1 + 2: linked to detail */}
-        <Link href={`/dashboard/my-bookings/${booking.id}`} target="_blank" rel="noopener noreferrer" onClick={onOpen} className="block">
+        <Link href={`/dashboard/my-bookings/${booking.id}`} className="block">
           {(isCompleted && booking.da_number || parseTags(booking.tags, tagValues).length > 0) && (
             <div className="flex items-center gap-1.5 mb-1 flex-wrap">
               {isCompleted && booking.da_number && <DaBadges daNumber={booking.da_number} />}
@@ -906,11 +893,15 @@ const PAGE_SIZES = [10, 25, 50, 100];
 export default function AllBookingsPage() {
   const user = useAppSelector(state => state.auth.user);
 
-  const [activeTab, setActiveTab] = useState<Tab>('All');
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem('bts:all-bookings-filters') ?? '{}');
+      return (TABS.includes(saved.activeTab) ? saved.activeTab : 'All') as Tab;
+    } catch { return 'All'; }
+  });
   const [tabDir, setTabDir] = useState(0);
   const prevTabIdx = useRef(0);
   const [lastClickedId, setLastClickedId] = useState<string | null>(null);
-  const [openedBookingId, setOpenedBookingId] = useState<string | null>(null);
   const scrollRestored = useRef(false);
   const pendingScroll = useRef<{ y: number; id: string | null } | null>(null);
 
@@ -931,17 +922,29 @@ export default function AllBookingsPage() {
     setActiveTab(tab);
   }
 
-  const [filtersOpen, setFiltersOpen] = useState(true);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [sortBy] = useState('Date created');
-  const [agentFilter, setAgentFilter] = useState('Any agent');
-  const [priorityFilter, setPriorityFilter] = useState('Any priority');
-  const [createdFilter, setCreatedFilter] = useState('Anytime');
-  const [closedAtFilter, setClosedAtFilter] = useState('Anytime');
-  const [fromFilter, setFromFilter] = useState('Any');
-  const [pageSize, setPageSize] = useState(25);
+
+  // Restore filters from sessionStorage on mount (lazy initialisers run once, no flash)
+  const [savedFilters] = useState<Record<string, string | number>>(() => {
+    try { return JSON.parse(sessionStorage.getItem('bts:all-bookings-filters') ?? '{}'); } catch { return {}; }
+  });
+  const [agentFilter, setAgentFilter] = useState<string>((savedFilters.agentFilter as string) ?? 'Any agent');
+  const [priorityFilter, setPriorityFilter] = useState<string>((savedFilters.priorityFilter as string) ?? 'Any priority');
+  const [createdFilter, setCreatedFilter] = useState<string>((savedFilters.createdFilter as string) ?? 'Anytime');
+  const [closedAtFilter, setClosedAtFilter] = useState<string>((savedFilters.closedAtFilter as string) ?? 'Anytime');
+  const [fromFilter, setFromFilter] = useState<string>((savedFilters.fromFilter as string) ?? 'Any');
+  const [pageSize, setPageSize] = useState<number>((savedFilters.pageSize as number) ?? 25);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  // Persist filters whenever they change so navigation back restores them
+  useEffect(() => {
+    sessionStorage.setItem('bts:all-bookings-filters', JSON.stringify({
+      activeTab, agentFilter, priorityFilter, createdFilter, closedAtFilter, fromFilter, pageSize,
+    }));
+  }, [activeTab, agentFilter, priorityFilter, createdFilter, closedAtFilter, fromFilter, pageSize]);
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
     return () => clearTimeout(t);
@@ -1080,6 +1083,14 @@ export default function AllBookingsPage() {
 
   const agentOpts = ['Any agent', ...agents.map(a => a.name)];
 
+  const activeFilterCount = [
+    agentFilter !== 'Any agent',
+    priorityFilter !== 'Any priority',
+    createdFilter !== 'Anytime',
+    closedAtFilter !== 'Anytime',
+    fromFilter !== 'Any',
+  ].filter(Boolean).length;
+
   return (
     <motion.div variants={pageTransition} initial="hidden" animate="visible" className="flex flex-col gap-3 h-full min-h-0">
 
@@ -1178,8 +1189,10 @@ export default function AllBookingsPage() {
         <div className="relative group/ft shrink-0 mb-1">
           <button
             onClick={() => setFiltersOpen(v => !v)}
-            className={`flex items-center justify-center w-8 h-8 rounded-lg border transition-colors ${
-              filtersOpen ? 'bg-indigo-50 border-indigo-200 text-indigo-600 hover:bg-indigo-100' : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+            className={`relative flex items-center justify-center w-8 h-8 rounded-lg border transition-colors ${
+              filtersOpen || activeFilterCount > 0
+                ? 'bg-indigo-50 border-indigo-300 text-indigo-600 hover:bg-indigo-100'
+                : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900'
             }`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1188,10 +1201,15 @@ export default function AllBookingsPage() {
               <circle cx="16" cy="12" r="2" fill="currentColor" stroke="none" />
               <circle cx="11" cy="19" r="2" fill="currentColor" stroke="none" />
             </svg>
+            {activeFilterCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 flex items-center justify-center rounded-full bg-indigo-600 text-white text-[9px] font-bold leading-none shadow">
+                {activeFilterCount}
+              </span>
+            )}
           </button>
           <div className="pointer-events-none absolute right-0 top-full mt-2 z-50 opacity-0 translate-y-1 group-hover/ft:opacity-100 group-hover/ft:translate-y-0 transition-all duration-150">
             <div className="bg-gray-900 text-white text-[11px] font-medium px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap">
-              {filtersOpen ? 'Hide Filters' : 'Show Filters'}
+              {filtersOpen ? 'Close Filters' : 'Open Filters'}
               <div className="absolute -top-1 right-2.5 w-2 h-2 bg-gray-900 rotate-45 rounded-sm" />
             </div>
           </div>
@@ -1199,11 +1217,11 @@ export default function AllBookingsPage() {
 
       </motion.div>
 
-      {/* Two-column content area */}
-      <div className="flex flex-1 min-h-0 flex-col lg:flex-row gap-4">
+      {/* Main content — full width, filter is now a drawer overlay */}
+      <div className="flex flex-1 min-h-0 flex-col">
 
       {/* ── Main ── */}
-      <div className="flex-1 min-w-0 flex flex-col gap-3 order-2 lg:order-1">
+      <div className="flex-1 min-w-0 flex flex-col gap-3">
 
         {/* Ticket list */}
         <motion.div variants={staggerItem} className="flex-1 min-h-0">
@@ -1296,7 +1314,7 @@ export default function AllBookingsPage() {
                         </div>
                         <div className="space-y-2">
                           {items.map(b => (
-                            <BookingRow key={b.id} booking={b} agents={agents} myUserEmail={user?.email} bookingConfig={bookingConfig} onMarkRead={(id) => markBookingRead(id)} highlighted={lastClickedId === b.id} isOpened={openedBookingId === b.id} onOpen={() => setOpenedBookingId(b.id)} onClose={() => setOpenedBookingId(null)} />
+                            <BookingRow key={b.id} booking={b} agents={agents} myUserEmail={user?.email} bookingConfig={bookingConfig} onMarkRead={(id) => markBookingRead(id)} highlighted={lastClickedId === b.id} />
                           ))}
                         </div>
                       </div>
@@ -1310,67 +1328,130 @@ export default function AllBookingsPage() {
 
       </div>
 
-      {/* ── Filters sidebar ── */}
-      <motion.div variants={staggerItem} className={`order-1 lg:order-2 w-full lg:w-80 lg:shrink-0 flex-col gap-3 ${filtersOpen ? 'flex' : 'hidden'}`}>
-
-        {/* Filters card */}
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-4 lg:sticky lg:top-0 max-h-[calc(100vh-7rem)] overflow-y-auto">
-
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold tracking-widest text-gray-700 uppercase">Filters</span>
-            <button className="p-1 rounded hover:bg-gray-100 transition-colors">
-              <svg className="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </button>
-          </div>
-
-          <FilterSelect label="From" value={fromFilter} options={uniqueSenders} onChange={setFromFilter} />
-
-          <div className="border-t border-gray-100" />
-
-          <FilterSelect label="Status" value={activeTab}
-            options={['All', 'Pending', 'In Progress', 'Completed', 'Ignored']}
-            onChange={(v) => handleTabChange(v as typeof activeTab)} />
-
-          <div className="border-t border-gray-100" />
-
-          <FilterSection label="Agents">
-            <FilterDropdown value={agentFilter} options={agentOpts} onChange={setAgentFilter} />
-          </FilterSection>
-
-          <div className="border-t border-gray-100" />
-
-          <FilterSelect label="Priority" value={priorityFilter}
-            options={['Any priority', ...(bookingConfig?.filter(c => c.type === 'priority').sort((a, b) => a.order_index - b.order_index).map(c => c.label) ?? ['Very Urgent', 'Urgent', 'Not Urgent'])]} onChange={setPriorityFilter} />
-          <FilterSelect label="Created" value={createdFilter}
-            options={['Anytime', 'Today', 'Last 7 days', 'Last 30 days']} onChange={setCreatedFilter} />
-          <FilterSelect label="Closed at" value={closedAtFilter}
-            options={['Anytime', 'Today', 'This week', 'This month']} onChange={setClosedAtFilter} />
-
-          {/* Assignment Rules */}
-          <div className="border-t border-gray-100 pt-4 space-y-2">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-700">Assignment Rules</p>
-            <div className="space-y-2">
-              <div className="flex items-start gap-2">
-                <svg className="w-3.5 h-3.5 text-indigo-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/>
-                </svg>
-                <p className="text-[11px] text-gray-800 leading-snug">You can assign any booking to yourself.</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <svg className="w-3.5 h-3.5 text-gray-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                </svg>
-                <p className="text-[11px] text-gray-800 leading-snug">Your own bookings cannot be reassigned to others.</p>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </motion.div>
-
       </div>
+
+      {/* ── Filter Drawer ── */}
+      <AnimatePresence>
+        {filtersOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/20 backdrop-blur-[1px] z-[55]"
+              onClick={() => setFiltersOpen(false)}
+            />
+
+            {/* Drawer panel */}
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+              className="fixed top-0 right-0 h-screen w-80 bg-white border-l border-gray-200 shadow-2xl z-[60] flex flex-col"
+            >
+              {/* Drawer header */}
+              <div className="flex items-center justify-between px-4 py-3.5 border-b border-gray-100 shrink-0">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-indigo-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
+                  </svg>
+                  <span className="text-[13px] font-bold text-gray-900">Filters</span>
+                  {activeFilterCount > 0 && (
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-100 text-indigo-600 leading-none">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {activeFilterCount > 0 && (
+                    <button
+                      onClick={() => { handleTabChange('All'); setAgentFilter('Any agent'); setPriorityFilter('Any priority'); setCreatedFilter('Anytime'); setClosedAtFilter('Anytime'); setFromFilter('Any'); }}
+                      className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 transition-colors px-2 py-1 rounded-md hover:bg-indigo-50"
+                    >
+                      Reset
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setFiltersOpen(false)}
+                    className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-500 hover:text-gray-900"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              {/* Scrollable filter body */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+
+                <FilterSelect label="From" value={fromFilter} options={uniqueSenders} onChange={setFromFilter} />
+
+                <div className="border-t border-gray-100" />
+
+                <FilterSelect
+                  label="Status"
+                  value={activeTab}
+                  options={['All', 'Pending', 'In Progress', 'Completed', 'Ignored']}
+                  onChange={(v) => handleTabChange(v as typeof activeTab)}
+                />
+
+                <div className="border-t border-gray-100" />
+
+                <FilterSection label="Agents">
+                  <FilterDropdown value={agentFilter} options={agentOpts} onChange={setAgentFilter} />
+                </FilterSection>
+
+                <div className="border-t border-gray-100" />
+
+                <FilterSelect
+                  label="Priority"
+                  value={priorityFilter}
+                  options={['Any priority', ...(bookingConfig?.filter(c => c.type === 'priority').sort((a, b) => a.order_index - b.order_index).map(c => c.label) ?? ['Very Urgent', 'Urgent', 'Not Urgent'])]}
+                  onChange={setPriorityFilter}
+                />
+
+                <FilterSelect
+                  label="Created"
+                  value={createdFilter}
+                  options={['Anytime', 'Today', 'Last 7 days', 'Last 30 days']}
+                  onChange={setCreatedFilter}
+                />
+
+                <FilterSelect
+                  label="Closed at"
+                  value={closedAtFilter}
+                  options={['Anytime', 'Today', 'This week', 'This month']}
+                  onChange={setClosedAtFilter}
+                />
+
+                {/* Assignment Rules */}
+                <div className="border-t border-gray-100 pt-4 space-y-2">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-700">Assignment Rules</p>
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2">
+                      <svg className="w-3.5 h-3.5 text-indigo-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/>
+                      </svg>
+                      <p className="text-[11px] text-gray-800 leading-snug">You can assign any booking to yourself.</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <svg className="w-3.5 h-3.5 text-gray-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                      </svg>
+                      <p className="text-[11px] text-gray-800 leading-snug">Your own bookings cannot be reassigned to others.</p>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
     </motion.div>
   );
