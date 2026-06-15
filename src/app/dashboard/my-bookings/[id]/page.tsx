@@ -321,6 +321,11 @@ export default function BookingDetailPage() {
   const [removeSupport]                           = useRemoveSupportAgentMutation();
   const { data: agents = [] }                     = useGetAgentsQuery();
 
+  useEffect(() => {
+    const el = document.getElementById('main-scroll');
+    if (el) el.scrollTop = 0;
+  }, [id]);
+
   const bookingIds  = typeof window !== 'undefined'
     ? JSON.parse(sessionStorage.getItem('bts:booking-nav') ?? '[]') as string[]
     : [];

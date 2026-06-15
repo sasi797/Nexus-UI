@@ -489,7 +489,8 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
     {/* ── Mobile card (< md) ── */}
     <Link
       href={`/dashboard/my-bookings/${booking.id}`}
-      className={`md:hidden block rounded-lg border shadow-sm active:opacity-75 transition-all ${busy ? 'opacity-60 pointer-events-none' : ''} ${isUnread ? (isReply ? 'bg-gradient-to-br from-amber-50 to-orange-100 border-amber-400' : 'bg-gradient-to-br from-slate-100 to-gray-200 border-slate-400') : isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300' : 'bg-white border-gray-100'}`}
+      onClick={() => { sessionStorage.setItem('bts:scroll-y', String(document.getElementById('main-scroll')?.scrollTop ?? 0)); sessionStorage.setItem('bts:last-booking', booking.id); }}
+      className={`md:hidden block rounded-lg border shadow-sm active:opacity-75 transition-all ${busy ? 'opacity-60 pointer-events-none' : ''} ${highlighted ? 'shadow-[0_0_0_2px_rgba(99,102,241,0.7),0_8px_32px_rgba(99,102,241,0.3)]' : ''} ${isUnread ? (isReply ? 'bg-gradient-to-br from-amber-50 to-orange-100 border-amber-400' : 'bg-gradient-to-br from-slate-100 to-gray-200 border-slate-400') : isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300' : 'bg-white border-gray-100'}`}
     >
       <div className="px-4 py-3.5">
         <div className="flex items-center justify-between mb-1.5">
@@ -531,7 +532,18 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
     </Link>
 
     {/* ── Desktop row (≥ md) ── */}
-    <div className={`hidden md:flex items-center gap-4 px-3 py-2 rounded-xl border shadow-sm hover:shadow-lg transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${highlighted ? 'ring-2 ring-indigo-400 ring-offset-1' : ''} ${isUnread ? (isReply ? 'bg-gradient-to-br from-amber-50 to-orange-100 border-amber-400 hover:border-amber-500' : 'bg-gradient-to-br from-slate-100 to-gray-200 border-slate-400 hover:border-slate-500') : isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300 hover:border-emerald-300' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
+    <div className={`relative hidden md:flex items-center gap-4 px-3 py-2 rounded-xl border shadow-sm hover:shadow-lg transition-all group ${busy ? 'opacity-60 pointer-events-none' : ''} ${highlighted ? 'shadow-[0_0_0_2px_rgba(99,102,241,0.7),0_8px_32px_rgba(99,102,241,0.3)]' : ''} ${isUnread ? (isReply ? 'bg-gradient-to-br from-amber-50 to-orange-100 border-amber-400 hover:border-amber-500' : 'bg-gradient-to-br from-slate-100 to-gray-200 border-slate-400 hover:border-slate-500') : isCompleted ? 'bg-gradient-to-br from-white to-emerald-200 border-emerald-300 hover:border-emerald-300' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
+
+      {highlighted && (
+        <>
+          <div className="absolute inset-0 bg-indigo-50/70 rounded-xl pointer-events-none" />
+          <div className="absolute left-0 inset-y-0 w-1 bg-gradient-to-b from-indigo-400 via-violet-500 to-purple-400 rounded-l-xl pointer-events-none" />
+          <div className="absolute top-1.5 left-3.5 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-indigo-500 text-white text-[9px] font-bold uppercase tracking-wide pointer-events-none z-10">
+            <span className="w-1.5 h-1.5 rounded-full bg-white/80 animate-pulse shrink-0" />
+            Last viewed
+          </div>
+        </>
+      )}
 
       {/* Avatar */}
       <Link href={`/dashboard/my-bookings/${booking.id}`} className="shrink-0" onClick={() => { sessionStorage.setItem('bts:scroll-y', String(document.getElementById('main-scroll')?.scrollTop ?? 0)); sessionStorage.setItem('bts:last-booking', booking.id); }}>
