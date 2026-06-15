@@ -472,6 +472,17 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
     patchStatus({ id: booking.id, status: s });
   }
 
+  function handleAssignAgent(agent_id: string | null, done: () => void) {
+    done();
+    assignAgent({ id: booking.id, agent_id }).then(() => {
+      if (agent_id !== null && booking.status === 'Pending') {
+        patchStatus({ id: booking.id, status: 'In Progress' });
+      } else if (agent_id === null && booking.status === 'In Progress') {
+        patchStatus({ id: booking.id, status: 'Pending' });
+      }
+    });
+  }
+
   async function submitDa() {
     setDaError('');
     try {
@@ -620,12 +631,12 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
                 <>
                   <DdItem label="Unassign" active={!booking.agent}
                     left={<span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-[9px] text-gray-400 font-bold shrink-0">—</span>}
-                    onClick={() => { assignAgent({ id: booking.id, agent_id: null }); close(); }} />
+                    onClick={() => handleAssignAgent(null, close)} />
                   <div className="max-h-48 overflow-y-auto">
                     {agents.map(a => (
                       <DdItem key={a.id} label={a.name} active={booking.agent?.id === a.id}
                         left={<div className={`w-5 h-5 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[9px] font-bold shrink-0`}>{a.name.charAt(0).toUpperCase()}</div>}
-                        onClick={() => { assignAgent({ id: booking.id, agent_id: a.id }); close(); }} />
+                        onClick={() => handleAssignAgent(a.id, close)} />
                     ))}
                   </div>
                 </>
@@ -753,11 +764,18 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
           )}>
           {close => statusCfg.map((s: BookingConfigItem) => {
             const cc = getColor(s.color);
-            return (
+            const blocked = s.value === 'In Progress' && !booking.agent;
+            const item = (
               <DdItem key={s.value} label={s.label} active={booking.status === s.value}
                 left={<span className={`w-2 h-2 rounded-full shrink-0 ${cc.dot}`} />}
-                onClick={() => handleStatusClick(s.value, close)} />
+                onClick={() => handleStatusClick(s.value, close)}
+                disabled={blocked} />
             );
+            return blocked ? (
+              <Tooltip key={s.value} label="No agent assigned" sub="Assign an agent — status changes automatically" align="right">
+                {item}
+              </Tooltip>
+            ) : item;
           })}
         </InlineDropdown>
 

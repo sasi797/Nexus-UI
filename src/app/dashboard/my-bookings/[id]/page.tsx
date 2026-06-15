@@ -355,6 +355,11 @@ export default function BookingDetailPage() {
   };
   const handleAgentChange = async (agent_id: string | null) => {
     await assignAgent({ id, agent_id: agent_id || null });
+    if (agent_id && b?.status === 'Pending') {
+      await patchStatus({ id, status: 'In Progress' });
+    } else if (!agent_id && b?.status === 'In Progress') {
+      await patchStatus({ id, status: 'Pending' });
+    }
     flashSaved('agent');
   };
 
@@ -629,21 +634,48 @@ export default function BookingDetailPage() {
               <div>
                 <p className={labelCls}>Status</p>
                 <div className="grid grid-cols-2 gap-1.5">
-                  {(['Pending', 'In Progress', 'Completed', 'Ignored'] as const).map(s => (
-                    <button
-                      key={s}
-                      disabled={saving || patching || !isOpen}
-                      onClick={() => handleStatusChange(s)}
-                      className={`flex items-center justify-center gap-1 text-[10.5px] font-bold py-1.5 rounded-lg border transition-all disabled:opacity-50 ${
-                        b.status.toLowerCase() === s.toLowerCase()
-                          ? STATUS_PILL_ON[s]
-                          : 'border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600 hover:bg-gray-50'
-                      }`}
-                    >
-                      <span className={`w-2 h-2 rounded-full shrink-0 ${b.status.toLowerCase() === s.toLowerCase() ? STATUS_DOT[s] : 'bg-gray-300'}`} />
-                      {s === 'Pending' ? 'Open' : s}
-                    </button>
-                  ))}
+                  {(['Pending', 'In Progress', 'Completed', 'Ignored'] as const).map(s => {
+                    const blockedInProgress = s === 'In Progress' && !b.agent_id;
+                    if (blockedInProgress) {
+                      return (
+                        <div key={s} className="relative group/ip">
+                          <button
+                            disabled
+                            className="w-full flex items-center justify-center gap-1.5 text-[10.5px] font-semibold py-1.5 rounded-lg border border-dashed border-gray-200 text-gray-300 cursor-not-allowed bg-gray-50/50"
+                          >
+                            <svg className="w-3 h-3 shrink-0 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                            </svg>
+                            In Progress
+                          </button>
+                          <div className="pointer-events-none absolute bottom-full mb-2 z-[300] opacity-0 group-hover/ip:opacity-100 translate-y-1 group-hover/ip:translate-y-0 transition-all duration-150 left-1/2 -translate-x-1/2">
+                            <div className="bg-gray-950 text-white rounded-xl shadow-2xl overflow-hidden min-w-max border border-white/10">
+                              <div className="px-3 py-2">
+                                <p className="text-[11px] font-semibold leading-none">No agent assigned</p>
+                                <p className="text-[10px] text-gray-400 mt-1.5 leading-none">Assign an agent — status changes automatically</p>
+                              </div>
+                            </div>
+                            <div className="absolute -bottom-1 w-2 h-2 bg-gray-950 rotate-45 rounded-sm border-r border-b border-white/10 left-1/2 -translate-x-1/2" />
+                          </div>
+                        </div>
+                      );
+                    }
+                    return (
+                      <button
+                        key={s}
+                        disabled={saving || patching || !isOpen}
+                        onClick={() => handleStatusChange(s)}
+                        className={`flex items-center justify-center gap-1 text-[10.5px] font-bold py-1.5 rounded-lg border transition-all disabled:opacity-50 ${
+                          b.status.toLowerCase() === s.toLowerCase()
+                            ? STATUS_PILL_ON[s]
+                            : 'border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600 hover:bg-gray-50'
+                        }`}
+                      >
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${b.status.toLowerCase() === s.toLowerCase() ? STATUS_DOT[s] : 'bg-gray-300'}`} />
+                        {s === 'Pending' ? 'Open' : s}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
