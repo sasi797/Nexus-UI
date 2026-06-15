@@ -196,7 +196,7 @@ function DaTagInput({ value, onChange }: { value: string; onChange: (v: string) 
 }
 
 function DaBadges({ daNumber }: { daNumber: string }) {
-  const all = daNumber.split(',').map(s => s.trim()).filter(Boolean);
+  const all = daNumber.split(/[\s,]+/).map(s => s.trim()).filter(Boolean);
   const shown = all.slice(0, 3);
   const rest = all.slice(3);
   return (
@@ -211,10 +211,13 @@ function DaBadges({ daNumber }: { daNumber: string }) {
           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-mono leading-none border border-emerald-300 cursor-default whitespace-nowrap">
             +{rest.length} more
           </span>
-          <div className="absolute left-0 top-full mt-1.5 z-[100] hidden group-hover/da:block bg-gray-900 text-white rounded-xl p-2.5 shadow-xl min-w-max space-y-1">
-            {all.map(da => (
-              <div key={da} className="text-[10px] font-mono font-semibold tracking-tight">{da}</div>
-            ))}
+          <div className="absolute left-0 top-full mt-1.5 z-[100] hidden group-hover/da:block bg-gray-900 text-white rounded-xl p-2.5 shadow-2xl w-72 max-h-44 overflow-y-auto">
+            <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider mb-1.5">All DA Numbers ({all.length})</p>
+            <div className="flex flex-wrap gap-1">
+              {all.map(da => (
+                <span key={da} className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-gray-700 text-emerald-300 whitespace-nowrap">{da}</span>
+              ))}
+            </div>
           </div>
         </span>
       )}
