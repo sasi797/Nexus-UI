@@ -311,6 +311,7 @@ export default function BookingDetailPage() {
   const [daNumber, setDaNumber]           = useState('');
   const [daDesc, setDaDesc]               = useState('');
   const [sidebarOpen, setSidebarOpen]     = useState(true);
+  const [newestFirst, setNewestFirst]     = useState(true);
 
   const { data: b, isLoading }                   = useGetBookingQuery(id);
   const { data: bookingEvents = [] }             = useGetBookingEventsQuery(id, { pollingInterval: 30_000 });
@@ -442,6 +443,15 @@ export default function BookingDetailPage() {
               {/* Prev / Next navigation */}
               <div className="flex items-center gap-1">
                 <button
+                  onClick={() => setNewestFirst(p => !p)}
+                  title={newestFirst ? 'Showing newest first — click for oldest first' : 'Showing oldest first — click for newest first'}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-gray-600 bg-gray-100 hover:bg-indigo-100 hover:text-indigo-700 border border-gray-300 hover:border-indigo-300 transition-all mr-1">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9M3 12h5m10 4v-8m0 0l-3 3m3-3l3 3" />
+                  </svg>
+                  {newestFirst ? 'Newest first' : 'Oldest first'}
+                </button>
+                <button
                   onClick={() => prevId && router.push(`/dashboard/my-bookings/${prevId}`)}
                   disabled={!prevId}
                   title="Previous booking"
@@ -565,6 +575,7 @@ export default function BookingDetailPage() {
                 await patchStatus({ id, status: 'Completed', da_number: daNumber, da_description: description || undefined });
                 flashSaved('status');
               }}
+              newestFirst={newestFirst}
               readOnly={false}
             />
           </div>

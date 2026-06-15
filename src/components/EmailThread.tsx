@@ -631,6 +631,7 @@ interface Props {
   composeTab?: ComposeTab;
   onComposeTabChange?: (tab: ComposeTab) => void;
   onSendSuccess?: (daNumber: string, description: string) => void;
+  newestFirst?: boolean;
   readOnly?: boolean;
 }
 
@@ -651,7 +652,7 @@ function extractDaDetails(text: string): { daNumber: string; description: string
   return { daNumber, description };
 }
 
-export default function EmailThread({ bookingId, senderEmail, replyRef, composeTab: controlledTab, onComposeTabChange, onSendSuccess, readOnly = false }: Props) {
+export default function EmailThread({ bookingId, senderEmail, replyRef, composeTab: controlledTab, onComposeTabChange, onSendSuccess, newestFirst = true, readOnly = false }: Props) {
   const accessToken = useSelector((s: RootState) => s.auth.accessToken);
   const currentUser  = useSelector((s: RootState) => s.auth.user);
   const { data: messages = [], isLoading } = useGetMessagesQuery(bookingId, { pollingInterval: 20000 });
@@ -662,6 +663,11 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
   const [internalTab, setInternalTab] = useState<ComposeTab>('Reply');
   const composeTab = controlledTab ?? internalTab;
   const setComposeTab = (t: ComposeTab) => { setInternalTab(t); onComposeTabChange?.(t); };
+
+  const sortedMessages = [...messages].sort((a, b) => {
+    const diff = new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime();
+    return newestFirst ? diff : -diff;
+  });
 
   // Rich-text editor (replaces plain textarea)
   const editorRef = useRef<HTMLDivElement>(null);
@@ -1013,7 +1019,7 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
         </div>
       ) : (
         <div className="space-y-2">
-          {messages.map((msg, i) => (
+          {sortedMessages.map((msg, i) => (
             <MessageCard
               key={msg.id}
               msg={msg}
