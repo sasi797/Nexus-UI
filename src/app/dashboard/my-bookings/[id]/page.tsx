@@ -561,6 +561,10 @@ export default function BookingDetailPage() {
               replyRef={replyRef}
               composeTab={composeTab}
               onComposeTabChange={setComposeTab}
+              onSendSuccess={async (daNumber, description) => {
+                await patchStatus({ id, status: 'Completed', da_number: daNumber, da_description: description || undefined });
+                flashSaved('status');
+              }}
               readOnly={false}
             />
           </div>

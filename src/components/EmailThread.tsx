@@ -630,10 +630,28 @@ interface Props {
   replyRef?: React.RefObject<HTMLElement | null>;
   composeTab?: ComposeTab;
   onComposeTabChange?: (tab: ComposeTab) => void;
+  onSendSuccess?: (daNumber: string, description: string) => void;
   readOnly?: boolean;
 }
 
-export default function EmailThread({ bookingId, senderEmail, replyRef, composeTab: controlledTab, onComposeTabChange, readOnly = false }: Props) {
+function extractDaDetails(text: string): { daNumber: string; description: string } {
+  const jobMatch   = text.match(/job\s*number\s*:\s*([^\n\r]+)/i);
+  const refMatch   = text.match(/customer\s+reference\s*:\s*([^\n\r]+)/i);
+  const codeMatch  = text.match(/account\s+code\s*:\s*([^\n\r]+)/i);
+
+  const daNumber = jobMatch  ? jobMatch[1].trim()  : '';
+  const ref      = refMatch  ? refMatch[1].trim()  : '';
+  const code     = codeMatch ? codeMatch[1].trim() : '';
+
+  let description = '';
+  if (ref && code)   description = `Customer reference is ${ref} and account code is ${code}.`;
+  else if (ref)      description = `Customer reference is ${ref}.`;
+  else if (code)     description = `Account code is ${code}.`;
+
+  return { daNumber, description };
+}
+
+export default function EmailThread({ bookingId, senderEmail, replyRef, composeTab: controlledTab, onComposeTabChange, onSendSuccess, readOnly = false }: Props) {
   const accessToken = useSelector((s: RootState) => s.auth.accessToken);
   const currentUser  = useSelector((s: RootState) => s.auth.user);
   const { data: messages = [], isLoading } = useGetMessagesQuery(bookingId, { pollingInterval: 20000 });
@@ -895,6 +913,11 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
     if (composeTab === 'Forward') setForwardTo('');
     setSent(true);
     setTimeout(() => setSent(false), 2000);
+
+    if (onSendSuccess) {
+      const { daNumber, description } = extractDaDetails(text);
+      if (daNumber) onSendSuccess(daNumber, description);
+    }
   };
 
   const composeTabs: { id: ComposeTab; icon: React.ReactNode; label: string }[] = [
