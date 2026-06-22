@@ -2,7 +2,7 @@ import { api } from './api';
 
 export interface DashboardStats {
   total_bookings: number; pending: number; in_progress: number; completed: number;
-  da_numbers_count: number;
+  da_numbers_count: number; at_risk: number;
 }
 
 export const dashboardApi = api.injectEndpoints({

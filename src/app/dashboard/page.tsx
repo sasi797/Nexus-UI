@@ -1,12 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import {
+  ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  ReferenceLine, LabelList,
+} from 'recharts';
 import { pageTransition, staggerItem } from '@/lib/animations';
 import Table, { ColumnDef } from '@/components/Table';
 import { useGetDashboardStatsQuery } from '@/services/dashboardApi';
 import { useGetBookingsQuery, BookingListItem } from '@/services/bookingsApi';
+import { useGetHourlyActivityQuery } from '@/services/reportsApi';
 import ApiErrorState from '@/components/ApiErrorState';
 
 /* ── helpers ── */
@@ -206,6 +211,8 @@ const ICON = {
   clock:     <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" strokeWidth={2}/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 7v5l3 3"/></svg>,
   refresh:   <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>,
   check:     <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>,
+  alert:     <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3.75m0 3.75h.008M10.29 3.86L1.82 18a1.5 1.5 0 001.29 2.25h17.78A1.5 1.5 0 0022.18 18L13.71 3.86a1.5 1.5 0 00-2.42 0z"/></svg>,
+  hash:      <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 9h14M5 15h14M9 4L7 20m10-16l-2 16"/></svg>,
 };
 
 /* ── watermark icons ── */
@@ -228,6 +235,16 @@ const WM = {
   check: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.1} strokeLinecap="round" strokeLinejoin="round" className="w-14 h-14">
       <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+  ),
+  alert: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.1} strokeLinecap="round" strokeLinejoin="round" className="w-14 h-14">
+      <path d="M12 9v3.75m0 3.75h.008M10.29 3.86L1.82 18a1.5 1.5 0 001.29 2.25h17.78A1.5 1.5 0 0022.18 18L13.71 3.86a1.5 1.5 0 00-2.42 0z"/>
+    </svg>
+  ),
+  hash: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.1} strokeLinecap="round" strokeLinejoin="round" className="w-14 h-14">
+      <path d="M5 9h14M5 15h14M9 4L7 20m10-16l-2 16"/>
     </svg>
   ),
 };
@@ -287,6 +304,25 @@ function StatCard({ label, value, gradient, border, valueColor, iconBg, iconColo
 }
 
 /* ── page ── */
+/* ── hourly chart tooltip ── */
+function HourlyFlowTooltip({ active, payload }: {
+  active?: boolean; payload?: { name: string; value: number; color: string; payload: { label: string } }[];
+}) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-white border border-gray-200 rounded-xl shadow-lg px-3.5 py-2.5 text-[11px]">
+      <p className="font-bold text-gray-700 mb-1.5">{payload[0].payload.label}</p>
+      {payload.map(p => (
+        <div key={p.name} className="flex items-center gap-2 mb-0.5">
+          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
+          <span className="text-gray-500">{p.name}:</span>
+          <span className="font-bold text-gray-800">{p.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { data: stats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } =
     useGetDashboardStatsQuery();
@@ -294,14 +330,38 @@ export default function DashboardPage() {
     useGetBookingsQuery({ page_size: 10 });
   const bookings = bookingsPage?.items ?? [];
 
+  const MIN_DATE = '2026-06-01';
+  const todayISO = new Date().toISOString().split('T')[0];
+  const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const [hourlyDate, setHourlyDate] = useState(todayISO);
+  const { data: hourly = [], isLoading: hourlyLoading } = useGetHourlyActivityQuery({ date: hourlyDate, tz: userTz });
+  const isToday = hourlyDate === todayISO;
+
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
+  const currentHourFraction = currentHour + currentMinute / 60;
+  const currentTimeLabel = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
+  const hourlyFlow = useMemo(() => {
+    return hourly.map(h => {
+      const completed = h.completed;
+      const pending = Math.max(h.received - h.completed, 0);
+      return { hour: h.hour, label: h.label, completed, pending };
+    });
+  }, [hourly]);
+
   return (
     <motion.div variants={pageTransition} initial="hidden" animate="visible" className="space-y-5">
       {statsError && <ApiErrorState title="Failed to load stats" onRetry={refetchStats} />}
 
       {/* ── Stat cards ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
         {statsLoading
-          ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24" />)
+          ? Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-24" />)
           : (
             <>
               <StatCard
@@ -312,31 +372,121 @@ export default function DashboardPage() {
                 watermarkColor="text-indigo-200" watermark={WM.clipboard} delay={0}
               />
               <StatCard
+                label="Completed" value={stats?.completed ?? 0}
+                gradient="bg-gradient-to-br from-emerald-50 to-teal-100"
+                border="border-emerald-100" valueColor="text-emerald-700"
+                iconBg="bg-emerald-100" iconColor="text-emerald-600" icon={ICON.check}
+                watermarkColor="text-emerald-200" watermark={WM.check} delay={0.07}
+              />
+              <StatCard
                 label="Open" value={stats?.pending ?? 0}
                 gradient="bg-gradient-to-br from-amber-50 to-orange-100"
                 border="border-amber-100" valueColor="text-amber-700"
                 iconBg="bg-amber-100" iconColor="text-amber-600" icon={ICON.clock}
-                watermarkColor="text-amber-200" watermark={WM.clock} delay={0.07}
+                watermarkColor="text-amber-200" watermark={WM.clock} delay={0.14}
               />
               <StatCard
                 label="In Progress" value={stats?.in_progress ?? 0}
                 gradient="bg-gradient-to-br from-blue-50 to-sky-100"
                 border="border-blue-100" valueColor="text-blue-700"
                 iconBg="bg-blue-100" iconColor="text-blue-600" icon={ICON.refresh}
-                watermarkColor="text-blue-200" watermark={WM.refresh} delay={0.14}
+                watermarkColor="text-blue-200" watermark={WM.refresh} delay={0.21}
               />
               <StatCard
-                label="Completed" value={stats?.completed ?? 0}
-                gradient="bg-gradient-to-br from-emerald-50 to-teal-100"
-                border="border-emerald-100" valueColor="text-emerald-700"
-                iconBg="bg-emerald-100" iconColor="text-emerald-600" icon={ICON.check}
-                watermarkColor="text-emerald-200" watermark={WM.check} delay={0.21}
-                sub={stats ? { value: stats.da_numbers_count, label: 'total DA numbers' } : null}
+                label="DA Count" value={stats?.da_numbers_count ?? 0}
+                gradient="bg-gradient-to-br from-violet-50 to-purple-100"
+                border="border-violet-100" valueColor="text-violet-700"
+                iconBg="bg-violet-100" iconColor="text-violet-600" icon={ICON.hash}
+                watermarkColor="text-violet-200" watermark={WM.hash} delay={0.28}
               />
             </>
           )
         }
       </div>
+
+      {/* ── Hourly Bookings Flow ── */}
+      <motion.div variants={staggerItem} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="font-bold text-gray-900 text-sm leading-tight">Hourly Bookings Flow</h2>
+            <p className="text-[11px] text-gray-400 leading-tight mt-0.5">{isToday ? 'Today, by hour' : 'By hour'}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                const d = new Date(hourlyDate);
+                d.setDate(d.getDate() - 1);
+                const prev = d.toISOString().split('T')[0];
+                if (prev >= MIN_DATE) setHourlyDate(prev);
+              }}
+              disabled={hourlyDate <= MIN_DATE}
+              className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors text-sm disabled:opacity-30 disabled:cursor-not-allowed"
+            >‹</button>
+            <input
+              type="date"
+              value={hourlyDate}
+              min={MIN_DATE}
+              max={todayISO}
+              onChange={e => setHourlyDate(e.target.value)}
+              className="text-[11px] font-semibold text-gray-600 border border-gray-200 rounded-lg px-2 py-1 bg-white cursor-pointer focus:outline-none focus:border-indigo-300"
+            />
+            <button
+              onClick={() => {
+                const d = new Date(hourlyDate);
+                d.setDate(d.getDate() + 1);
+                const next = d.toISOString().split('T')[0];
+                if (next <= todayISO) setHourlyDate(next);
+              }}
+              disabled={isToday}
+              className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors text-sm disabled:opacity-30 disabled:cursor-not-allowed"
+            >›</button>
+            {!isToday && (
+              <button
+                onClick={() => setHourlyDate(todayISO)}
+                className="text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded-md transition-colors"
+              >Today</button>
+            )}
+            {isToday && (
+              <span className="text-[11px] font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg whitespace-nowrap">
+                Current time {currentTimeLabel}
+              </span>
+            )}
+          </div>
+        </div>
+        {hourlyLoading
+          ? <Skeleton className="h-[260px]" />
+          : (
+            <ResponsiveContainer width="100%" height={290}>
+              <ComposedChart data={hourlyFlow} margin={{ top: 5, right: 10, left: 0, bottom: 10 }} barGap={2}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                <XAxis
+                  dataKey="hour" type="number" domain={[0, 23]} ticks={[0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22]}
+                  tickFormatter={(h: number) => `${String(h).padStart(2, '0')}:00`}
+                  tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickMargin={10}
+                  padding={{ left: 16, right: 16 }}
+                />
+                <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip content={<HourlyFlowTooltip />} cursor={{ fill: '#f8fafc' }} />
+                <Legend iconType="circle" iconSize={7} wrapperStyle={{ fontSize: 11 }} />
+                {isToday && (
+                  <ReferenceLine
+                    x={currentHourFraction}
+                    stroke="#3b82f6"
+                    strokeDasharray="4 4"
+                    label={{ value: `Now ${currentTimeLabel}`, position: 'top', fill: '#3b82f6', fontSize: 10, fontWeight: 700 }}
+                  />
+                )}
+                <Bar dataKey="completed" name="Completed" stackId="a" fill="#22c55e" radius={[0, 0, 0, 0]}>
+                  <LabelList dataKey="completed" position="inside" fill="#fff" fontSize={10} fontWeight={700} formatter={(v: React.ReactNode) => (Number(v) > 0 ? String(v) : '')} />
+                </Bar>
+                <Bar dataKey="pending" name="Open" stackId="a" fill="#f59e0b" radius={[3, 3, 0, 0]}>
+                  <LabelList dataKey="pending" position="inside" fill="#fff" fontSize={10} fontWeight={700} formatter={(v: React.ReactNode) => (Number(v) > 0 ? String(v) : '')} />
+                </Bar>
+              </ComposedChart>
+            </ResponsiveContainer>
+          )
+        }
+      </motion.div>
 
       {/* ── Recent Bookings ── */}
       <motion.div variants={staggerItem} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
