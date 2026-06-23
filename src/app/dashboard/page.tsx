@@ -213,6 +213,7 @@ const ICON = {
   check:     <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>,
   alert:     <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3.75m0 3.75h.008M10.29 3.86L1.82 18a1.5 1.5 0 001.29 2.25h17.78A1.5 1.5 0 0022.18 18L13.71 3.86a1.5 1.5 0 00-2.42 0z"/></svg>,
   hash:      <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 9h14M5 15h14M9 4L7 20m10-16l-2 16"/></svg>,
+  ban:       <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" strokeWidth={2}/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6.343 17.657l11.314-11.314"/></svg>,
 };
 
 /* ── watermark icons ── */
@@ -245,6 +246,11 @@ const WM = {
   hash: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.1} strokeLinecap="round" strokeLinejoin="round" className="w-14 h-14">
       <path d="M5 9h14M5 15h14M9 4L7 20m10-16l-2 16"/>
+    </svg>
+  ),
+  ban: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.1} strokeLinecap="round" strokeLinejoin="round" className="w-14 h-14">
+      <circle cx="12" cy="12" r="9"/><path d="M6.343 17.657l11.314-11.314"/>
     </svg>
   ),
 };
@@ -324,15 +330,18 @@ function HourlyFlowTooltip({ active, payload }: {
 }
 
 export default function DashboardPage() {
+  const MIN_DATE = '2026-06-01';
+  const todayISO = new Date().toISOString().split('T')[0];
+  const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  const [statsDate, setStatsDate] = useState<string | null>(null);
+
   const { data: stats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } =
-    useGetDashboardStatsQuery();
+    useGetDashboardStatsQuery(statsDate ? { date: statsDate, tz: userTz } : undefined);
   const { data: bookingsPage, isLoading: bookingsLoading, isError: bookingsError, refetch: refetchBookings } =
     useGetBookingsQuery({ page_size: 10 });
   const bookings = bookingsPage?.items ?? [];
 
-  const MIN_DATE = '2026-06-01';
-  const todayISO = new Date().toISOString().split('T')[0];
-  const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const [hourlyDate, setHourlyDate] = useState(todayISO);
   const { data: hourly = [], isLoading: hourlyLoading } = useGetHourlyActivityQuery({ date: hourlyDate, tz: userTz });
   const isToday = hourlyDate === todayISO;
@@ -359,9 +368,59 @@ export default function DashboardPage() {
       {statsError && <ApiErrorState title="Failed to load stats" onRetry={refetchStats} />}
 
       {/* ── Stat cards ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="font-bold text-gray-900 text-sm leading-tight">Overview</h2>
+          <p className="text-[11px] text-gray-400 leading-tight mt-0.5">
+            {statsDate ? `Bookings on ${new Date(statsDate + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}` : 'All time'}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {statsDate && (
+            <>
+              <button
+                onClick={() => {
+                  const d = new Date(statsDate);
+                  d.setDate(d.getDate() - 1);
+                  const prev = d.toISOString().split('T')[0];
+                  if (prev >= MIN_DATE) setStatsDate(prev);
+                }}
+                disabled={statsDate <= MIN_DATE}
+                className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors text-sm disabled:opacity-30 disabled:cursor-not-allowed"
+              >‹</button>
+            </>
+          )}
+          <input
+            type="date"
+            value={statsDate ?? ''}
+            min={MIN_DATE}
+            max={todayISO}
+            onChange={e => setStatsDate(e.target.value || null)}
+            className="text-[11px] font-semibold text-gray-600 border border-gray-200 rounded-lg px-2 py-1 bg-white cursor-pointer focus:outline-none focus:border-indigo-300"
+          />
+          {statsDate && (
+            <>
+              <button
+                onClick={() => {
+                  const d = new Date(statsDate);
+                  d.setDate(d.getDate() + 1);
+                  const next = d.toISOString().split('T')[0];
+                  if (next <= todayISO) setStatsDate(next);
+                }}
+                disabled={statsDate === todayISO}
+                className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors text-sm disabled:opacity-30 disabled:cursor-not-allowed"
+              >›</button>
+              <button
+                onClick={() => setStatsDate(null)}
+                className="text-[10px] font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded-md transition-colors"
+              >All time</button>
+            </>
+          )}
+        </div>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-6 gap-4">
         {statsLoading
-          ? Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-24" />)
+          ? Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-24" />)
           : (
             <>
               <StatCard
@@ -393,11 +452,18 @@ export default function DashboardPage() {
                 watermarkColor="text-blue-200" watermark={WM.refresh} delay={0.21}
               />
               <StatCard
+                label="Ignored" value={stats?.ignored ?? 0}
+                gradient="bg-gradient-to-br from-slate-50 to-gray-100"
+                border="border-slate-200" valueColor="text-slate-600"
+                iconBg="bg-slate-100" iconColor="text-slate-500" icon={ICON.ban}
+                watermarkColor="text-slate-200" watermark={WM.ban} delay={0.28}
+              />
+              <StatCard
                 label="DA Count" value={stats?.da_numbers_count ?? 0}
                 gradient="bg-gradient-to-br from-violet-50 to-purple-100"
                 border="border-violet-100" valueColor="text-violet-700"
                 iconBg="bg-violet-100" iconColor="text-violet-600" icon={ICON.hash}
-                watermarkColor="text-violet-200" watermark={WM.hash} delay={0.28}
+                watermarkColor="text-violet-200" watermark={WM.hash} delay={0.35}
               />
             </>
           )
