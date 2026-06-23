@@ -13,6 +13,15 @@ const ADMIN_ONLY_PATHS = [
   '/dashboard/settings',
 ];
 
+// Viewer can only reach dashboard root, all-bookings, and booking detail pages
+const VIEWER_ALLOWED_PREFIXES = [
+  '/dashboard/all-bookings',
+  '/dashboard/my-bookings/',  // detail pages only — not the list itself
+];
+const isViewerAllowed = (path: string) =>
+  path === '/dashboard' ||
+  VIEWER_ALLOWED_PREFIXES.some(p => path.startsWith(p));
+
 const Spinner = () => (
   <div className="min-h-screen flex items-center justify-center bg-gray-50">
     <div className="w-6 h-6 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
@@ -32,7 +41,8 @@ export default function DashboardGuard({ children }: { children: React.ReactNode
 
   const isAdminOnlyPath = ADMIN_ONLY_PATHS.some(p => pathname.startsWith(p));
   const isAgent = user?.role === 'agent';
-  const blocked = isAgent && isAdminOnlyPath;
+  const isViewer = user?.role === 'viewer';
+  const blocked = (isAgent && isAdminOnlyPath) || (isViewer && !isViewerAllowed(pathname));
 
   useEffect(() => {
     if (!mounted) return;

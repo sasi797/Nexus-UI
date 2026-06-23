@@ -23,14 +23,14 @@ import { useLogoutMutation } from '@/services/authApi';
 import { useGetNotificationsQuery } from '@/services/notificationsApi';
 
 const navItems = [
-  { label: 'Dashboard',     href: '/dashboard',               adminOnly: false, icon: LayoutDashboard },
-  { label: 'All Bookings',  href: '/dashboard/all-bookings',  adminOnly: false, icon: Layers },
-  { label: 'My Bookings',   href: '/dashboard/my-bookings',   adminOnly: false, icon: BookUser },
-  { label: 'Attendance',    href: '/dashboard/attendance',    adminOnly: true,  icon: CalendarCheck2 },
-  { label: 'Agents',        href: '/dashboard/agents',        adminOnly: true,  icon: Users },
-  { label: 'Notifications', href: '/dashboard/notifications', adminOnly: false, icon: Bell },
-  { label: 'Reports',       href: '/dashboard/reports',       adminOnly: true,  icon: BarChart3 },
-  { label: 'Settings',      href: '/dashboard/settings',      adminOnly: true,  icon: Settings2 },
+  { label: 'Dashboard',     href: '/dashboard',               adminOnly: false, viewerOnly: true,  icon: LayoutDashboard },
+  { label: 'All Bookings',  href: '/dashboard/all-bookings',  adminOnly: false, viewerOnly: true,  icon: Layers },
+  { label: 'My Bookings',   href: '/dashboard/my-bookings',   adminOnly: false, viewerOnly: false, icon: BookUser },
+  { label: 'Attendance',    href: '/dashboard/attendance',    adminOnly: true,  viewerOnly: false, icon: CalendarCheck2 },
+  { label: 'Agents',        href: '/dashboard/agents',        adminOnly: true,  viewerOnly: false, icon: Users },
+  { label: 'Notifications', href: '/dashboard/notifications', adminOnly: false, viewerOnly: false, icon: Bell },
+  { label: 'Reports',       href: '/dashboard/reports',       adminOnly: true,  viewerOnly: false, icon: BarChart3 },
+  { label: 'Settings',      href: '/dashboard/settings',      adminOnly: true,  viewerOnly: false, icon: Settings2 },
 ];
 
 export default function Sidebar({
@@ -133,7 +133,11 @@ export default function Sidebar({
         animate="visible"
         className={`flex-1 pt-4 pb-1 ${collapsed ? 'px-1.5' : 'px-3'} space-y-0.5 transition-[padding] duration-300`}
       >
-        {navItems.filter(item => !item.adminOnly || user?.role !== 'agent').map((item) => {
+        {navItems.filter(item => {
+          if (user?.role === 'viewer') return item.viewerOnly;
+          if (user?.role === 'agent') return !item.adminOnly;
+          return true;
+        }).map((item) => {
           const active = isActive(item.href);
           const Icon = item.icon;
           return (

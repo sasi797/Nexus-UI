@@ -405,10 +405,10 @@ function FilterDropdown({ value, options, onChange }: {
 }
 
 /* ── Booking row ── */
-function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, highlighted }: {
+function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, highlighted, readOnly = false }: {
   booking: BookingListItem; agents: Agent[]; myUserEmail: string | undefined;
   bookingConfig: ReturnType<typeof useGetBookingConfigQuery>['data'];
-  onMarkRead: (id: string) => void; highlighted?: boolean;
+  onMarkRead: (id: string) => void; highlighted?: boolean; readOnly?: boolean;
 }) {
   const isUnread = !booking.is_read;
   const isReply = booking.has_reply;
@@ -568,7 +568,27 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
           </span>
 
           {/* Agent */}
-          {!isIgnored && (isMine ? (
+          {!isIgnored && (readOnly ? (
+            (() => {
+              const bs = booking.agent ? badgeStyle(booking.agent.email) : null;
+              return (
+                <div className={`flex items-center gap-1.5 text-[11px] font-semibold shrink-0 rounded-md px-2 py-1 border ${
+                  bs ? `${bs.bg} ${bs.border} ${bs.text}` : 'border-dashed border-gray-400 bg-gray-100 text-gray-500'
+                }`}>
+                  {booking.agent ? (
+                    <div className={`w-4 h-4 rounded-full bg-gradient-to-br ${avatarColor(booking.agent.email)} flex items-center justify-center text-white text-[8px] font-bold shrink-0`}>
+                      {booking.agent.name.charAt(0).toUpperCase()}
+                    </div>
+                  ) : (
+                    <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  )}
+                  <span className="truncate max-w-[80px]">{booking.agent?.name ?? 'Unassigned'}</span>
+                </div>
+              );
+            })()
+          ) : isMine ? (
             <div className="flex items-center gap-1 text-[11px] font-semibold text-indigo-900 bg-indigo-200 border border-indigo-400 rounded-md px-1.5 py-0.5 shrink-0">
               <svg className="w-3 h-3 text-indigo-700 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -633,23 +653,23 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
               <Tooltip
                 key={a.id}
                 label={a.name}
-                sub={booking.status === 'Completed' ? 'Support agent' : 'Click to remove'}
+                sub={readOnly || booking.status === 'Completed' ? 'Support agent' : 'Click to remove'}
                 align="center"
               >
                 <button
-                  disabled={booking.status === 'Completed'}
-                  onClick={() => { removeSupport({ id: booking.id, agent_id: a.id }); }}
+                  disabled={readOnly || booking.status === 'Completed'}
+                  onClick={() => { if (!readOnly) removeSupport({ id: booking.id, agent_id: a.id }); }}
                   className="relative group/sa shrink-0 disabled:cursor-default">
                   <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${avatarColor(a.email)} flex items-center justify-center text-white text-[10px] font-bold ring-2 ring-white shadow-sm`}>
                     {a.name.charAt(0).toUpperCase()}
                   </div>
-                  {booking.status !== 'Completed' && (
+                  {!readOnly && booking.status !== 'Completed' && (
                     <div className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-red-500 rounded-full hidden group-hover/sa:flex items-center justify-center text-white text-[8px] font-bold leading-none shadow-sm">×</div>
                   )}
                 </button>
               </Tooltip>
             ))}
-            {availableForSupport.length > 0 && booking.status !== 'Completed' && (
+            {!readOnly && availableForSupport.length > 0 && booking.status !== 'Completed' && (
               <InlineDropdown align="left" direction="auto"
                 trigger={(open, toggle) => (
                   <Tooltip
@@ -700,7 +720,16 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
         {(() => {
           const pItem = priorityCfg.find((p: BookingConfigItem) => p.label === booking.priority || p.value === booking.priority);
           const pc = getColor(pItem?.color ?? 'gray');
-          return (
+          return readOnly ? (
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-lg w-full justify-end ${(pItem?.label === 'Very Urgent' || pItem?.label === 'Urgent') ? 'bg-red-100' : ''}`}>
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-900">
+                <svg className={`w-3 h-3 shrink-0 ${pc.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={P_PATH[pItem?.label ?? ''] ?? P_PATH['Not Urgent']} />
+                </svg>
+                {pItem?.label ?? booking.priority}
+              </span>
+            </div>
+          ) : (
             <InlineDropdown direction="auto"
               trigger={(open, toggle) => (
                 <Tooltip
@@ -733,98 +762,131 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
         })()}
 
         {/* Status */}
-        <InlineDropdown direction="auto"
-          trigger={(open, toggle) => (
-            <Tooltip
-              label={`Status: ${sc.label}`}
-              sub="Click to change status"
-              align="right" disabled={open} className="w-full"
-            >
-              <button onClick={toggle}
-                className={`flex items-center gap-1 px-2 py-1 rounded-lg w-full justify-end transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-900">
-                  <svg className={`w-3 h-3 shrink-0 ${sc.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sc.path} />
-                  </svg>
-                  {sc.label}
-                </span>
-                <Chevron cls="text-gray-600 ml-0.5" />
-              </button>
-            </Tooltip>
-          )}>
-          {close => statusCfg.map((s: BookingConfigItem) => {
-            const cc = getColor(s.color);
-            const blocked = s.value === 'In Progress' && !booking.agent;
-            const item = (
-              <DdItem key={s.value} label={s.label} active={booking.status === s.value}
-                left={<span className={`w-2 h-2 rounded-full shrink-0 ${cc.dot}`} />}
-                onClick={() => handleStatusClick(s.value, close)}
-                disabled={blocked} />
-            );
-            return blocked ? (
-              <Tooltip key={s.value} label="No agent assigned" sub="Assign an agent — status changes automatically" align="right">
-                {item}
-              </Tooltip>
-            ) : item;
-          })}
-        </InlineDropdown>
-
-        {/* Tags — multi-select */}
-        <InlineDropdown align="right" direction="auto"
-          trigger={(open, toggle) => {
-            const activeTags = parseTags(booking.tags, tagValues);
-            const tagLabels = activeTags.map(t => tagCfg.find((c: BookingConfigItem) => c.value === t)?.label ?? t);
-            return (
+        {readOnly ? (
+          <div className="flex items-center gap-1 px-2 py-1 rounded-lg w-full justify-end">
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-900">
+              <svg className={`w-3 h-3 shrink-0 ${sc.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sc.path} />
+              </svg>
+              {sc.label}
+            </span>
+          </div>
+        ) : (
+          <InlineDropdown direction="auto"
+            trigger={(open, toggle) => (
               <Tooltip
-                label={tagLabels.length > 0 ? tagLabels.join(', ') : 'No tags assigned'}
-                sub="Click to manage tags"
+                label={`Status: ${sc.label}`}
+                sub="Click to change status"
                 align="right" disabled={open} className="w-full"
               >
-              <button onClick={toggle}
-                className={`flex items-center gap-1.5 px-2 py-1 rounded-lg w-full justify-end transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
-                <svg className="w-3 h-3 shrink-0 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                </svg>
-                {activeTags.length === 0 ? (
-                  <span className="text-[11px] text-gray-900 font-medium">Tags</span>
-                ) : (
-                  <span className="inline-flex items-center gap-1">
-                    {activeTags.map(t => {
-                      const cfg = tagCfg.find((c: BookingConfigItem) => c.value === t);
-                      const c = getColor(cfg?.color ?? 'gray');
-                      return <span key={t} className={`w-2 h-2 rounded-full shrink-0 ${c.dot}`} />;
-                    })}
-                    <span className="text-[11px] font-semibold text-gray-900 ml-0.5">{activeTags.length}</span>
+                <button onClick={toggle}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-lg w-full justify-end transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-900">
+                    <svg className={`w-3 h-3 shrink-0 ${sc.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sc.path} />
+                    </svg>
+                    {sc.label}
                   </span>
-                )}
-                <Chevron cls="text-gray-600" />
-              </button>
+                  <Chevron cls="text-gray-600 ml-0.5" />
+                </button>
               </Tooltip>
-            );
-          }}>
-          {close => (
-            <div className="py-1 min-w-[140px] max-h-52 overflow-y-auto">
-              {tagCfg.map((tag: BookingConfigItem) => {
-                const activeTags = parseTags(booking.tags, tagValues);
-                const active = activeTags.includes(tag.value);
-                const c = getColor(tag.color);
-                return (
-                  <button key={tag.value}
-                    onClick={() => {
-                      const next = active ? activeTags.filter(t => t !== tag.value) : [...activeTags, tag.value];
-                      updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, tags: serializeTags(next) } });
-                      close();
-                    }}
-                    className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-medium transition-colors ${active ? `${c.bg} ${c.text}` : 'text-gray-600 hover:bg-gray-50'}`}>
-                    <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${active ? c.dot : 'bg-gray-200'}`} />
-                    {tag.label}
-                    {active && <svg className="w-3 h-3 ml-auto text-current shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>}
-                  </button>
-                );
-              })}
+            )}>
+            {close => statusCfg.map((s: BookingConfigItem) => {
+              const cc = getColor(s.color);
+              const blocked = s.value === 'In Progress' && !booking.agent;
+              const item = (
+                <DdItem key={s.value} label={s.label} active={booking.status === s.value}
+                  left={<span className={`w-2 h-2 rounded-full shrink-0 ${cc.dot}`} />}
+                  onClick={() => handleStatusClick(s.value, close)}
+                  disabled={blocked} />
+              );
+              return blocked ? (
+                <Tooltip key={s.value} label="No agent assigned" sub="Assign an agent — status changes automatically" align="right">
+                  {item}
+                </Tooltip>
+              ) : item;
+            })}
+          </InlineDropdown>
+        )}
+
+        {/* Tags — multi-select */}
+        {(() => {
+          const activeTags = parseTags(booking.tags, tagValues);
+          return readOnly ? (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg w-full justify-end">
+              <svg className="w-3 h-3 shrink-0 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+              </svg>
+              {activeTags.length === 0 ? (
+                <span className="text-[11px] text-gray-900 font-medium">Tags</span>
+              ) : (
+                <span className="inline-flex items-center gap-1">
+                  {activeTags.map(t => {
+                    const cfg = tagCfg.find((c: BookingConfigItem) => c.value === t);
+                    const c = getColor(cfg?.color ?? 'gray');
+                    return <span key={t} className={`w-2 h-2 rounded-full shrink-0 ${c.dot}`} />;
+                  })}
+                  <span className="text-[11px] font-semibold text-gray-900 ml-0.5">{activeTags.length}</span>
+                </span>
+              )}
             </div>
-          )}
-        </InlineDropdown>
+          ) : (
+            <InlineDropdown align="right" direction="auto"
+              trigger={(open, toggle) => {
+                const tagLabels = activeTags.map(t => tagCfg.find((c: BookingConfigItem) => c.value === t)?.label ?? t);
+                return (
+                  <Tooltip
+                    label={tagLabels.length > 0 ? tagLabels.join(', ') : 'No tags assigned'}
+                    sub="Click to manage tags"
+                    align="right" disabled={open} className="w-full"
+                  >
+                  <button onClick={toggle}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded-lg w-full justify-end transition-colors ${open ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
+                    <svg className="w-3 h-3 shrink-0 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                    </svg>
+                    {activeTags.length === 0 ? (
+                      <span className="text-[11px] text-gray-900 font-medium">Tags</span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1">
+                        {activeTags.map(t => {
+                          const cfg = tagCfg.find((c: BookingConfigItem) => c.value === t);
+                          const c = getColor(cfg?.color ?? 'gray');
+                          return <span key={t} className={`w-2 h-2 rounded-full shrink-0 ${c.dot}`} />;
+                        })}
+                        <span className="text-[11px] font-semibold text-gray-900 ml-0.5">{activeTags.length}</span>
+                      </span>
+                    )}
+                    <Chevron cls="text-gray-600" />
+                  </button>
+                  </Tooltip>
+                );
+              }}>
+              {close => (
+                <div className="py-1 min-w-[140px] max-h-52 overflow-y-auto">
+                  {tagCfg.map((tag: BookingConfigItem) => {
+                    const curTags = parseTags(booking.tags, tagValues);
+                    const active = curTags.includes(tag.value);
+                    const c = getColor(tag.color);
+                    return (
+                      <button key={tag.value}
+                        onClick={() => {
+                          const next = active ? curTags.filter(t => t !== tag.value) : [...curTags, tag.value];
+                          updateBooking({ id: booking.id, body: { subject: booking.subject, sender_email: booking.sender_email, tags: serializeTags(next) } });
+                          close();
+                        }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-medium transition-colors ${active ? `${c.bg} ${c.text}` : 'text-gray-600 hover:bg-gray-50'}`}>
+                        <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${active ? c.dot : 'bg-gray-200'}`} />
+                        {tag.label}
+                        {active && <svg className="w-3 h-3 ml-auto text-current shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </InlineDropdown>
+          );
+        })()}
 
         {/* Mark as read */}
         {isUnread && (
@@ -1414,7 +1476,7 @@ export default function AllBookingsPage() {
                         </div>
                         <div className="space-y-2">
                           {items.map(b => (
-                            <BookingRow key={b.id} booking={b} agents={agents} myUserEmail={user?.email} bookingConfig={bookingConfig} onMarkRead={(id) => markBookingRead(id)} highlighted={lastClickedId === b.id} />
+                            <BookingRow key={b.id} booking={b} agents={agents} myUserEmail={user?.email} bookingConfig={bookingConfig} onMarkRead={(id) => markBookingRead(id)} highlighted={lastClickedId === b.id} readOnly={user?.role === 'viewer'} />
                           ))}
                         </div>
                       </div>

@@ -13,6 +13,7 @@ import {
 } from '@/services/bookingsApi';
 
 import { useGetAgentsQuery, Agent } from '@/services/agentsApi';
+import { useAppSelector } from '@/store/hooks';
 
 import EmailThread from '@/components/EmailThread';
 
@@ -304,6 +305,8 @@ export default function BookingDetailPage() {
   const { id }   = useParams<{ id: string }>();
   const router   = useRouter();
   const replyRef = useRef<HTMLElement>(null);
+  const currentUser = useAppSelector(state => state.auth.user);
+  const readOnly = currentUser?.role === 'viewer';
 
   const [composeTab, setComposeTab]       = useState<ComposeTab>('Reply');
   const [savedField, setSavedField]       = useState<string | null>(null);
@@ -521,7 +524,7 @@ export default function BookingDetailPage() {
           </div>
 
           {/* Action bar */}
-          <div className="px-4 py-2.5 border-b border-gray-100 flex flex-wrap items-center gap-2">
+          {!readOnly && <div className="px-4 py-2.5 border-b border-gray-100 flex flex-wrap items-center gap-2">
             <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
               onClick={() => focusCompose('Reply')}
               className="flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300 hover:shadow-sm transition-all">
@@ -566,7 +569,7 @@ export default function BookingDetailPage() {
               </svg>
               {patching ? 'Completing…' : isOpen ? 'Complete' : 'Completed'}
             </motion.button>
-          </div>
+          </div>}
 
           {/* Conversation */}
           <div className="p-3 sm:p-5">
@@ -581,7 +584,7 @@ export default function BookingDetailPage() {
                 flashSaved('status');
               }}
               newestFirst={newestFirst}
-              readOnly={false}
+              readOnly={readOnly}
             />
           </div>
         </motion.div>
@@ -593,7 +596,16 @@ export default function BookingDetailPage() {
             {/* Sidebar header */}
             <div className="px-4 py-3 bg-gray-50/60 border-b border-gray-100 flex items-center justify-between">
               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Ticket Details</span>
-              {(saving || patching) && (
+              {readOnly && (
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 border border-gray-200 text-[10px] font-semibold text-gray-400">
+                  <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                  </svg>
+                  View only
+                </span>
+              )}
+              {!readOnly && (saving || patching) && (
                 <span className="flex items-center gap-1 text-[10px] text-indigo-500 font-semibold">
                   <span className="w-2.5 h-2.5 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin" />
                   Saving…
@@ -663,7 +675,7 @@ export default function BookingDetailPage() {
                     return (
                       <button
                         key={s}
-                        disabled={saving || patching || !isOpen}
+                        disabled={saving || patching || !isOpen || readOnly}
                         onClick={() => handleStatusChange(s)}
                         className={`flex items-center justify-center gap-1 text-[10.5px] font-bold py-1.5 rounded-lg border transition-all disabled:opacity-50 ${
                           b.status.toLowerCase() === s.toLowerCase()
@@ -686,7 +698,7 @@ export default function BookingDetailPage() {
                   {(['Very Urgent', 'Urgent', 'Not Urgent'] as const).map(p => (
                     <button
                       key={p}
-                      disabled={saving || patching || !isOpen}
+                      disabled={saving || patching || !isOpen || readOnly}
                       onClick={() => handlePriorityChange(p)}
                       className={`flex-1 flex items-center justify-center gap-1 text-[10px] font-bold py-1.5 rounded-lg border transition-all disabled:opacity-50 ${
                         b.priority === p
@@ -725,7 +737,7 @@ export default function BookingDetailPage() {
                         const c = TAG_CFG[tag];
                         return (
                           <button key={tag}
-                            disabled={saving || patching || !isOpen}
+                            disabled={saving || patching || !isOpen || readOnly}
                             onClick={() => handleTagToggle(tag)}
                             className={`flex-1 flex items-center justify-center gap-1 text-[10px] font-bold py-1.5 rounded-lg border transition-all disabled:opacity-50 ${active ? c.on : 'border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600 hover:bg-gray-50'}`}>
                             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${active ? c.dot : c.offDot}`} />
@@ -760,7 +772,7 @@ export default function BookingDetailPage() {
                   agents={agents}
                   value={b.agent_id ?? ''}
                   onChange={handleAgentChange}
-                  disabled={saving || !isOpen}
+                  disabled={saving || !isOpen || readOnly}
                 />
               </div>
 
@@ -778,7 +790,7 @@ export default function BookingDetailPage() {
                         <p className="text-xs text-gray-400 truncate">{a.email}</p>
                       </div>
                       <button
-                        disabled={!isOpen || saving}
+                        disabled={!isOpen || saving || readOnly}
                         onClick={() => { removeSupport({ id, agent_id: a.id }); flashSaved('agent'); }}
                         className="shrink-0 w-5 h-5 flex items-center justify-center rounded-md text-violet-300 hover:text-red-400 hover:bg-red-50 transition-colors disabled:opacity-30">
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -792,7 +804,7 @@ export default function BookingDetailPage() {
                       <p className="text-[11px] text-gray-400">No support agents yet</p>
                     </div>
                   )}
-                  {isOpen && (() => {
+                  {isOpen && !readOnly && (() => {
                     const supportIds = new Set((b.support_agents ?? []).map(a => a.id));
                     const available = agents.filter(a => a.id !== b.agent_id && !supportIds.has(a.id));
                     return (
