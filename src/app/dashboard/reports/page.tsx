@@ -39,12 +39,12 @@ function ViewToggle({ view, onChange }: { view: ViewMode; onChange: (v: ViewMode
 
 function HourlyTick({ x, y, payload }: { x?: number; y?: number; payload?: { value: number } }) {
   const h = payload?.value ?? 0;
-  const end = (h + 1) % 24;
   const fmt = (n: number) => String(n).padStart(2, '0');
+  const endLabel = h === 23 ? '23:59' : `${fmt(h + 1)}:00`;
   return (
     <g transform={`translate(${x},${y})`}>
       <text x={0} y={0} dy={4} transform="rotate(-45)" textAnchor="end" fill="#94a3b8" fontSize={7.5}>
-        {`${fmt(h)}:00–${fmt(end)}:00`}
+        {`${fmt(h)}:00–${endLabel}`}
       </text>
     </g>
   );
@@ -53,11 +53,11 @@ function HourlyTick({ x, y, payload }: { x?: number; y?: number; payload?: { val
 function HourlyTooltip({ active, payload }: { active?: boolean; payload?: { name: string; value: number; color: string }[] }) {
   if (!active || !payload?.length) return null;
   const h = Number((payload[0] as unknown as { payload: { hour: number } }).payload.hour);
-  const end = (h + 1) % 24;
   const fmt = (n: number) => String(n).padStart(2, '0');
+  const endLabel = h === 23 ? '23:59' : `${fmt(h + 1)}:00`;
   return (
     <div className="bg-white border border-gray-200 rounded-xl shadow-lg px-3.5 py-2.5 text-[11px]">
-      <p className="font-bold text-gray-700 mb-1.5">{`${fmt(h)}:00 – ${fmt(end)}:00`}</p>
+      <p className="font-bold text-gray-700 mb-1.5">{`${fmt(h)}:00 – ${endLabel}`}</p>
       {payload.map(p => (
         <div key={p.name} className="flex items-center gap-2 mb-0.5">
           <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: p.color }} />

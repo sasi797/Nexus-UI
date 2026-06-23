@@ -1100,6 +1100,8 @@ export default function AllBookingsPage() {
     'Today': 'today', 'This week': 'week', 'This month': 'month', 'Anytime': undefined,
   };
 
+  const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
   const { data, currentData, isLoading, isFetching, isError, refetch } = useGetBookingsQuery({
     status,
     priority,
@@ -1108,6 +1110,7 @@ export default function AllBookingsPage() {
     search: debouncedSearch || undefined,
     created_after: createdFilter.startsWith('date:') ? createdFilter : CREATED_MAP[createdFilter],
     closed_after: closedAtFilter.startsWith('date:') ? closedAtFilter : CLOSED_MAP[closedAtFilter],
+    tz: userTz,
     page: currentPage,
     page_size: pageSize,
   }, { pollingInterval: 10_000, refetchOnFocus: true });
@@ -1122,7 +1125,7 @@ export default function AllBookingsPage() {
   // Separate count queries so counts are always global, not filtered by current tab
   const resolvedCreatedAfter = createdFilter.startsWith('date:') ? createdFilter : CREATED_MAP[createdFilter];
   const resolvedClosedAfter = closedAtFilter.startsWith('date:') ? closedAtFilter : CLOSED_MAP[closedAtFilter];
-  const cntBase = { priority, agent_id: agentId, sender_email: fromFilter === 'Any' ? undefined : fromFilter, created_after: resolvedCreatedAfter, closed_after: resolvedClosedAfter, page_size: 1 };
+  const cntBase = { priority, agent_id: agentId, sender_email: fromFilter === 'Any' ? undefined : fromFilter, created_after: resolvedCreatedAfter, closed_after: resolvedClosedAfter, tz: userTz, page_size: 1 };
   const cntOpts = { refetchOnMountOrArgChange: true };
   const { data: cntAll  } = useGetBookingsQuery({ ...cntBase },                                              cntOpts);
   const { data: cntPend } = useGetBookingsQuery({ ...cntBase, status: resolveStatus('Pending') },       cntOpts);

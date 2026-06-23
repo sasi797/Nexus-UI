@@ -336,14 +336,34 @@ export default function DashboardPage() {
 
   const [statsDate, setStatsDate] = useState<string | null>(null);
 
-  const { data: stats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } =
-    useGetDashboardStatsQuery(statsDate ? { date: statsDate, tz: userTz } : undefined);
+  // DA Count still comes from the dashboard API (bookings API doesn't expose it)
+  const { data: dashStats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } =
+    useGetDashboardStatsQuery(statsDate ? { date: statsDate, tz: userTz } : undefined, { pollingInterval: 30_000, refetchOnFocus: true });
+
+  // Status counts come from the same bookings API as All Bookings — guaranteed to always match
+  const cntOpts = { pollingInterval: 30_000, refetchOnFocus: true };
+  const cntBase = { created_after: statsDate ? `date:${statsDate}` : undefined, tz: userTz, page_size: 1 };
+  const { data: cntAll  } = useGetBookingsQuery(cntBase, cntOpts);
+  const { data: cntOpen } = useGetBookingsQuery({ ...cntBase, status: 'Pending' },     cntOpts);
+  const { data: cntProg } = useGetBookingsQuery({ ...cntBase, status: 'In Progress' }, cntOpts);
+  const { data: cntDone } = useGetBookingsQuery({ ...cntBase, status: 'Completed' },   cntOpts);
+  const { data: cntIgn  } = useGetBookingsQuery({ ...cntBase, status: 'Ignored' },     cntOpts);
+
+  const stats = {
+    total_bookings:   cntAll?.total  ?? dashStats?.total_bookings  ?? 0,
+    pending:          cntOpen?.total ?? dashStats?.pending          ?? 0,
+    in_progress:      cntProg?.total ?? dashStats?.in_progress      ?? 0,
+    completed:        cntDone?.total ?? dashStats?.completed        ?? 0,
+    ignored:          cntIgn?.total  ?? dashStats?.ignored          ?? 0,
+    da_numbers_count: dashStats?.da_numbers_count ?? 0,
+  };
+
   const { data: bookingsPage, isLoading: bookingsLoading, isError: bookingsError, refetch: refetchBookings } =
-    useGetBookingsQuery({ page_size: 10 });
+    useGetBookingsQuery({ page_size: 10 }, { pollingInterval: 30_000, refetchOnFocus: true });
   const bookings = bookingsPage?.items ?? [];
 
   const [hourlyDate, setHourlyDate] = useState(todayISO);
-  const { data: hourly = [], isLoading: hourlyLoading } = useGetHourlyActivityQuery({ date: hourlyDate, tz: userTz });
+  const { data: hourly = [], isLoading: hourlyLoading } = useGetHourlyActivityQuery({ date: hourlyDate, tz: userTz }, { pollingInterval: 30_000, refetchOnFocus: true });
   const isToday = hourlyDate === todayISO;
 
   const [now, setNow] = useState(new Date());
