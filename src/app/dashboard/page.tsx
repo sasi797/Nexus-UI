@@ -176,14 +176,14 @@ function HourlyFlowTooltip({ active, payload }: {
 
 export default function DashboardPage() {
   const MIN_DATE = '2026-06-01';
-  const todayISO = new Date().toISOString().split('T')[0];
-  const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const BST_TZ = 'Europe/London';
+  const todayISO = new Intl.DateTimeFormat('en-CA', { timeZone: BST_TZ }).format(new Date());
 
-  const [statsDate, setStatsDate] = useState<string | null>(null);
+  const [statsDate, setStatsDate] = useState<string | null>(todayISO);
 
   // DA Count still comes from the dashboard API (bookings API doesn't expose it)
   const { data: dashStats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } =
-    useGetDashboardStatsQuery(statsDate ? { date: statsDate, tz: userTz } : undefined, { pollingInterval: 30_000 });
+    useGetDashboardStatsQuery(statsDate ? { date: statsDate, tz: BST_TZ } : undefined, { pollingInterval: 30_000 });
 
   const stats = {
     total_bookings:   dashStats?.total_bookings  ?? 0,
@@ -217,7 +217,7 @@ export default function DashboardPage() {
   ];
 
   const [hourlyDate, setHourlyDate] = useState(todayISO);
-  const { data: hourly = [], isLoading: hourlyLoading } = useGetHourlyActivityQuery({ date: hourlyDate, tz: userTz }, { pollingInterval: 30_000 });
+  const { data: hourly = [], isLoading: hourlyLoading } = useGetHourlyActivityQuery({ date: hourlyDate, tz: BST_TZ }, { pollingInterval: 30_000 });
   const isToday = hourlyDate === todayISO;
 
   const [tick, setTick] = useState(() => Date.now());
@@ -229,8 +229,9 @@ export default function DashboardPage() {
     return () => clearInterval(id);
   }, []);
   const nowDate = new Date(tick);
-  const currentHour = nowDate.getHours();
-  const currentMinute = nowDate.getMinutes();
+  const bstParts = new Intl.DateTimeFormat('en-GB', { timeZone: BST_TZ, hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(nowDate);
+  const currentHour = Number(bstParts.find(p => p.type === 'hour')?.value ?? 0);
+  const currentMinute = Number(bstParts.find(p => p.type === 'minute')?.value ?? 0);
   const currentHourFraction = currentHour + currentMinute / 60;
   const currentTimeLabel = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
   const hourlyFlow = useMemo(() => {

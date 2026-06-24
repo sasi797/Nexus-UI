@@ -50,19 +50,23 @@ function extractName(email: string) {
     .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
 }
 
+const BST_TZ = 'Europe/London';
+
+function bstGet(date: Date, opts: Intl.DateTimeFormatOptions) {
+  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: BST_TZ, ...opts }).formatToParts(date);
+  return (type: string) => parts.find(p => p.type === type)?.value ?? '';
+}
+
 function formatReceivedAt(iso: string): string {
   const d = new Date(iso);
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mo = String(d.getMonth() + 1).padStart(2, '0');
-  const day = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-  return `${dd}/${mo} - ${day} ${hh}:${mm}`;
+  const g = bstGet(d, { day: '2-digit', month: '2-digit', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
+  return `${g('day')}/${g('month')} - ${g('weekday')} ${g('hour')}:${g('minute')}`;
 }
 
 function dayKey(iso: string): string {
   const d = new Date(iso);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const g = bstGet(d, { year: 'numeric', month: '2-digit', day: '2-digit' });
+  return `${g('year')}-${g('month')}-${g('day')}`;
 }
 
 function dayLabel(key: string): string {
@@ -70,11 +74,9 @@ function dayLabel(key: string): string {
   const yesterday = dayKey(new Date(Date.now() - 86400000).toISOString());
   if (key === today) return 'Today';
   if (key === yesterday) return 'Yesterday';
-  const d = new Date(key);
-  const day = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mo = String(d.getMonth() + 1).padStart(2, '0');
-  return `${day}, ${dd}/${mo}`;
+  const d = new Date(`${key}T12:00:00Z`);
+  const g = bstGet(d, { day: '2-digit', month: '2-digit', weekday: 'short' });
+  return `${g('weekday')}, ${g('day')}/${g('month')}`;
 }
 
 function formatHMS(ms: number): string {
@@ -1100,8 +1102,6 @@ export default function AllBookingsPage() {
     'Today': 'today', 'This week': 'week', 'This month': 'month', 'Anytime': undefined,
   };
 
-  const userTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
   const { data, currentData, isLoading, isFetching, isError, refetch } = useGetBookingsQuery({
     status,
     priority,
@@ -1110,7 +1110,7 @@ export default function AllBookingsPage() {
     search: debouncedSearch || undefined,
     created_after: createdFilter.startsWith('date:') ? createdFilter : CREATED_MAP[createdFilter],
     closed_after: closedAtFilter.startsWith('date:') ? closedAtFilter : CLOSED_MAP[closedAtFilter],
-    tz: userTz,
+    tz: BST_TZ,
     page: currentPage,
     page_size: pageSize,
   }, { pollingInterval: 10_000, refetchOnFocus: true });
@@ -1125,7 +1125,7 @@ export default function AllBookingsPage() {
   // Separate count queries so counts are always global, not filtered by current tab
   const resolvedCreatedAfter = createdFilter.startsWith('date:') ? createdFilter : CREATED_MAP[createdFilter];
   const resolvedClosedAfter = closedAtFilter.startsWith('date:') ? closedAtFilter : CLOSED_MAP[closedAtFilter];
-  const cntBase = { priority, agent_id: agentId, sender_email: fromFilter === 'Any' ? undefined : fromFilter, created_after: resolvedCreatedAfter, closed_after: resolvedClosedAfter, tz: userTz, page_size: 1 };
+  const cntBase = { priority, agent_id: agentId, sender_email: fromFilter === 'Any' ? undefined : fromFilter, created_after: resolvedCreatedAfter, closed_after: resolvedClosedAfter, tz: BST_TZ, page_size: 1 };
   const cntOpts = { refetchOnMountOrArgChange: true };
   const { data: cntAll  } = useGetBookingsQuery({ ...cntBase },                                              cntOpts);
   const { data: cntPend } = useGetBookingsQuery({ ...cntBase, status: resolveStatus('Pending') },       cntOpts);
