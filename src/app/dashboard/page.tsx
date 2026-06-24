@@ -455,7 +455,6 @@ export default function DashboardPage() {
                 <Tooltip
                   contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 11, boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}
                   cursor={{ fill: '#f8fafc' }}
-                  formatter={(value, name) => [value, name === 'in_progress' ? 'In Progress' : name === 'pending' ? 'Pending' : 'Completed']}
                 />
                 <Bar dataKey="pending" name="Pending" stackId="a" fill="#fbbf24" radius={[0, 0, 0, 0]} isAnimationActive={false} />
                 <Bar dataKey="in_progress" name="In Progress" stackId="a" fill="#60a5fa" isAnimationActive={false} />
