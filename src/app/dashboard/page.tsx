@@ -179,7 +179,7 @@ export default function DashboardPage() {
   const BST_TZ = 'Europe/London';
   const todayISO = new Intl.DateTimeFormat('en-CA', { timeZone: BST_TZ }).format(new Date());
 
-  const [statsDate, setStatsDate] = useState<string | null>(null);
+  const [statsDate, setStatsDate] = useState<string | null>(todayISO);
 
   // DA Count still comes from the dashboard API (bookings API doesn't expose it)
   const { data: dashStats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } =
@@ -194,9 +194,10 @@ export default function DashboardPage() {
     da_numbers_count: dashStats?.da_numbers_count ?? 0,
   };
 
-  const { data: statusBreakdown = [] } = useGetStatusBreakdownQuery();
-  const { data: priorityDist = [] } = useGetPriorityDistributionQuery();
-  const { data: avgCompletion } = useGetAvgCompletionQuery();
+  const chartParams = statsDate ? { date: statsDate, tz: BST_TZ } : undefined;
+  const { data: statusBreakdown = [] } = useGetStatusBreakdownQuery(chartParams);
+  const { data: priorityDist = [] } = useGetPriorityDistributionQuery(chartParams);
+  const { data: avgCompletion } = useGetAvgCompletionQuery(chartParams);
   const [avgView, setAvgView] = useState<ViewMode>('table');
   const maxAvgHours = avgCompletion ? Math.max(...avgCompletion.by_priority.map(x => x.avg_hours), 1) : 1;
   const PRIORITY_COLORS: Record<string, string> = { 'Very Urgent': 'bg-red-400', 'Urgent': 'bg-amber-400', 'Not Urgent': 'bg-emerald-400' };
@@ -235,11 +236,12 @@ export default function DashboardPage() {
   const currentHourFraction = currentHour + currentMinute / 60;
   const currentTimeLabel = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
   const hourlyFlow = useMemo(() => {
-    return hourly.map(h => {
-      const completed = h.completed;
-      const pending = Math.max(h.received - h.completed, 0);
-      return { hour: h.hour, label: h.label, completed, pending };
-    });
+    return hourly.map(h => ({
+      hour: h.hour,
+      label: h.label,
+      completed: h.completed,
+      pending: h.open,
+    }));
   }, [hourly]);
 
   return (
@@ -255,7 +257,7 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {statsDate && (
+          {statsDate ? (
             <>
               <button
                 onClick={() => {
@@ -267,18 +269,14 @@ export default function DashboardPage() {
                 disabled={statsDate <= MIN_DATE}
                 className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors text-sm disabled:opacity-30 disabled:cursor-not-allowed"
               >‹</button>
-            </>
-          )}
-          <input
-            type="date"
-            value={statsDate ?? ''}
-            min={MIN_DATE}
-            max={todayISO}
-            onChange={e => setStatsDate(e.target.value || null)}
-            className="text-[11px] font-semibold text-gray-600 border border-gray-200 rounded-lg px-2 py-1 bg-white cursor-pointer focus:outline-none focus:border-indigo-300"
-          />
-          {statsDate && (
-            <>
+              <input
+                type="date"
+                value={statsDate}
+                min={MIN_DATE}
+                max={todayISO}
+                onChange={e => setStatsDate(e.target.value || todayISO)}
+                className="text-[11px] font-semibold text-gray-600 border border-gray-200 rounded-lg px-2 py-1 bg-white cursor-pointer focus:outline-none focus:border-indigo-300"
+              />
               <button
                 onClick={() => {
                   const d = new Date(statsDate);
@@ -293,6 +291,14 @@ export default function DashboardPage() {
                 onClick={() => setStatsDate(null)}
                 className="text-[10px] font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded-md transition-colors"
               >All time</button>
+            </>
+          ) : (
+            <>
+              <span className="text-[11px] font-semibold text-gray-400 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-lg">All time</span>
+              <button
+                onClick={() => setStatsDate(todayISO)}
+                className="text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded-md transition-colors"
+              >Today</button>
             </>
           )}
         </div>

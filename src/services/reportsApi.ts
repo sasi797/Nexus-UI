@@ -11,7 +11,7 @@ export interface PrioritySlice { name: string; value: number; color: string }
 export interface DailySummaryRow {
   date: string; received: number; completed: number; pending: number; rate: number;
 }
-export interface HourlyPoint { hour: number; label: string; received: number; completed: number; }
+export interface HourlyPoint { hour: number; label: string; received: number; completed: number; open: number; }
 export interface AvgCompletionByPriority { priority: string; avg_hours: number; count: number; }
 export interface AvgCompletionReport { overall_avg_hours: number; overall_count: number; by_priority: AvgCompletionByPriority[]; }
 export interface StatusBreakdownRow { priority: string; pending: number; in_progress: number; completed: number; }
@@ -26,8 +26,8 @@ export const reportsApi = api.injectEndpoints({
       query: (params) => ({ url: '/reports/trend', params }),
       providesTags: ['Reports'],
     }),
-    getPriorityDistribution: build.query<PrioritySlice[], void>({
-      query: () => '/reports/priority-distribution',
+    getPriorityDistribution: build.query<PrioritySlice[], { date?: string; tz?: string } | void>({
+      query: (params) => ({ url: '/reports/priority-distribution', params: params ?? {} }),
       providesTags: ['Reports'],
     }),
     getDailySummary: build.query<DailySummaryRow[], { days?: number }>({
@@ -38,12 +38,12 @@ export const reportsApi = api.injectEndpoints({
       query: (params) => ({ url: '/reports/hourly', params }),
       providesTags: ['Reports'],
     }),
-    getAvgCompletion: build.query<AvgCompletionReport, void>({
-      query: () => '/reports/avg-completion',
+    getAvgCompletion: build.query<AvgCompletionReport, { date?: string; tz?: string } | void>({
+      query: (params) => ({ url: '/reports/avg-completion', params: params ?? {} }),
       providesTags: ['Reports'],
     }),
-    getStatusBreakdown: build.query<StatusBreakdownRow[], void>({
-      query: () => '/reports/status-breakdown',
+    getStatusBreakdown: build.query<StatusBreakdownRow[], { date?: string; tz?: string } | void>({
+      query: (params) => ({ url: '/reports/status-breakdown', params: params ?? {} }),
       providesTags: ['Reports'],
     }),
   }),
