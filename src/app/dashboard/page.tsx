@@ -1,204 +1,49 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
   ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  ReferenceLine, LabelList,
+  ReferenceLine, LabelList, PieChart, Pie, Cell, BarChart,
 } from 'recharts';
 import { pageTransition, staggerItem } from '@/lib/animations';
 import Table, { ColumnDef } from '@/components/Table';
 import { useGetDashboardStatsQuery } from '@/services/dashboardApi';
-import { useGetBookingsQuery, BookingListItem } from '@/services/bookingsApi';
-import { useGetHourlyActivityQuery } from '@/services/reportsApi';
+import { useGetHourlyActivityQuery, useGetStatusBreakdownQuery, useGetPriorityDistributionQuery, useGetAvgCompletionQuery } from '@/services/reportsApi';
 import ApiErrorState from '@/components/ApiErrorState';
 
 /* ── helpers ── */
-function parseDaNumbers(raw: unknown): string[] {
-  const val = String(raw ?? '').trim();
-  if (!val || val === 'null') return [];
-  return val.split(',').map(s => s.trim()).filter(Boolean);
+function downloadCSV(filename: string, headers: string[], rows: (string | number)[][]) {
+  const escape = (v: string | number) => {
+    const s = String(v);
+    return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const csv = [headers, ...rows].map(r => r.map(escape).join(',')).join('\r\n');
+  const blob = new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
 }
 
-const AVATAR_COLORS = [
-  'from-sky-400 to-blue-500', 'from-violet-400 to-purple-600',
-  'from-emerald-400 to-teal-500', 'from-amber-400 to-orange-500',
-  'from-rose-400 to-pink-600', 'from-indigo-400 to-violet-500',
-];
-function avatarColor(str: string) {
-  let h = 0;
-  for (const c of str) h = (h * 31 + c.charCodeAt(0)) & 0xffff;
-  return AVATAR_COLORS[h % AVATAR_COLORS.length];
-}
-function senderName(email: string) {
-  return email.split('@')[0].split(/[._+]/).filter(Boolean)
-    .map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-}
-
-/* ── status config ── */
-const STATUS_CFG: Record<string, { bg: string; text: string; dot: string; label: string }> = {
-  'In Progress': { bg: 'bg-blue-50',    text: 'text-blue-700',    dot: 'bg-blue-500',    label: 'In Progress' },
-  Pending:       { bg: 'bg-amber-50',   text: 'text-amber-700',   dot: 'bg-amber-500',   label: 'Open'        },
-  Completed:     { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500', label: 'Completed'   },
-  Ignored:       { bg: 'bg-slate-50',   text: 'text-slate-600',   dot: 'bg-slate-400',   label: 'Ignored'     },
-};
-
-/* ── elapsed timer ── */
-function ElapsedTimer({ receivedAt, completedAt, status, priority }: {
-  receivedAt: string; completedAt: string | null; status: string; priority: string;
-}) {
-  const isActive = status === 'Pending' || status === 'In Progress';
-  const endTime   = (!isActive && completedAt) ? new Date(completedAt).getTime() : null;
-
-  const calcMs = () => endTime
-    ? endTime - new Date(receivedAt).getTime()
-    : Date.now() - new Date(receivedAt).getTime();
-
-  const [ms, setMs] = useState(calcMs);
-
-  useEffect(() => {
-    if (!isActive) { setMs(calcMs()); return; }
-    const id = setInterval(() => setMs(calcMs()), 1000);
-    return () => clearInterval(id);
-  }, [isActive, receivedAt, completedAt]);
-
-  const totalSec = Math.floor(ms / 1000);
-  const h = Math.floor(totalSec / 3600);
-  const m = Math.floor((totalSec % 3600) / 60);
-  const s = totalSec % 60;
-  const fmt = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-
-  const isHigh = priority === 'High';
-  const isMed  = priority === 'Medium';
-
-  if (!isActive) {
-    return (
-      <span className="inline-flex items-center gap-1 text-[11px] font-mono text-gray-400">
-        <svg className="w-3 h-3 shrink-0 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="9" strokeWidth={2}/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 7v5l3 3"/>
-        </svg>
-        {fmt}
-      </span>
-    );
-  }
-
-  const ringCls = isHigh ? 'bg-red-50 text-red-600 border border-red-100'
-    : isMed ? 'bg-amber-50 text-amber-600 border border-amber-100'
-    : 'bg-slate-50 text-slate-500 border border-slate-100';
-  const dotCls  = isHigh ? 'bg-red-500' : isMed ? 'bg-amber-500' : 'bg-slate-400';
-  const badgeCls = isHigh ? 'bg-red-100 text-red-600' : isMed ? 'bg-amber-100 text-amber-600' : '';
-
+type ViewMode = 'chart' | 'table';
+function ViewToggle({ view, onChange }: { view: ViewMode; onChange: (v: ViewMode) => void }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] font-mono font-semibold ${ringCls}`}>
-      <span className={`w-1.5 h-1.5 rounded-full shrink-0 animate-pulse ${dotCls}`} />
-      {fmt}
-      {(isHigh || isMed) && (
-        <span className={`text-[9px] font-extrabold uppercase px-1 py-0.5 rounded ${badgeCls}`}>
-          {priority}
-        </span>
-      )}
-    </span>
+    <div className="flex items-center bg-gray-100 rounded-lg p-0.5 gap-0.5">
+      {(['chart', 'table'] as ViewMode[]).map(v => (
+        <button key={v} onClick={() => onChange(v)}
+          className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition-all capitalize ${
+            view === v ? 'bg-white text-indigo-700 shadow-sm' : 'text-gray-400 hover:text-gray-600'
+          }`}>
+          {v === 'chart' ? 'Chart' : 'Table'}
+        </button>
+      ))}
+    </div>
   );
 }
 
-/* ── table columns ── */
-const bookingColumns: ColumnDef<BookingListItem>[] = [
-  {
-    key: 'sender_email', header: 'From',
-    render: (v) => {
-      const email = String(v);
-      const name  = senderName(email);
-      return (
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${avatarColor(email)} flex items-center justify-center text-white text-[12px] font-bold shrink-0 shadow-sm`}>
-            {email.charAt(0).toUpperCase()}
-          </div>
-          <div className="min-w-0">
-            <p className="text-[12px] font-semibold text-gray-900 truncate leading-tight">{name}</p>
-            <p className="text-[10px] text-gray-400 truncate leading-tight">{email}</p>
-          </div>
-        </div>
-      );
-    },
-  },
-  {
-    key: 'id', header: 'Booking ID', sortable: true,
-    render: v => (
-      <Link href={`/dashboard/my-bookings/${v}`}
-        className="inline-flex items-center font-mono text-[11px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded-lg transition-colors whitespace-nowrap">
-        {String(v)}
-      </Link>
-    ),
-  },
-  {
-    key: 'subject', header: 'Subject', sortable: true, filterable: true,
-    render: v => <span className="text-[12.5px] font-medium text-gray-800 line-clamp-1 max-w-[260px] block">{String(v)}</span>,
-  },
-  {
-    key: 'status', header: 'Status', sortable: true, filterable: true,
-    render: v => {
-      const cfg = STATUS_CFG[String(v)] ?? STATUS_CFG.Ignored;
-      return (
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${cfg.bg} ${cfg.text}`}>
-          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${cfg.dot}`} />
-          {cfg.label}
-        </span>
-      );
-    },
-  },
-  {
-    key: '_timer', header: 'Timer',
-    render: (_, row) => {
-      const b = row as BookingListItem;
-      return <ElapsedTimer receivedAt={b.received_at} completedAt={b.completed_at} status={b.status} priority={b.priority} />;
-    },
-  },
-  {
-    key: 'da_number', header: 'DA Numbers',
-    render: (_, row) => {
-      const nums = parseDaNumbers((row as BookingListItem).da_number);
-      if (nums.length === 0) return <span className="text-gray-200 font-black text-lg">—</span>;
-      const shown = nums.slice(0, 2);
-      const rest  = nums.length - 2;
-      return (
-        <div className="flex items-center gap-1 flex-wrap">
-          {shown.map(n => (
-            <span key={n} className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
-              {n}
-            </span>
-          ))}
-          {rest > 0 && (
-            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-emerald-600 text-white whitespace-nowrap">
-              +{rest}
-            </span>
-          )}
-        </div>
-      );
-    },
-  },
-  {
-    key: '_da_count', header: '#DA',
-    render: (_, row) => {
-      const count = parseDaNumbers((row as BookingListItem).da_number).length;
-      if (count === 0) return <span className="text-gray-200 font-black text-lg">—</span>;
-      return (
-        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-emerald-600 text-white text-[11px] font-bold shadow-sm">
-          {count}
-        </span>
-      );
-    },
-  },
-  {
-    key: 'received_at', header: 'Received', sortable: true,
-    render: v => (
-      <span className="text-[11px] text-gray-400 whitespace-nowrap">
-        {new Date(String(v)).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-      </span>
-    ),
-  },
-
-];
+/* ── shared tick — single 1s interval drives all timers ── */
+let sharedTick = Date.now();
 
 /* ── skeleton ── */
 function Skeleton({ className = '' }: { className?: string }) {
@@ -338,41 +183,54 @@ export default function DashboardPage() {
 
   // DA Count still comes from the dashboard API (bookings API doesn't expose it)
   const { data: dashStats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } =
-    useGetDashboardStatsQuery(statsDate ? { date: statsDate, tz: userTz } : undefined, { pollingInterval: 30_000, refetchOnFocus: true });
-
-  // Status counts come from the same bookings API as All Bookings — guaranteed to always match
-  const cntOpts = { pollingInterval: 30_000, refetchOnFocus: true };
-  const cntBase = { created_after: statsDate ? `date:${statsDate}` : undefined, tz: userTz, page_size: 1 };
-  const { data: cntAll  } = useGetBookingsQuery(cntBase, cntOpts);
-  const { data: cntOpen } = useGetBookingsQuery({ ...cntBase, status: 'Pending' },     cntOpts);
-  const { data: cntProg } = useGetBookingsQuery({ ...cntBase, status: 'In Progress' }, cntOpts);
-  const { data: cntDone } = useGetBookingsQuery({ ...cntBase, status: 'Completed' },   cntOpts);
-  const { data: cntIgn  } = useGetBookingsQuery({ ...cntBase, status: 'Ignored' },     cntOpts);
+    useGetDashboardStatsQuery(statsDate ? { date: statsDate, tz: userTz } : undefined, { pollingInterval: 30_000 });
 
   const stats = {
-    total_bookings:   cntAll?.total  ?? dashStats?.total_bookings  ?? 0,
-    pending:          cntOpen?.total ?? dashStats?.pending          ?? 0,
-    in_progress:      cntProg?.total ?? dashStats?.in_progress      ?? 0,
-    completed:        cntDone?.total ?? dashStats?.completed        ?? 0,
-    ignored:          cntIgn?.total  ?? dashStats?.ignored          ?? 0,
+    total_bookings:   dashStats?.total_bookings  ?? 0,
+    pending:          dashStats?.pending          ?? 0,
+    in_progress:      dashStats?.in_progress      ?? 0,
+    completed:        dashStats?.completed        ?? 0,
+    ignored:          dashStats?.ignored          ?? 0,
     da_numbers_count: dashStats?.da_numbers_count ?? 0,
   };
 
-  const { data: bookingsPage, isLoading: bookingsLoading, isError: bookingsError, refetch: refetchBookings } =
-    useGetBookingsQuery({ page_size: 10 }, { pollingInterval: 30_000, refetchOnFocus: true });
-  const bookings = bookingsPage?.items ?? [];
+  const { data: statusBreakdown = [] } = useGetStatusBreakdownQuery();
+  const { data: priorityDist = [] } = useGetPriorityDistributionQuery();
+  const { data: avgCompletion } = useGetAvgCompletionQuery();
+  const [avgView, setAvgView] = useState<ViewMode>('table');
+  const maxAvgHours = avgCompletion ? Math.max(...avgCompletion.by_priority.map(x => x.avg_hours), 1) : 1;
+  const PRIORITY_COLORS: Record<string, string> = { 'Very Urgent': 'bg-red-400', 'Urgent': 'bg-amber-400', 'Not Urgent': 'bg-emerald-400' };
+  const avgTableData = avgCompletion ? [
+    { priority: 'Overall', avg_hours: avgCompletion.overall_avg_hours, count: avgCompletion.overall_count },
+    ...avgCompletion.by_priority,
+  ] : [];
+  const avgColumns: ColumnDef<{ priority: string; avg_hours: number; count: number }>[] = [
+    {
+      key: 'priority', header: 'Priority', sortable: true,
+      render: (v) => {
+        const colorMap: Record<string, string> = { 'Very Urgent': 'text-red-600', 'Urgent': 'text-amber-600', 'Not Urgent': 'text-emerald-600', 'Overall': 'text-indigo-700' };
+        return <span className={`font-bold text-sm ${colorMap[String(v)] ?? 'text-gray-700'} ${v === 'Overall' ? 'italic' : ''}`}>{String(v)}</span>;
+      },
+    },
+    { key: 'avg_hours', header: 'Avg Hours', sortable: true, render: v => <span className="font-bold text-gray-800">{Number(v).toFixed(1)}h</span> },
+    { key: 'count', header: 'Bookings', sortable: true, render: v => <span className="font-medium text-gray-600">{String(v)}</span> },
+  ];
 
   const [hourlyDate, setHourlyDate] = useState(todayISO);
-  const { data: hourly = [], isLoading: hourlyLoading } = useGetHourlyActivityQuery({ date: hourlyDate, tz: userTz }, { pollingInterval: 30_000, refetchOnFocus: true });
+  const { data: hourly = [], isLoading: hourlyLoading } = useGetHourlyActivityQuery({ date: hourlyDate, tz: userTz }, { pollingInterval: 30_000 });
   const isToday = hourlyDate === todayISO;
 
-  const [now, setNow] = useState(new Date());
+  const [tick, setTick] = useState(() => Date.now());
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 30_000);
+    const id = setInterval(() => {
+      sharedTick = Date.now();
+      setTick(sharedTick);
+    }, 60_000);
     return () => clearInterval(id);
   }, []);
-  const currentHour = now.getHours();
-  const currentMinute = now.getMinutes();
+  const nowDate = new Date(tick);
+  const currentHour = nowDate.getHours();
+  const currentMinute = nowDate.getMinutes();
   const currentHourFraction = currentHour + currentMinute / 60;
   const currentTimeLabel = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
   const hourlyFlow = useMemo(() => {
@@ -562,10 +420,10 @@ export default function DashboardPage() {
                     label={{ value: `Now ${currentTimeLabel}`, position: 'top', fill: '#3b82f6', fontSize: 10, fontWeight: 700 }}
                   />
                 )}
-                <Bar dataKey="completed" name="Completed" stackId="a" fill="#22c55e" radius={[0, 0, 0, 0]}>
+                <Bar dataKey="completed" name="Completed" stackId="a" fill="#22c55e" radius={[0, 0, 0, 0]} isAnimationActive={false}>
                   <LabelList dataKey="completed" position="inside" fill="#fff" fontSize={10} fontWeight={700} formatter={(v: React.ReactNode) => (Number(v) > 0 ? String(v) : '')} />
                 </Bar>
-                <Bar dataKey="pending" name="Open" stackId="a" fill="#f59e0b" radius={[3, 3, 0, 0]}>
+                <Bar dataKey="pending" name="Open" stackId="a" fill="#f59e0b" radius={[3, 3, 0, 0]} isAnimationActive={false}>
                   <LabelList dataKey="pending" position="inside" fill="#fff" fontSize={10} fontWeight={700} formatter={(v: React.ReactNode) => (Number(v) > 0 ? String(v) : '')} />
                 </Bar>
               </ComposedChart>
@@ -574,38 +432,128 @@ export default function DashboardPage() {
         }
       </motion.div>
 
-      {/* ── Recent Bookings ── */}
-      <motion.div variants={staggerItem} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center">
-              <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-              </svg>
-            </div>
-            <div>
-              <h2 className="font-bold text-gray-900 text-sm leading-tight">Recent Bookings</h2>
-              <p className="text-[11px] text-gray-400 leading-tight mt-0.5">
-                {bookings.length > 0 ? `Latest ${bookings.length} bookings` : 'No bookings yet'}
-              </p>
+      {/* ── Priority Charts ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        {/* Booking Status by Priority */}
+        <motion.div variants={staggerItem} className="col-span-1 lg:col-span-3 bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <h2 className="font-bold text-gray-900 text-sm">Booking Status by Priority</h2>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[10px] font-semibold text-gray-500">
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" />Pending</span>
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-blue-400 inline-block" />In Progress</span>
+              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" />Completed</span>
             </div>
           </div>
-          <Link
-            href="/dashboard/all-bookings"
-            className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-indigo-600 hover:text-white bg-indigo-50 hover:bg-indigo-600 px-3.5 py-2 rounded-xl transition-all duration-200"
-          >
-            View all
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-            </svg>
-          </Link>
+          {statusBreakdown.length === 0 ? (
+            <div className="flex items-center justify-center h-[185px] text-gray-300 text-sm">No data yet</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={185}>
+              <BarChart data={statusBreakdown} layout="vertical" margin={{ top: 0, right: 16, left: 4, bottom: 0 }} barCategoryGap="30%">
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <YAxis type="category" dataKey="priority" tick={{ fontSize: 11, fill: '#374151', fontWeight: 600 }} axisLine={false} tickLine={false} width={72} />
+                <Tooltip
+                  contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 11, boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}
+                  cursor={{ fill: '#f8fafc' }}
+                  formatter={(value, name) => [value, name === 'in_progress' ? 'In Progress' : name === 'pending' ? 'Pending' : 'Completed']}
+                />
+                <Bar dataKey="pending" name="Pending" stackId="a" fill="#fbbf24" radius={[0, 0, 0, 0]} isAnimationActive={false} />
+                <Bar dataKey="in_progress" name="In Progress" stackId="a" fill="#60a5fa" isAnimationActive={false} />
+                <Bar dataKey="completed" name="Completed" stackId="a" fill="#10b981" radius={[0, 4, 4, 0]} isAnimationActive={false} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </motion.div>
+
+        {/* Bookings by Priority */}
+        <motion.div variants={staggerItem} className="col-span-1 lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+          <h2 className="font-bold text-gray-900 text-sm mb-1">Bookings by Priority</h2>
+          <div className="flex flex-col items-center">
+            <div className="relative">
+              <ResponsiveContainer width={165} height={165}>
+                <PieChart>
+                  <Pie data={priorityDist} cx="50%" cy="50%" innerRadius={46} outerRadius={70} paddingAngle={4} dataKey="value">
+                    {priorityDist.map((e, i) => <Cell key={i} fill={e.color} stroke="white" strokeWidth={2} />)}
+                  </Pie>
+                  <Tooltip formatter={v => [`${v}%`, '']} contentStyle={{ borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 11 }} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <p className="text-xl font-black text-gray-900">{stats.total_bookings || '—'}</p>
+                <p className="text-[10px] text-gray-400 font-medium">Total</p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-1.5 mt-1 w-full px-2">
+              {priorityDist.map(item => (
+                <div key={item.name} className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                    <span className="text-xs text-gray-600 font-medium">{item.name}</span>
+                  </div>
+                  <span className="text-xs font-bold text-gray-700">{item.value}%</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* ── Avg Completion Time ── */}
+      <motion.div variants={staggerItem} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-bold text-gray-900 text-sm">Avg Completion Time</h2>
+          <div className="flex items-center gap-2">
+            {avgView === 'table' && avgCompletion && (
+              <button
+                onClick={() => downloadCSV(
+                  'avg-completion-time.csv',
+                  ['Priority', 'Avg Hours', 'Bookings'],
+                  avgTableData.map(r => [r.priority, r.avg_hours, r.count])
+                )}
+                className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors"
+              >
+                ↓ CSV
+              </button>
+            )}
+            <ViewToggle view={avgView} onChange={setAvgView} />
+          </div>
         </div>
-        {bookingsLoading
-          ? <div className="p-5 space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}</div>
-          : bookingsError
-            ? <ApiErrorState title="Failed to load bookings" onRetry={refetchBookings} />
-            : <Table columns={bookingColumns} data={bookings} rowKey={r => r.id} />
-        }
+        {avgCompletion ? (
+          avgView === 'chart' ? (
+            <div className="flex flex-col gap-4">
+              <div className="bg-gradient-to-br from-indigo-50 to-violet-50 rounded-xl p-4 text-center">
+                <p className="text-3xl font-black text-indigo-700">{avgCompletion.overall_avg_hours}h</p>
+                <p className="text-[11px] text-gray-500 font-medium mt-1">Overall average</p>
+                <p className="text-[10px] text-gray-400">{avgCompletion.overall_count} completed bookings</p>
+              </div>
+              <div className="flex flex-col gap-2">
+                {avgCompletion.by_priority.map(p => (
+                  <div key={p.priority}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] font-semibold text-gray-600">{p.priority}</span>
+                      <span className="text-[11px] font-bold text-gray-700">{p.avg_hours}h</span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.round((p.avg_hours / maxAvgHours) * 100)}%` }}
+                        transition={{ duration: 0.8, ease: 'easeOut' }}
+                        className={`h-full rounded-full ${PRIORITY_COLORS[p.priority] ?? 'bg-indigo-400'}`}
+                      />
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-0.5">{p.count} bookings</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-gray-100 overflow-hidden">
+              <Table columns={avgColumns} data={avgTableData} rowKey={row => row.priority} emptyMessage="No data yet." />
+            </div>
+          )
+        ) : (
+          <div className="flex items-center justify-center h-24 text-gray-300 text-sm">No data yet</div>
+        )}
       </motion.div>
     </motion.div>
   );
