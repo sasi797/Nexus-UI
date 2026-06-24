@@ -179,7 +179,7 @@ export default function DashboardPage() {
   const BST_TZ = 'Europe/London';
   const todayISO = new Intl.DateTimeFormat('en-CA', { timeZone: BST_TZ }).format(new Date());
 
-  const [statsDate, setStatsDate] = useState<string | null>(todayISO);
+  const [statsDate, setStatsDate] = useState<string | null>(null);
 
   // DA Count still comes from the dashboard API (bookings API doesn't expose it)
   const { data: dashStats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } =
@@ -216,7 +216,7 @@ export default function DashboardPage() {
     { key: 'count', header: 'Bookings', sortable: true, render: v => <span className="font-medium text-gray-600">{String(v)}</span> },
   ];
 
-  const [hourlyDate, setHourlyDate] = useState(todayISO);
+  const hourlyDate = statsDate ?? todayISO;
   const { data: hourly = [], isLoading: hourlyLoading } = useGetHourlyActivityQuery({ date: hourlyDate, tz: BST_TZ }, { pollingInterval: 30_000 });
   const isToday = hourlyDate === todayISO;
 
@@ -354,49 +354,15 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between mb-3">
           <div>
             <h2 className="font-bold text-gray-900 text-sm leading-tight">Hourly Bookings Flow</h2>
-            <p className="text-[11px] text-gray-400 leading-tight mt-0.5">{isToday ? 'Today, by hour' : 'By hour'}</p>
+            <p className="text-[11px] text-gray-400 leading-tight mt-0.5">
+              {isToday ? 'Today, by hour' : `${new Date(hourlyDate + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}, by hour`}
+            </p>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                const d = new Date(hourlyDate);
-                d.setDate(d.getDate() - 1);
-                const prev = d.toISOString().split('T')[0];
-                if (prev >= MIN_DATE) setHourlyDate(prev);
-              }}
-              disabled={hourlyDate <= MIN_DATE}
-              className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors text-sm disabled:opacity-30 disabled:cursor-not-allowed"
-            >‹</button>
-            <input
-              type="date"
-              value={hourlyDate}
-              min={MIN_DATE}
-              max={todayISO}
-              onChange={e => setHourlyDate(e.target.value)}
-              className="text-[11px] font-semibold text-gray-600 border border-gray-200 rounded-lg px-2 py-1 bg-white cursor-pointer focus:outline-none focus:border-indigo-300"
-            />
-            <button
-              onClick={() => {
-                const d = new Date(hourlyDate);
-                d.setDate(d.getDate() + 1);
-                const next = d.toISOString().split('T')[0];
-                if (next <= todayISO) setHourlyDate(next);
-              }}
-              disabled={isToday}
-              className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors text-sm disabled:opacity-30 disabled:cursor-not-allowed"
-            >›</button>
-            {!isToday && (
-              <button
-                onClick={() => setHourlyDate(todayISO)}
-                className="text-[10px] font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-2 py-1 rounded-md transition-colors"
-              >Today</button>
-            )}
-            {isToday && (
-              <span className="text-[11px] font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg whitespace-nowrap">
-                Current time {currentTimeLabel}
-              </span>
-            )}
-          </div>
+          {isToday && (
+            <span className="text-[11px] font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg whitespace-nowrap">
+              Current time {currentTimeLabel}
+            </span>
+          )}
         </div>
         {hourlyLoading
           ? <Skeleton className="h-[260px]" />
