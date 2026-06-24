@@ -102,7 +102,7 @@ const WM = {
 
 /* ── stat card ── */
 function StatCard({ label, value, gradient, border, valueColor, iconBg, iconColor, icon, watermarkColor, watermark, sub, delay = 0 }: {
-  label: string; value: number; gradient: string; border: string;
+  label: string; value: number | null; gradient: string; border: string;
   valueColor: string; iconBg: string; iconColor: string; icon: React.ReactNode;
   watermarkColor: string; watermark: React.ReactNode;
   sub?: { value: number; label: string } | null; delay?: number;
@@ -133,9 +133,9 @@ function StatCard({ label, value, gradient, border, valueColor, iconBg, iconColo
         initial={{ opacity: 0, scale: 0.75 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ type: 'spring', stiffness: 220, delay: delay + 0.08 }}
-        className={`text-3xl font-black leading-none ${valueColor}`}
+        className={`text-3xl font-black leading-none ${value === null ? 'text-gray-300' : valueColor}`}
       >
-        {value}
+        {value === null ? 'N/A' : value}
       </motion.p>
 
       {/* Sub metric */}
@@ -344,7 +344,7 @@ export default function DashboardPage() {
                 watermarkColor="text-slate-200" watermark={WM.ban} delay={0.28}
               />
               <StatCard
-                label="DA Count" value={stats?.da_numbers_count ?? 0}
+                label="DA Count" value={statsDate ? null : (stats?.da_numbers_count ?? 0)}
                 gradient="bg-gradient-to-br from-violet-50 to-purple-100"
                 border="border-violet-100" valueColor="text-violet-700"
                 iconBg="bg-violet-100" iconColor="text-violet-600" icon={ICON.hash}
