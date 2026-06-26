@@ -8,6 +8,7 @@ import type { RootState } from '@/store';
 import { useGetMessagesQuery, useReplyMessageMutation, useSyncEmailsMutation } from '@/services/emailApi';
 import { useGetEmailTemplatesQuery } from '@/services/emailTemplatesApi';
 import type { EmailMessage, EmailAttachment } from '@/services/emailApi';
+import AccountCodePicker from '@/components/AccountCodePicker';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 const MAILBOX_EMAIL = (process.env.NEXT_PUBLIC_MAILBOX_EMAIL ?? '').toLowerCase();
@@ -337,10 +338,12 @@ function SelectedFileChip({ file, onRemove }: { file: File; onRemove: () => void
 
   return (
     <>
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setShowPreview(true)}
-        className="flex items-center gap-3 px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-indigo-300 hover:shadow-md transition-all w-full sm:w-auto sm:min-w-[200px] sm:max-w-[260px] text-left group"
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setShowPreview(true); }}
+        className="flex items-center gap-3 px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-indigo-300 hover:shadow-md transition-all w-full sm:w-auto sm:min-w-[200px] sm:max-w-[260px] text-left group cursor-pointer"
       >
         <div className={`w-9 h-9 rounded-lg ${iconBg} ${iconClr} flex items-center justify-center shrink-0 overflow-hidden`}>
           {isImage && thumbUrl ? (
@@ -376,7 +379,7 @@ function SelectedFileChip({ file, onRemove }: { file: File; onRemove: () => void
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12"/>
           </svg>
         </button>
-      </button>
+      </div>
 
       <AnimatePresence>
         {showPreview && <FilePreviewModal file={file} onClose={() => setShowPreview(false)} />}
@@ -459,7 +462,7 @@ function AttachmentChip({ att, token }: { att: EmailAttachment; token: string | 
   );
 }
 
-function MessageCard({ msg, token, defaultOpen }: { msg: EmailMessage; token: string | null; defaultOpen: boolean }) {
+function MessageCard({ msg, token, defaultOpen, onCreateBooking }: { msg: EmailMessage; token: string | null; defaultOpen: boolean; onCreateBooking?: () => void }) {
   const isInbound = msg.direction === 'inbound';
   const [collapsed, setCollapsed] = useState(!defaultOpen);
   const [resolvedHtml, setResolvedHtml] = useState<string | null>(null);
@@ -536,6 +539,18 @@ function MessageCard({ msg, token, defaultOpen }: { msg: EmailMessage; token: st
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {isInbound && onCreateBooking && (
+            <button
+              type="button"
+              onClick={e => { e.stopPropagation(); onCreateBooking(); }}
+              className="flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-300 transition-all"
+            >
+              <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+              </svg>
+              New Booking
+            </button>
+          )}
           <span className="text-[11px] text-gray-400">{formattedTime}</span>
           <svg
             className={`w-3.5 h-3.5 text-gray-300 transition-transform ${collapsed ? '' : 'rotate-180'}`}
@@ -624,6 +639,7 @@ function MessageCard({ msg, token, defaultOpen }: { msg: EmailMessage; token: st
   );
 }
 
+
 interface Props {
   bookingId: string;
   senderEmail: string;
@@ -631,8 +647,10 @@ interface Props {
   composeTab?: ComposeTab;
   onComposeTabChange?: (tab: ComposeTab) => void;
   onSendSuccess?: (daNumber: string, description: string) => void;
+  onCreateBookingFromReply?: (msg: EmailMessage) => void;
   newestFirst?: boolean;
   readOnly?: boolean;
+  onAccountCodeSelected?: (code: string | null) => void;
 }
 
 function extractDaDetails(text: string): { daNumber: string; description: string } {
@@ -652,7 +670,7 @@ function extractDaDetails(text: string): { daNumber: string; description: string
   return { daNumber, description };
 }
 
-export default function EmailThread({ bookingId, senderEmail, replyRef, composeTab: controlledTab, onComposeTabChange, onSendSuccess, newestFirst = true, readOnly = false }: Props) {
+export default function EmailThread({ bookingId, senderEmail, replyRef, composeTab: controlledTab, onComposeTabChange, onSendSuccess, onCreateBookingFromReply, newestFirst = true, readOnly = false, onAccountCodeSelected }: Props) {
   const accessToken = useSelector((s: RootState) => s.auth.accessToken);
   const currentUser  = useSelector((s: RootState) => s.auth.user);
   const { data: messages = [], isLoading } = useGetMessagesQuery(bookingId, { pollingInterval: 20000 });
@@ -668,6 +686,11 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
     const diff = new Date(b.sent_at).getTime() - new Date(a.sent_at).getTime();
     return newestFirst ? diff : -diff;
   });
+
+  const firstInboundId = useMemo(() => {
+    const byTime = [...messages].sort((a, b) => new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime());
+    return byTime.find(m => m.direction === 'inbound')?.id ?? null;
+  }, [messages]);
 
   // Rich-text editor (replaces plain textarea)
   const editorRef = useRef<HTMLDivElement>(null);
@@ -710,6 +733,9 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
   const [ccInput, setCcInput] = useState('');
 
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const [showAccountPickerToolbar, setShowAccountPickerToolbar] = useState(false);
+  const [selectedAccountCode, setSelectedAccountCode] = useState<string | null>(null);
+  const accountPickerRef = useRef<HTMLDivElement>(null);
   const templatePickerRef = useRef<HTMLDivElement>(null);
   const toInputWrapperRef = useRef<HTMLDivElement>(null);
   const ccInputWrapperRef = useRef<HTMLDivElement>(null);
@@ -725,6 +751,16 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [showTemplatePicker]);
+
+  useEffect(() => {
+    if (!showAccountPickerToolbar) return;
+    const handler = (e: MouseEvent) => {
+      if (!accountPickerRef.current?.contains(e.target as Node))
+        setShowAccountPickerToolbar(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showAccountPickerToolbar]);
 
   const firstInbound = messages.find(m => m.direction === 'inbound');
   const isMailbox = (e: string) => e.toLowerCase() === MAILBOX_EMAIL;
@@ -958,6 +994,34 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
 
   const composePlaceholder = composeTab === 'Forward' ? 'Write your forwarded message…' : 'Write your reply…';
 
+  const handleAccountCodeSelect = (code: string) => {
+    const el = editorRef.current;
+    if (el) {
+      const original = el.innerHTML;
+      let replaced = original.replace(
+        /(Your Account Code:[^<]{0,30})&lt;_+&gt;/i,
+        `$1${code}`
+      );
+      if (replaced === original) {
+        replaced = original.replace(
+          /(Your Account Code:\s*)[^<\r\n]*/i,
+          `$1${code}`
+        );
+      }
+      if (replaced !== original) {
+        el.innerHTML = replaced;
+      } else {
+        el.focus();
+        try { document.execCommand('insertText', false, code); } catch { }
+      }
+      setEditorEmpty(!el.innerText.trim());
+    }
+    setSelectedAccountCode(code);
+    onAccountCodeSelected?.(code);
+    setShowAccountPickerToolbar(false);
+  };
+
+
   const handleSync = async () => {
     setSyncResult(null);
     try {
@@ -1025,6 +1089,11 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
               msg={msg}
               token={accessToken}
               defaultOpen={i === 0}
+              onCreateBooking={
+                msg.direction === 'inbound' && msg.id !== firstInboundId && onCreateBookingFromReply
+                  ? () => onCreateBookingFromReply(msg)
+                  : undefined
+              }
             />
           ))}
         </div>
@@ -1396,6 +1465,44 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
                 </AnimatePresence>
               </div>
             )}
+
+            {/* Account code picker — toolbar button (floats upward) */}
+            <div className="relative" ref={accountPickerRef}>
+              <button
+                type="button"
+                onClick={() => { setShowAccountPickerToolbar(p => !p); setShowTemplatePicker(false); }}
+                className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 border rounded-lg transition-all ${
+                  selectedAccountCode
+                    ? 'border-emerald-300 text-emerald-700 bg-emerald-50'
+                    : showAccountPickerToolbar
+                      ? 'border-emerald-300 text-emerald-700 bg-emerald-50/60'
+                      : 'border-gray-200 text-gray-500 hover:border-emerald-300 hover:text-emerald-700 hover:bg-emerald-50/40'
+                }`}
+              >
+                <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/>
+                </svg>
+                {selectedAccountCode
+                  ? <><span className="opacity-70 font-normal">Account Code:</span><span className="font-mono font-bold ml-1">{selectedAccountCode}</span><span className="ml-0.5 text-emerald-400">✓</span></>
+                  : 'Account Codes'
+                }
+              </button>
+              <AnimatePresence>
+                {showAccountPickerToolbar && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 6, scale: 0.97 }}
+                    transition={{ duration: 0.12 }}
+                  >
+                    <AccountCodePicker
+                      onSelect={code => handleAccountCodeSelect(code)}
+                      onClose={() => setShowAccountPickerToolbar(false)}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
             <div className="flex-1" />
 

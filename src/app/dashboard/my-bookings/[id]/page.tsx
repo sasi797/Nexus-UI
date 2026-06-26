@@ -8,14 +8,18 @@ import { pageTransition, staggerItem } from '@/lib/animations';
 import {
   useGetBookingQuery, usePatchBookingStatusMutation,
   useUpdateBookingMutation, useAssignAgentMutation, useGetBookingEventsQuery,
-  useAddSupportAgentMutation, useRemoveSupportAgentMutation,
+  useAddSupportAgentMutation, useRemoveSupportAgentMutation, useCreateBookingMutation, useSetAccountCodeMutation,
   BookingEvent,
 } from '@/services/bookingsApi';
 
 import { useGetAgentsQuery, Agent } from '@/services/agentsApi';
 import { useAppSelector } from '@/store/hooks';
+import { useReplyMessageMutation } from '@/services/emailApi';
+import type { EmailMessage, EmailAttachment } from '@/services/emailApi';
+import { useGetEmailTemplatesQuery } from '@/services/emailTemplatesApi';
 
 import EmailThread from '@/components/EmailThread';
+import AccountCodePicker from '@/components/AccountCodePicker';
 
 type ComposeTab = 'Reply' | 'Reply All' | 'Forward';
 
@@ -42,6 +46,28 @@ const STATUS_PILL_ON: Record<string, string> = {
   Completed: 'bg-red-50 text-red-600 border-red-300',
   Ignored: 'bg-slate-100 text-slate-700 border-slate-400',
 };
+// Strips quoted-reply content so only the sender's new text is shown.
+// Handles both HTML (removes <blockquote> and the "On … wrote:" line) and plain text.
+function stripQuotedReply(html: string | null | undefined, text: string | null | undefined): { html: string | null; text: string | null } {
+  let cleanHtml: string | null = null;
+  if (html) {
+    // Remove Gmail/Outlook blockquote wrappers
+    let h = html.replace(/<blockquote[\s\S]*?<\/blockquote>/gi, '');
+    // Remove "On <date>, <name> wrote:" divider lines
+    h = h.replace(/<div[^>]*>\s*On .{0,120}wrote:\s*<\/div>/gi, '');
+    // Trim trailing <br> / empty <p>
+    h = h.replace(/(<br\s*\/?>|\s|&nbsp;)*$/gi, '').trim();
+    cleanHtml = h || null;
+  }
+  let cleanText: string | null = null;
+  if (text) {
+    const lines = text.split('\n');
+    const cutIdx = lines.findIndex(l => /^On .{0,120}wrote:/.test(l.trim()) || l.trimStart().startsWith('>'));
+    cleanText = (cutIdx > 0 ? lines.slice(0, cutIdx) : lines).join('\n').trim() || null;
+  }
+  return { html: cleanHtml, text: cleanText };
+}
+
 const STATUS_DOT: Record<string, string> = {
   Pending: 'bg-amber-400', 'In Progress': 'bg-blue-500', Completed: 'bg-red-400', Ignored: 'bg-slate-500',
 };
@@ -304,31 +330,78 @@ function HistorySection({
 export default function BookingDetailPage() {
   const { id }   = useParams<{ id: string }>();
   const router   = useRouter();
-  const replyRef = useRef<HTMLElement>(null);
+  const replyRef              = useRef<HTMLElement>(null);
+  const topPickerRef = useRef<HTMLDivElement>(null);
   const currentUser = useAppSelector(state => state.auth.user);
   const readOnly = currentUser?.role === 'viewer';
 
-  const [composeTab, setComposeTab]       = useState<ComposeTab>('Reply');
-  const [savedField, setSavedField]       = useState<string | null>(null);
-  const [showDaModal, setShowDaModal]     = useState(false);
-  const [daNumber, setDaNumber]           = useState('');
-  const [daDesc, setDaDesc]               = useState('');
-  const [sidebarOpen, setSidebarOpen]     = useState(true);
-  const [newestFirst, setNewestFirst]     = useState(true);
+  const [selectedAccountCode, setSelectedAccountCode] = useState<string | null>(null);
+  const [showAccountPickerTop, setShowAccountPickerTop] = useState(false);
+  const [accountCodeCopied, setAccountCodeCopied] = useState(false);
+  const [composeTab, setComposeTab]             = useState<ComposeTab>('Reply');
+  const [savedField, setSavedField]             = useState<string | null>(null);
+  const [showDaModal, setShowDaModal]           = useState(false);
+  const [daNumber, setDaNumber]                 = useState('');
+  const [daDesc, setDaDesc]                     = useState('');
+  const [sidebarOpen, setSidebarOpen]           = useState(true);
+  const [newestFirst, setNewestFirst]           = useState(true);
+  const [showNewBookingModal, setShowNewBookingModal] = useState(false);
+  const [newBookingSourceMsg, setNewBookingSourceMsg] = useState<EmailMessage | null>(null);
+  const [newBookingPriority, setNewBookingPriority]   = useState('Not Urgent');
+  const [newBookingError, setNewBookingError]         = useState<string | null>(null);
+  const newBookingEditorRef   = useRef<HTMLDivElement>(null);
+  const newBookingTemplateRef = useRef<HTMLDivElement>(null);
+  const [newBookingEditorEmpty,   setNewBookingEditorEmpty]   = useState(true);
+  const [newBookingToChips,       setNewBookingToChips]       = useState<string[]>([]);
+  const [newBookingToInput,       setNewBookingToInput]       = useState('');
+  const [newBookingCcChips,       setNewBookingCcChips]       = useState<string[]>([]);
+  const [newBookingCcInput,       setNewBookingCcInput]       = useState('');
+  const [newBookingFiles,         setNewBookingFiles]         = useState<File[]>([]);
+  const [newBookingShowTemplate,  setNewBookingShowTemplate]  = useState(false);
+  const [newBookingSendError,     setNewBookingSendError]     = useState<string | null>(null);
 
-  const { data: b, isLoading }                   = useGetBookingQuery(id);
-  const { data: bookingEvents = [] }             = useGetBookingEventsQuery(id, { pollingInterval: 30_000 });
-  const [patchStatus,    { isLoading: patching }] = usePatchBookingStatusMutation();
-  const [updateBooking,  { isLoading: saving }]   = useUpdateBookingMutation();
-  const [assignAgent]                             = useAssignAgentMutation();
-  const [addSupport]                              = useAddSupportAgentMutation();
-  const [removeSupport]                           = useRemoveSupportAgentMutation();
-  const { data: agents = [] }                     = useGetAgentsQuery();
+  const { data: b, isLoading }                        = useGetBookingQuery(id);
+  const { data: bookingEvents = [] }                  = useGetBookingEventsQuery(id, { pollingInterval: 30_000 });
+  const [patchStatus,    { isLoading: patching }]     = usePatchBookingStatusMutation();
+  const [updateBooking,  { isLoading: saving }]       = useUpdateBookingMutation();
+  const [assignAgent]                                 = useAssignAgentMutation();
+  const [addSupport]                                  = useAddSupportAgentMutation();
+  const [removeSupport]                               = useRemoveSupportAgentMutation();
+  const [setAccountCode]                              = useSetAccountCodeMutation();
+  const [createBooking,  { isLoading: creatingBooking }] = useCreateBookingMutation();
+  const [replyMessage,   { isLoading: sendingNewBookingReply }] = useReplyMessageMutation();
+  const { data: agents = [] }         = useGetAgentsQuery();
+  const { data: emailTemplates = [] } = useGetEmailTemplatesQuery();
 
   useEffect(() => {
     const el = document.getElementById('main-scroll');
     if (el) el.scrollTop = 0;
   }, [id]);
+
+  useEffect(() => {
+    if (!newBookingShowTemplate) return;
+    const handler = (e: MouseEvent) => {
+      if (newBookingTemplateRef.current && !newBookingTemplateRef.current.contains(e.target as Node))
+        setNewBookingShowTemplate(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [newBookingShowTemplate]);
+
+  useEffect(() => {
+    if (!showAccountPickerTop) return;
+    const handler = (e: MouseEvent) => {
+      if (topPickerRef.current && !topPickerRef.current.contains(e.target as Node))
+        setShowAccountPickerTop(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showAccountPickerTop]);
+
+  // Initialise from DB when booking loads
+  useEffect(() => {
+    if (b?.account_code) setSelectedAccountCode(b.account_code);
+  }, [b?.account_code]);
 
   const bookingIds  = typeof window !== 'undefined'
     ? JSON.parse(sessionStorage.getItem('bts:booking-nav') ?? '[]') as string[]
@@ -378,6 +451,48 @@ export default function BookingDetailPage() {
     await patchStatus({ id, status: 'Completed', da_number: tags.join(', '), da_description: daDesc.trim() || undefined });
     setShowDaModal(false);
     flashSaved('status');
+  };
+
+  const handleCreateBookingFromReply = (msg: EmailMessage) => {
+    setNewBookingSourceMsg(msg);
+    setNewBookingError(null);
+    setShowNewBookingModal(true);
+  };
+
+  const handleNewBookingConfirm = async () => {
+    if (!newBookingSourceMsg) return;
+    setNewBookingError(null);
+    const result = await createBooking({
+      subject: newBookingSourceMsg.subject ?? b?.subject ?? '',
+      priority: 'Not Urgent',
+      sender_email: newBookingSourceMsg.from_email,
+      parent_booking_id: id,
+      source_message_id: newBookingSourceMsg.id,
+    });
+    if ('error' in result) {
+      const err = result.error as { status?: number | string; data?: { detail?: string } };
+      // CORS/network errors (status FETCH_ERROR / 500) can happen even when the booking
+      // was successfully saved — navigate away so the user isn't stuck on the modal.
+      const isCorsOrServer = err?.status === 'FETCH_ERROR' || err?.status === 500 || err?.status === 0;
+      if (isCorsOrServer) {
+        setShowNewBookingModal(false);
+        router.push(listOrigin);
+        return;
+      }
+      const msg = err?.data?.detail ?? 'Failed to create booking. Please try again.';
+      setNewBookingError(msg);
+      return;
+    }
+    setShowNewBookingModal(false);
+    router.push(listOrigin);
+  };
+
+  const formatNewBookingText = (cmd: string) => {
+    const el = newBookingEditorRef.current;
+    if (!el) return;
+    el.focus();
+    try { document.execCommand(cmd, false); } catch { }
+    setNewBookingEditorEmpty(!el.innerText.trim());
   };
 
   const focusCompose = (tab: ComposeTab) => {
@@ -552,6 +667,65 @@ export default function BookingDetailPage() {
               Forward
             </button>
 
+            <div className="relative" ref={topPickerRef}>
+              <button
+                onClick={() => setShowAccountPickerTop(p => !p)}
+                className={`flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg border transition-all hover:shadow-sm ${
+                  selectedAccountCode
+                    ? 'bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100'
+                    : 'bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100 hover:border-indigo-300'
+                }`}>
+                <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"/>
+                </svg>
+                {selectedAccountCode
+                  ? <>
+                      <span className="opacity-70 font-normal">Account Code:</span>
+                      <span className="font-mono font-bold ml-1">{selectedAccountCode}</span>
+                      <span
+                        role="button"
+                        title="Copy account code"
+                        onClick={e => {
+                          e.stopPropagation();
+                          navigator.clipboard.writeText(selectedAccountCode);
+                          setAccountCodeCopied(true);
+                          setTimeout(() => setAccountCodeCopied(false), 1500);
+                        }}
+                        className="ml-1.5 cursor-pointer"
+                      >
+                        {accountCodeCopied
+                          ? <span className="text-emerald-500 text-[10px] font-semibold">Copied!</span>
+                          : <svg className="w-3 h-3 text-emerald-500 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                            </svg>
+                        }
+                      </span>
+                    </>
+                  : 'Account Codes'
+                }
+              </button>
+              <AnimatePresence>
+                {showAccountPickerTop && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                    transition={{ duration: 0.12 }}
+                  >
+                    <AccountCodePicker
+                      direction="down"
+                      onSelect={code => {
+                        setSelectedAccountCode(code);
+                        setShowAccountPickerTop(false);
+                        setAccountCode({ id, code });
+                      }}
+                      onClose={() => setShowAccountPickerTop(false)}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
             <div className="flex-1" />
 
             <motion.button
@@ -583,6 +757,7 @@ export default function BookingDetailPage() {
                 await patchStatus({ id, status: 'Completed', da_number: daNumber, da_description: description || undefined });
                 flashSaved('status');
               }}
+              onCreateBookingFromReply={!readOnly ? handleCreateBookingFromReply : undefined}
               newestFirst={newestFirst}
               readOnly={readOnly}
             />
@@ -860,6 +1035,63 @@ export default function BookingDetailPage() {
                 </div>
               )}
 
+              {/* Parent Booking */}
+              {b.parent_booking && (
+                <div>
+                  <p className={labelCls}>Parent Booking</p>
+                  <Link
+                    href={`/dashboard/my-bookings/${b.parent_booking.id}`}
+                    className="flex items-center gap-2.5 px-3 py-2 bg-violet-50/60 border border-violet-100 rounded-lg hover:bg-violet-100 hover:border-violet-300 transition-colors group"
+                  >
+                    <div className="w-6 h-6 rounded-md bg-violet-100 flex items-center justify-center shrink-0">
+                      <svg className="w-3.5 h-3.5 text-violet-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
+                      </svg>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-bold text-violet-400 uppercase tracking-wider leading-none mb-0.5">Parent</p>
+                      <p className="text-xs font-semibold text-gray-800 group-hover:text-violet-700 truncate">{b.parent_booking.subject}</p>
+                      <p className="text-[10px] text-gray-400 font-mono">{b.parent_booking.id}</p>
+                    </div>
+                    <svg className="w-3.5 h-3.5 text-violet-300 group-hover:text-violet-600 shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Link>
+                </div>
+              )}
+
+              {/* Related (child) Bookings */}
+              {b.child_bookings.length > 0 && (
+                <div>
+                  <p className={labelCls}>Related Bookings</p>
+                  <div className="space-y-1.5">
+                    {b.child_bookings.map(child => (
+                      <Link
+                        key={child.id}
+                        href={`/dashboard/my-bookings/${child.id}`}
+                        className="flex items-center gap-2.5 px-3 py-2 bg-gray-50 border border-gray-100 rounded-lg hover:bg-indigo-50/60 hover:border-indigo-200 transition-colors group"
+                      >
+                        <span className={`w-2 h-2 rounded-full shrink-0 ${STATUS_DOT[child.status] ?? 'bg-gray-300'}`} />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-semibold text-gray-700 group-hover:text-indigo-700 truncate leading-snug">{child.subject}</p>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <p className="text-[10px] text-gray-400 font-mono">{child.id}</p>
+                            {child.da_number && (
+                              <span className="text-[10px] font-bold px-1 rounded bg-emerald-50 text-emerald-700 font-mono border border-emerald-200">
+                                {child.da_number.split(',')[0].trim()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <svg className="w-3 h-3 text-gray-300 group-hover:text-indigo-500 shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Divider */}
               <div className="border-t border-gray-100" />
 
@@ -875,6 +1107,7 @@ export default function BookingDetailPage() {
                   reply_received:        { icon: '💬', color: 'bg-sky-50',     label: e => `${e.new_value ?? 'Reply received'} — booking reopened` },
                   support_agent_added:   { icon: '👥', color: 'bg-violet-50',  label: e => `Support agent added: ${e.new_value ?? ''}` },
                   support_agent_removed: { icon: '👤', color: 'bg-gray-50',    label: e => `Support agent removed: ${e.old_value ?? ''}` },
+                  child_booking_created: { icon: '🔗', color: 'bg-violet-50',  label: e => `Related booking: ${e.new_value ?? ''}` },
                 };
                 return <HistorySection events={bookingEvents} eventCfg={EVENT_CFG} />;
               })()}
@@ -883,6 +1116,153 @@ export default function BookingDetailPage() {
           </div>
         </motion.div>}
       </div>
+
+      {/* ── New Booking from Reply Modal ── */}
+      <AnimatePresence>
+        {showNewBookingModal && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+            onClick={() => setShowNewBookingModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 16 }}
+              transition={{ type: 'spring', stiffness: 340, damping: 30 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-2xl shadow-indigo-200/40 border border-indigo-100/60 w-full max-w-lg mx-auto overflow-hidden relative max-h-[90vh] flex flex-col"
+            >
+              {/* Loading overlay */}
+              {creatingBooking && (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/90 backdrop-blur-[2px] rounded-2xl">
+                  <div className="relative w-14 h-14">
+                    <div className="absolute inset-0 rounded-full border-4 border-indigo-100" />
+                    <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-indigo-600 animate-spin" />
+                    <div className="absolute inset-1.5 rounded-full border-4 border-transparent border-t-violet-400 animate-spin [animation-direction:reverse] [animation-duration:600ms]" />
+                    <div className="absolute inset-3 rounded-full bg-indigo-50 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                    </div>
+                  </div>
+                  <p className="mt-4 text-sm font-bold text-gray-800">Creating Booking…</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Please wait</p>
+                </div>
+              )}
+
+              {/* Header — gradient */}
+              <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-6 py-5 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                    <svg className="w-4.5 h-4.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-white leading-tight">Create New Booking</p>
+                    <p className="text-[11px] text-indigo-200 mt-0.5">From email reply</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowNewBookingModal(false)}
+                  className="w-7 h-7 rounded-lg bg-white/15 hover:bg-white/25 flex items-center justify-center text-white/80 hover:text-white transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
+
+                {/* From + Subject — grid keeps values perfectly column-aligned */}
+                <div className="bg-indigo-50/50 border border-indigo-100 rounded-xl overflow-hidden">
+                  <div className="grid grid-cols-[72px_1fr] items-center gap-3 px-4 py-3">
+                    <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">From</span>
+                    <span className="text-xs font-semibold text-gray-800 truncate">{newBookingSourceMsg?.from_email}</span>
+                  </div>
+                  <div className="h-px bg-indigo-100 mx-4" />
+                  <div className="grid grid-cols-[72px_1fr] items-start gap-3 px-4 py-3">
+                    <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest pt-px">Subject</span>
+                    <span className="text-xs font-semibold text-gray-800 break-words leading-relaxed">{newBookingSourceMsg?.subject}</span>
+                  </div>
+                </div>
+
+                {/* Email body — current message only, quoted thread stripped */}
+                {(newBookingSourceMsg?.body_html || newBookingSourceMsg?.body_text) && (() => {
+                  const { html, text } = stripQuotedReply(newBookingSourceMsg.body_html, newBookingSourceMsg.body_text);
+                  if (!html && !text) return null;
+                  return (
+                    <div className="max-h-64 overflow-y-auto rounded-xl border border-gray-100 bg-gray-50/80 px-4 py-3 text-sm text-gray-600 leading-relaxed">
+                      {html
+                        ? <div dangerouslySetInnerHTML={{ __html: html }} className="prose prose-sm max-w-none [&_img]:max-w-full [&_a]:text-indigo-600" />
+                        : <pre className="whitespace-pre-wrap font-sans">{text}</pre>
+                      }
+                    </div>
+                  );
+                })()}
+
+                {/* Attachments */}
+                {(newBookingSourceMsg?.attachments ?? []).length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Attachments</p>
+                    <div className="flex flex-wrap gap-2">
+                      {(newBookingSourceMsg!.attachments as EmailAttachment[]).map(att => (
+                        <div key={att.id} className="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-lg text-[11px] font-semibold text-indigo-700 shadow-sm">
+                          <svg className="w-3 h-3 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                          </svg>
+                          <span className="truncate max-w-[160px]">{att.filename}</span>
+                          {att.size_bytes && (
+                            <span className="text-indigo-400 font-normal">
+                              {att.size_bytes > 1048576
+                                ? `${(att.size_bytes / 1048576).toFixed(1)} MB`
+                                : `${Math.round(att.size_bytes / 1024)} KB`}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 bg-gray-50/60 border-t border-indigo-100/60 flex flex-col gap-3 shrink-0">
+                {newBookingError && (
+                  <div className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs font-medium text-red-600">
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {newBookingError}
+                  </div>
+                )}
+                <div className="flex items-center justify-end gap-2.5">
+                  <button
+                    onClick={() => setShowNewBookingModal(false)}
+                    className="px-4 py-2 text-sm font-semibold text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleNewBookingConfirm}
+                    disabled={creatingBooking}
+                    className="flex items-center gap-1.5 px-5 py-2 text-sm font-bold bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md shadow-indigo-200"
+                  >
+                    {creatingBooking
+                      ? <><span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />Creating…</>
+                      : <><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>Create Booking</>
+                    }
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── DA Completion Modal ── */}
       <AnimatePresence>

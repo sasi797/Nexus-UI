@@ -2,6 +2,8 @@ import { api } from './api';
 import { notificationsApi } from './notificationsApi';
 
 export interface AgentBrief { id: string; name: string; email: string }
+export interface ParentBookingBrief { id: string; subject: string; }
+export interface ChildBookingBrief { id: string; subject: string; status: string; da_number: string | null; }
 
 export interface BookingListItem {
   id: string;
@@ -21,6 +23,8 @@ export interface BookingListItem {
   last_email_at: string;
   is_read: boolean;
   has_reply: boolean;
+  parent_booking_id: string | null;
+  has_children: boolean;
 }
 
 export interface PaginatedBookings {
@@ -35,13 +39,18 @@ export interface Booking {
   id: string; subject: string; priority: string; status: string;
   agent_id: string | null; agent: AgentBrief | null; support_agents: AgentBrief[];
   sender_email: string; da_number: string | null; da_description: string | null;
-  tags: string | null;
+  tags: string | null; account_code: string | null;
   received_at: string; assigned_at: string | null; completed_at: string | null;
   created_at: string; updated_at: string;
+  parent_booking_id: string | null;
+  parent_booking: ParentBookingBrief | null;
+  child_bookings: ChildBookingBrief[];
 }
 
 export interface BookingCreate {
   subject: string; priority: string; sender_email: string;
+  parent_booking_id?: string;
+  source_message_id?: string;
 }
 
 export interface BookingUpdate extends Partial<BookingCreate> {
@@ -104,6 +113,10 @@ export const bookingsApi = api.injectEndpoints({
       query: (id) => `/bookings/${id}/events`,
       providesTags: (_r, _e, id) => [{ type: 'Booking', id }],
     }),
+    setAccountCode: build.mutation<Booking, { id: string; code: string | null }>({
+      query: ({ id, code }) => ({ url: `/bookings/${id}/account-code`, method: 'PATCH', body: { code } }),
+      invalidatesTags: (_r, _e, { id }) => [{ type: 'Booking', id }],
+    }),
     assignAgent: build.mutation<Booking, { id: string; agent_id: string | null }>({
       query: ({ id, agent_id }) => ({ url: `/bookings/${id}/assign`, method: 'PATCH', body: { agent_id } }),
       invalidatesTags: (_r, _e, { id }) => [{ type: 'Booking', id }, 'Booking', 'Dashboard'],
@@ -147,6 +160,6 @@ export const bookingsApi = api.injectEndpoints({
 export const {
   useGetBookingsQuery, useGetBookingQuery, useCreateBookingMutation,
   useUpdateBookingMutation, usePatchBookingStatusMutation, useDeleteBookingMutation,
-  useGetBookingEventsQuery, useAssignAgentMutation, useAddSupportAgentMutation, useRemoveSupportAgentMutation,
+  useGetBookingEventsQuery, useAssignAgentMutation, useSetAccountCodeMutation, useAddSupportAgentMutation, useRemoveSupportAgentMutation,
   useMarkBookingReadMutation, useMarkAllBookingsReadMutation,
 } = bookingsApi;
