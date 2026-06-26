@@ -50,14 +50,7 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
   const [open, setOpen]       = useState(false);
   const [clock, setClock]     = useState(() => new Date());
   const [tz, setTz]           = useState<'Asia/Kolkata' | 'Europe/London'>('Europe/London');
-  const [calcOpen, setCalcOpen] = useState(false);
-  const [calcUnit, setCalcUnit] = useState<'cm' | 'inches'>('cm');
-  const [calcH, setCalcH]     = useState('');
-  const [calcW, setCalcW]     = useState('');
-  const [calcL, setCalcL]     = useState('');
-  const [calcQ, setCalcQ]     = useState('');
   const ref     = useRef<HTMLDivElement>(null);
-  const calcRef = useRef<HTMLDivElement>(null);
 
   const { data }      = useGetNotificationsQuery(undefined, { pollingInterval: 60_000 });
   const [markRead]    = useMarkReadMutation();
@@ -84,23 +77,6 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
   }, [open]);
-
-  /* close calc dropdown on outside click */
-  useEffect(() => {
-    if (!calcOpen) return;
-    const h = (e: MouseEvent) => {
-      if (calcRef.current && !calcRef.current.contains(e.target as Node)) setCalcOpen(false);
-    };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, [calcOpen]);
-
-  const h = parseFloat(calcH) || 0;
-  const w = parseFloat(calcW) || 0;
-  const l = parseFloat(calcL) || 0;
-  const q = calcQ === '' ? 1 : parseFloat(calcQ) || 0;
-  const divisor  = calcUnit === 'cm' ? 6000 : 366;
-  const volWeight = h > 0 && w > 0 && l > 0 ? (h * w * l * q) / divisor : null;
 
   const handleClick = async (n: NotificationItem) => {
     if (!n.is_read) await markRead(n.id);
@@ -138,105 +114,16 @@ export default function Header({ onMenuToggle }: { onMenuToggle?: () => void }) 
       <div className="flex items-center gap-2 shrink-0">
 
         {/* DA Calculator */}
-        <div ref={calcRef} className="relative">
-          <button
-            onClick={() => setCalcOpen(v => !v)}
-            title="DA Volumetric Calculator"
-            className={`hidden lg:flex items-center gap-1.5 text-[10.5px] font-bold px-2.5 py-1.5 rounded-lg border transition-colors ${
-              calcOpen
-                ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
-                : 'bg-gray-50 border-gray-100 text-gray-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700'
-            }`}
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-            </svg>
-            DA Calculator
-          </button>
-
-          <AnimatePresence>
-            {calcOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: -8, scale: 0.97 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -8, scale: 0.97 }}
-                transition={{ duration: 0.15 }}
-                className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50"
-              >
-                {/* Header */}
-                <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-6">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                    </svg>
-                    <span className="text-sm font-bold text-gray-900">DA Volumetric Weight</span>
-                  </div>
-                  {/* Unit toggle */}
-                  <div className="flex bg-gray-100 rounded-lg p-0.5 text-[11px] font-semibold">
-                    {(['cm', 'inches'] as const).map(u => (
-                      <button
-                        key={u}
-                        onClick={() => setCalcUnit(u)}
-                        className={`px-2.5 py-1 rounded-md transition-all ${calcUnit === u ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                      >
-                        {u === 'cm' ? 'CM' : 'IN'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Inputs */}
-                <div className="p-4 space-y-3">
-                  <div className="grid grid-cols-2 gap-2">
-                    {([
-                      { label: 'Length', val: calcL, set: setCalcL },
-                      { label: 'Width',  val: calcW, set: setCalcW },
-                      { label: 'Height', val: calcH, set: setCalcH },
-                      { label: 'Qty',    val: calcQ, set: setCalcQ },
-                    ] as const).map(({ label, val, set }) => (
-                      <div key={label}>
-                        <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">{label}</label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={val}
-                          onChange={e => set(e.target.value)}
-                          placeholder="0"
-                          className="w-full px-2.5 py-1.5 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 text-gray-800 placeholder:text-gray-300"
-                        />
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Formula hint */}
-                  <p className="text-[10px] text-gray-400 text-center">
-                    L × W × H × Qty ÷ {divisor.toLocaleString()} ({calcUnit})
-                  </p>
-
-                  {/* Result */}
-                  <div className={`rounded-xl p-3 text-center transition-colors ${volWeight !== null ? 'bg-indigo-50 border border-indigo-100' : 'bg-gray-50 border border-gray-100'}`}>
-                    {volWeight !== null ? (
-                      <>
-                        <p className="text-[10px] font-semibold text-indigo-400 uppercase tracking-widest mb-0.5">Volumetric Weight</p>
-                        <p className="text-2xl font-bold text-indigo-700 tabular-nums">{volWeight.toFixed(2)} <span className="text-sm font-semibold">kg</span></p>
-                      </>
-                    ) : (
-                      <p className="text-[12px] text-gray-400 py-1">Enter dimensions to calculate</p>
-                    )}
-                  </div>
-
-                  {/* Reset */}
-                  <button
-                    onClick={() => { setCalcH(''); setCalcW(''); setCalcL(''); setCalcQ(''); }}
-                    className="w-full text-[11px] font-semibold text-gray-400 hover:text-red-500 transition-colors py-1"
-                  >
-                    Clear
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+        <button
+          onClick={() => window.open('/da-calculator', 'da-calculator', 'width=960,height=640,resizable=yes,scrollbars=yes')}
+          title="DA Volumetric Calculator"
+          className="hidden lg:flex items-center gap-1.5 text-[10.5px] font-bold px-2.5 py-1.5 rounded-lg border transition-colors bg-gray-50 border-gray-100 text-gray-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+          DA Calculator
+        </button>
 
         {/* Clock — click to toggle IST / UK */}
         <button
