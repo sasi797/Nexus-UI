@@ -468,6 +468,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
   function handleStatusClick(s: string, close: () => void) {
     close();
     if (s === booking.status) return;
+    if (s === 'Completed' && !booking.agent) return;
     if (s === 'Completed') { setDaNumber(booking.da_number ?? ''); setDaDesc(booking.da_description ?? ''); setShowDa(true); return; }
     patchStatus({ id: booking.id, status: s });
   }
@@ -770,7 +771,11 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
           )}>
           {close => statusCfg.map((s: BookingConfigItem) => {
             const cc = getColor(s.color);
-            const blocked = s.value === 'In Progress' && !booking.agent;
+            const noAgent = !booking.agent;
+            const blocked = (s.value === 'In Progress' || s.value === 'Completed') && noAgent;
+            const blockedSub = s.value === 'Completed'
+              ? 'Assign an agent before marking as completed'
+              : 'Assign an agent — status changes automatically';
             const item = (
               <DdItem key={s.value} label={s.label} active={booking.status === s.value}
                 left={<span className={`w-2 h-2 rounded-full shrink-0 ${cc.dot}`} />}
@@ -778,7 +783,7 @@ function BookingRow({ booking, agents, myUserEmail, bookingConfig, onMarkRead, h
                 disabled={blocked} />
             );
             return blocked ? (
-              <Tooltip key={s.value} label="No agent assigned" sub="Assign an agent — status changes automatically" align="right">
+              <Tooltip key={s.value} label="No agent assigned" sub={blockedSub} align="right">
                 {item}
               </Tooltip>
             ) : item;

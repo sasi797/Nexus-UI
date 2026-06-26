@@ -9,6 +9,7 @@ import { useGetMessagesQuery, useReplyMessageMutation, useSyncEmailsMutation } f
 import { useGetEmailTemplatesQuery } from '@/services/emailTemplatesApi';
 import type { EmailMessage, EmailAttachment } from '@/services/emailApi';
 import AccountCodePicker from '@/components/AccountCodePicker';
+import type { Agent } from '@/services/agentsApi';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 const MAILBOX_EMAIL = (process.env.NEXT_PUBLIC_MAILBOX_EMAIL ?? '').toLowerCase();
@@ -651,6 +652,9 @@ interface Props {
   newestFirst?: boolean;
   readOnly?: boolean;
   onAccountCodeSelected?: (code: string | null) => void;
+  hasAgent?: boolean;
+  agents?: Agent[];
+  onAssignAgent?: (agentId: string) => Promise<void>;
 }
 
 function extractDaDetails(text: string): { daNumber: string; description: string } {
@@ -670,7 +674,7 @@ function extractDaDetails(text: string): { daNumber: string; description: string
   return { daNumber, description };
 }
 
-export default function EmailThread({ bookingId, senderEmail, replyRef, composeTab: controlledTab, onComposeTabChange, onSendSuccess, onCreateBookingFromReply, newestFirst = true, readOnly = false, onAccountCodeSelected }: Props) {
+export default function EmailThread({ bookingId, senderEmail, replyRef, composeTab: controlledTab, onComposeTabChange, onSendSuccess, onCreateBookingFromReply, newestFirst = true, readOnly = false, onAccountCodeSelected, hasAgent = true, agents = [], onAssignAgent }: Props) {
   const accessToken = useSelector((s: RootState) => s.auth.accessToken);
   const currentUser  = useSelector((s: RootState) => s.auth.user);
   const { data: messages = [], isLoading } = useGetMessagesQuery(bookingId, { pollingInterval: 20000 });
@@ -735,6 +739,13 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
   const [showAccountPickerToolbar, setShowAccountPickerToolbar] = useState(false);
   const [selectedAccountCode, setSelectedAccountCode] = useState<string | null>(null);
+
+  // Agent-required gate
+  const [showAgentModal, setShowAgentModal] = useState(false);
+  const [pendingFd, setPendingFd] = useState<FormData | null>(null);
+  const [pickedAgentId, setPickedAgentId] = useState('');
+  const [assigningSend, setAssigningSend] = useState(false);
+  const [agentDropOpen, setAgentDropOpen] = useState(false);
   const accountPickerRef = useRef<HTMLDivElement>(null);
   const templatePickerRef = useRef<HTMLDivElement>(null);
   const toInputWrapperRef = useRef<HTMLDivElement>(null);
@@ -906,6 +917,45 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
     setEditorEmpty(!el.innerText.trim());
   };
 
+  const executeSend = async (fd: FormData, bodyText: string) => {
+    try {
+      const result = await replyMessage({ bookingId, formData: fd });
+      if (!result) { setSendError('No response from server. Please try again.'); return; }
+      if ('error' in result) {
+        const raw = (result.error as { data?: { detail?: string } })?.data?.detail ?? '';
+        let errMsg = 'Failed to send. Please try again.';
+        if (raw) {
+          if (/InvalidRecipients?/i.test(raw) || /recipient.*not.*resolved/i.test(raw))
+            errMsg = 'One or more email addresses are invalid or could not be resolved. Please check the recipients.';
+          else if (/Unauthorized|401/i.test(raw))
+            errMsg = 'Session expired. Please refresh and try again.';
+          else if (!raw.startsWith('{'))
+            errMsg = raw.length <= 300 ? raw : raw.slice(0, 297) + '…';
+        }
+        setSendError(errMsg);
+        return;
+      }
+      if (editorRef.current) editorRef.current.innerHTML = '';
+      setEditorEmpty(true);
+      setSelectedFiles([]);
+      setToInput('');
+      setExtraToChips([]);
+      setRemovedBaseEmails(new Set());
+      setCcChips([]);
+      setCcInput('');
+      if (composeTab === 'Forward') setForwardTo('');
+      setSent(true);
+      setTimeout(() => setSent(false), 2000);
+      if (onSendSuccess) {
+        const { daNumber, description } = extractDaDetails(bodyText);
+        if (daNumber) onSendSuccess(daNumber, description);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unexpected error. Please try again.';
+      setSendError(msg);
+    }
+  };
+
   const handleSend = async () => {
     const html = editorRef.current?.innerHTML ?? '';
     const text = editorRef.current?.innerText?.trim() ?? '';
@@ -920,45 +970,37 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
     if (composeTab === 'Forward') {
       fd.append('to_emails', forwardTo.trim());
     } else {
-      // Commit any half-typed email, then combine all To recipients
       const pending = toInput.trim() ? toInput.split(',').map(s => s.trim()).filter(Boolean) : [];
       const filteredBase = baseToEmails.filter(e => !removedBaseEmails.has(e));
-      fd.append('to_emails', [...filteredBase, ...extraToChips, ...pending].join(', '));
+      const allTo = [...filteredBase, ...extraToChips, ...pending];
+      if (allTo.length === 0) { setSendError('Please add at least one recipient in the To field.'); return; }
+      fd.append('to_emails', allTo.join(', '));
     }
     const pendingCc = ccInput.trim() ? ccInput.split(',').map(s => s.trim()).filter(Boolean) : [];
     const allCc = [...ccChips, ...pendingCc];
     if (allCc.length > 0) fd.append('cc_emails', allCc.join(', '));
 
-    const result = await replyMessage({ bookingId, formData: fd });
-    if ('error' in result) {
-      const raw = (result.error as { data?: { detail?: string } })?.data?.detail ?? '';
-      let errMsg = 'Failed to send. Please try again.';
-      if (raw) {
-        if (/InvalidRecipients?/i.test(raw) || /recipient.*not.*resolved/i.test(raw))
-          errMsg = 'One or more email addresses are invalid or could not be resolved. Please check the recipients.';
-        else if (/Unauthorized|401/i.test(raw))
-          errMsg = 'Session expired. Please refresh and try again.';
-        else if (!raw.startsWith('{'))
-          errMsg = raw.length <= 300 ? raw : raw.slice(0, 297) + '…';
-      }
-      setSendError(errMsg);
+    if (!hasAgent && onAssignAgent && agents.length > 0) {
+      setPendingFd(fd);
+      setPickedAgentId(agents[0]?.id ?? '');
+      setShowAgentModal(true);
       return;
     }
-    if (editorRef.current) editorRef.current.innerHTML = '';
-    setEditorEmpty(true);
-    setSelectedFiles([]);
-    setToInput('');
-    setExtraToChips([]);
-    setRemovedBaseEmails(new Set());
-    setCcChips([]);
-    setCcInput('');
-    if (composeTab === 'Forward') setForwardTo('');
-    setSent(true);
-    setTimeout(() => setSent(false), 2000);
 
-    if (onSendSuccess) {
-      const { daNumber, description } = extractDaDetails(text);
-      if (daNumber) onSendSuccess(daNumber, description);
+    await executeSend(fd, text);
+  };
+
+  const handleAgentModalConfirm = async () => {
+    if (!pendingFd || !pickedAgentId || !onAssignAgent) return;
+    setAssigningSend(true);
+    try {
+      await onAssignAgent(pickedAgentId);
+      const text = pendingFd.get('body_text') as string ?? '';
+      await executeSend(pendingFd, text);
+      setShowAgentModal(false);
+      setPendingFd(null);
+    } finally {
+      setAssigningSend(false);
     }
   };
 
@@ -1035,6 +1077,7 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
   };
 
   return (
+    <>
     <div className="space-y-3">
       {/* Full-screen sending overlay — blocks all interaction during API call */}
       {sending && (
@@ -1525,7 +1568,7 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
               onClick={handleSend}
               disabled={
                 (composeTab === 'Forward' ? !forwardTo.trim() : (editorEmpty && selectedFiles.length === 0)) ||
-                sending
+                sending || assigningSend
               }
               className="flex items-center gap-2 text-xs font-bold px-4 py-1.5 rounded-lg shadow-sm disabled:opacity-50 transition-all text-white bg-indigo-600 hover:bg-indigo-700"
             >
@@ -1551,5 +1594,129 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
       </div>}
 
     </div>
+
+    {/* ── Assign-agent gate modal ────────────────────────────── */}
+    {typeof window !== 'undefined' && createPortal(
+      <AnimatePresence>
+        {showAgentModal && (
+        <motion.div
+          key="agent-modal-backdrop"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[999] flex items-center justify-center"
+          style={{ background: 'rgba(15,15,25,0.55)', backdropFilter: 'blur(4px)' }}
+          onClick={e => { if (e.target === e.currentTarget) setShowAgentModal(false); }}
+        >
+          <motion.div
+            key="agent-modal-card"
+            initial={{ opacity: 0, scale: 0.93, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+            className="bg-white rounded-2xl shadow-2xl border border-gray-100 w-full max-w-sm mx-4 overflow-hidden"
+          >
+            {/* Top accent */}
+            <div className="h-1 w-full" style={{ background: 'linear-gradient(90deg, #f59e0b, #f97316)' }} />
+
+            <div className="px-5 pt-4 pb-5">
+              {/* Icon + title */}
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center shrink-0">
+                  <svg className="w-4.5 h-4.5 text-amber-500 w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-[14px] font-bold text-gray-900 leading-tight">No agent assigned</h3>
+                  <p className="text-[12px] text-gray-500 mt-0.5 leading-snug">
+                    Assign an agent before sending. The booking will be updated automatically.
+                  </p>
+                </div>
+              </div>
+
+              {/* Agent inline list */}
+              {(() => {
+                const activeAgents = agents.filter(a => a.is_active);
+                const AGENT_COLORS = ['bg-violet-500','bg-indigo-500','bg-blue-500','bg-emerald-500','bg-amber-500','bg-rose-500','bg-cyan-500','bg-pink-500'];
+                const agentColor = (id: string) => AGENT_COLORS[Math.abs(id.split('').reduce((a,c) => a + c.charCodeAt(0), 0)) % AGENT_COLORS.length];
+                return (
+                  <div className="mb-4">
+                    <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-2">Select Agent</p>
+                    <div className="border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100 max-h-[220px] overflow-y-auto">
+                      {activeAgents.map(a => {
+                        const isSelected = a.id === pickedAgentId;
+                        return (
+                          <button
+                            key={a.id}
+                            type="button"
+                            onClick={() => setPickedAgentId(a.id)}
+                            className={`w-full flex items-center gap-2.5 px-3 py-2.5 transition-colors text-left ${isSelected ? 'bg-indigo-50' : 'hover:bg-gray-50'}`}
+                          >
+                            <span className={`w-7 h-7 rounded-lg ${agentColor(a.id)} flex items-center justify-center text-white text-[11px] font-bold shrink-0`}>
+                              {a.name.charAt(0).toUpperCase()}
+                            </span>
+                            <span className={`flex-1 text-[13px] font-semibold truncate ${isSelected ? 'text-indigo-700' : 'text-gray-800'}`}>{a.name}</span>
+                            {a.shift && (
+                              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md shrink-0 ${isSelected ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-500'}`}>
+                                {a.shift.name}
+                              </span>
+                            )}
+                            {isSelected && (
+                              <svg className="w-3.5 h-3.5 text-indigo-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Actions */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowAgentModal(false)}
+                  disabled={assigningSend}
+                  className="flex-1 py-2 text-[12px] font-semibold text-gray-500 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors disabled:opacity-40"
+                >
+                  Cancel
+                </button>
+                <motion.button
+                  onClick={handleAgentModalConfirm}
+                  disabled={!pickedAgentId || assigningSend}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="flex-1 py-2 text-[12px] font-bold text-white rounded-xl transition-all disabled:opacity-40 flex items-center justify-center gap-1.5"
+                  style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)' }}
+                >
+                  {assigningSend ? (
+                    <>
+                      <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                      </svg>
+                      Assigning…
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      </svg>
+                      Assign & Send
+                    </>
+                  )}
+                </motion.button>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+        )}
+      </AnimatePresence>,
+      document.body
+    )}
+    </>
   );
 }
