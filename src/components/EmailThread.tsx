@@ -463,7 +463,7 @@ function AttachmentChip({ att, token }: { att: EmailAttachment; token: string | 
   );
 }
 
-function MessageCard({ msg, token, defaultOpen, onCreateBooking }: { msg: EmailMessage; token: string | null; defaultOpen: boolean; onCreateBooking?: () => void }) {
+function MessageCard({ msg, token, defaultOpen, onCreateBooking, bookingAlreadyCreated }: { msg: EmailMessage; token: string | null; defaultOpen: boolean; onCreateBooking?: () => void; bookingAlreadyCreated?: boolean }) {
   const isInbound = msg.direction === 'inbound';
   const [collapsed, setCollapsed] = useState(!defaultOpen);
   const [resolvedHtml, setResolvedHtml] = useState<string | null>(null);
@@ -540,7 +540,18 @@ function MessageCard({ msg, token, defaultOpen, onCreateBooking }: { msg: EmailM
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {isInbound && onCreateBooking && (
+          {isInbound && bookingAlreadyCreated && (
+            <span
+              title="A booking has already been created from this email"
+              className="flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-md bg-gray-50 border border-gray-200 text-gray-400 cursor-not-allowed select-none"
+            >
+              <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+              Booking Created
+            </span>
+          )}
+          {isInbound && !bookingAlreadyCreated && onCreateBooking && (
             <button
               type="button"
               onClick={e => { e.stopPropagation(); onCreateBooking(); }}
@@ -649,6 +660,7 @@ interface Props {
   onComposeTabChange?: (tab: ComposeTab) => void;
   onSendSuccess?: (daNumber: string, description: string) => void;
   onCreateBookingFromReply?: (msg: EmailMessage) => void;
+  bookedMessageIds?: Set<string>;
   newestFirst?: boolean;
   readOnly?: boolean;
   onAccountCodeSelected?: (code: string | null) => void;
@@ -674,7 +686,7 @@ function extractDaDetails(text: string): { daNumber: string; description: string
   return { daNumber, description };
 }
 
-export default function EmailThread({ bookingId, senderEmail, replyRef, composeTab: controlledTab, onComposeTabChange, onSendSuccess, onCreateBookingFromReply, newestFirst = true, readOnly = false, onAccountCodeSelected, hasAgent = true, agents = [], onAssignAgent }: Props) {
+export default function EmailThread({ bookingId, senderEmail, replyRef, composeTab: controlledTab, onComposeTabChange, onSendSuccess, onCreateBookingFromReply, bookedMessageIds, newestFirst = true, readOnly = false, onAccountCodeSelected, hasAgent = true, agents = [], onAssignAgent }: Props) {
   const accessToken = useSelector((s: RootState) => s.auth.accessToken);
   const currentUser  = useSelector((s: RootState) => s.auth.user);
   const { data: messages = [], isLoading } = useGetMessagesQuery(bookingId, { pollingInterval: 20000 });
@@ -1132,8 +1144,9 @@ export default function EmailThread({ bookingId, senderEmail, replyRef, composeT
               msg={msg}
               token={accessToken}
               defaultOpen={i === 0}
+              bookingAlreadyCreated={msg.direction === 'inbound' && msg.id !== firstInboundId && !!bookedMessageIds?.has(msg.id)}
               onCreateBooking={
-                msg.direction === 'inbound' && msg.id !== firstInboundId && onCreateBookingFromReply
+                msg.direction === 'inbound' && msg.id !== firstInboundId && onCreateBookingFromReply && !bookedMessageIds?.has(msg.id)
                   ? () => onCreateBookingFromReply(msg)
                   : undefined
               }

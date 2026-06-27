@@ -3,7 +3,7 @@ import { notificationsApi } from './notificationsApi';
 
 export interface AgentBrief { id: string; name: string; email: string }
 export interface ParentBookingBrief { id: string; subject: string; }
-export interface ChildBookingBrief { id: string; subject: string; status: string; da_number: string | null; }
+export interface ChildBookingBrief { id: string; subject: string; status: string; da_number: string | null; source_message_id: string | null; }
 
 export interface BookingListItem {
   id: string;

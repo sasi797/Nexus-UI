@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -372,6 +372,14 @@ export default function BookingDetailPage() {
   const [replyMessage,   { isLoading: sendingNewBookingReply }] = useReplyMessageMutation();
   const { data: agents = [] }         = useGetAgentsQuery();
   const { data: emailTemplates = [] } = useGetEmailTemplatesQuery();
+
+  const bookedMessageIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const child of b?.child_bookings ?? []) {
+      if (child.source_message_id) ids.add(child.source_message_id);
+    }
+    return ids;
+  }, [b?.child_bookings]);
 
   useEffect(() => {
     const el = document.getElementById('main-scroll');
@@ -759,6 +767,7 @@ export default function BookingDetailPage() {
                 flashSaved('status');
               }}
               onCreateBookingFromReply={!readOnly ? handleCreateBookingFromReply : undefined}
+              bookedMessageIds={bookedMessageIds}
               newestFirst={newestFirst}
               readOnly={readOnly}
               hasAgent={!!b.agent_id}
