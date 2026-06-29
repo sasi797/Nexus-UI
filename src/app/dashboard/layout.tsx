@@ -6,6 +6,7 @@ import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import DashboardGuard from '@/components/DashboardGuard';
+import AIChatBot from '@/components/ai/AIChatBot';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -59,6 +60,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
 
         </div>
+
+        <AIChatBot />
       </DashboardGuard>
     </ErrorBoundary>
   );
