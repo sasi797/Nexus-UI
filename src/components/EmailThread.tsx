@@ -13,6 +13,7 @@ import type { Agent } from '@/services/agentsApi';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 const MAILBOX_EMAIL = (process.env.NEXT_PUBLIC_MAILBOX_EMAIL ?? '').toLowerCase();
+const TRILOGY_API = 'https://trilogy-api.wavetrain.cloud';
 
 const PREDEFINED_CONTACTS: { name: string; email: string }[] = [
   { name: 'bookingslhr',        email: 'bookingslhr@trilogylogistics.com' },
@@ -389,8 +390,802 @@ function SelectedFileChip({ file, onRemove }: { file: File; onRemove: () => void
   );
 }
 
+type TrilogyDetail = {
+  filename?: string;
+  doc_type?: string;
+  uploaded_at?: string;
+  uploaded_by?: string;
+  headers?: string[];
+  rows?: Record<string, unknown>[];
+};
+
+function isTrilogyDetail(d: unknown): d is TrilogyDetail {
+  if (!d || typeof d !== 'object') return false;
+  const obj = d as Record<string, unknown>;
+  return Array.isArray(obj.headers) && Array.isArray(obj.rows);
+}
+
+/* ── Windows-style shared styles ── */
+const WF: React.CSSProperties = { fontFamily: 'Tahoma, "MS Sans Serif", Arial, sans-serif' };
+
+const WIN_IN: React.CSSProperties = {
+  ...WF, fontSize: '11px', background: '#ffffff',
+  border: '1px solid', borderColor: '#808080 #ffffff #ffffff #808080',
+  boxShadow: 'inset 1px 1px 2px rgba(0,0,0,0.12)',
+  outline: 'none', color: '#000000', padding: '1px 4px', height: '20px',
+};
+
+const WIN_IN_SM: React.CSSProperties = { ...WIN_IN, fontSize: '10px', height: '18px', padding: '1px 3px' };
+
+const LBL: React.CSSProperties = {
+  ...WF, fontSize: '11px', color: '#000080', fontWeight: 'bold',
+  whiteSpace: 'nowrap' as const, textAlign: 'right' as const,
+};
+const LBL_SM: React.CSSProperties = { ...LBL, fontSize: '10px' };
+
+function focusIn(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) {
+  e.target.style.borderColor = '#0a246a #c0c0c0 #c0c0c0 #0a246a';
+}
+function focusOut(e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) {
+  e.target.style.borderColor = '#808080 #ffffff #ffffff #808080';
+}
+
+function Win3DButton({
+  onClick, children, bold, minW = 72, disabled,
+}: {
+  onClick: () => void; children: React.ReactNode; bold?: boolean; minW?: number; disabled?: boolean;
+}) {
+  const [pressed, setPressed] = useState(false);
+  return (
+    <button
+      onClick={disabled ? undefined : onClick}
+      onMouseDown={() => { if (!disabled) setPressed(true); }}
+      onMouseUp={() => setPressed(false)}
+      onMouseLeave={() => setPressed(false)}
+      style={{
+        minWidth: minW, padding: '2px 10px', fontSize: '11px', ...WF,
+        fontWeight: bold ? 'bold' : 'normal', background: '#ece9d8',
+        border: '1px solid',
+        borderColor: pressed ? '#808080 #ffffff #ffffff #808080' : '#ffffff #808080 #808080 #ffffff',
+        cursor: disabled ? 'default' : 'pointer',
+        color: disabled ? '#808080' : '#000000',
+        opacity: disabled ? 0.55 : 1,
+        userSelect: 'none' as const, outline: 'none',
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+/* Compact input with focus highlight */
+function WI({
+  value, onChange, style, sm,
+}: {
+  value: string; onChange?: (v: string) => void; style?: React.CSSProperties; sm?: boolean;
+}) {
+  const base = sm ? WIN_IN_SM : WIN_IN;
+  return (
+    <input
+      value={value}
+      onChange={onChange ? e => onChange(e.target.value) : undefined}
+      readOnly={!onChange}
+      style={{ ...base, ...style }}
+      onFocus={focusIn}
+      onBlur={focusOut}
+    />
+  );
+}
+
+/* One labelled field row */
+function FR({
+  label, value, onChange, lw = 72, required, sm,
+}: {
+  label: string; value: string; onChange?: (v: string) => void;
+  lw?: number; required?: boolean; sm?: boolean;
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '3px', minHeight: sm ? 20 : 23 }}>
+      <span style={{
+        ...(sm ? LBL_SM : LBL),
+        width: lw, minWidth: lw,
+        ...(required ? { background: '#ff8080', color: '#000', padding: '0 2px' } : {}),
+      }}>
+        {label}
+      </span>
+      <WI value={value} onChange={onChange} style={{ flex: 1 }} sm={sm} />
+    </div>
+  );
+}
+
+/* Two-col address panel (Pick / Drop) */
+function AddrPanel({
+  title, addrNo, addrType, fields, swap,
+}: {
+  title: string;
+  addrNo: number;
+  addrType: string;
+  fields: { label: string; value: string; onChange?: (v: string) => void }[];
+  swap?: boolean;
+}) {
+  return (
+    <div>
+      {/* Header bar */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '4px',
+        background: '#d4d0c8', padding: '2px 4px', marginBottom: '2px',
+        borderBottom: '1px solid #808080',
+      }}>
+        <span style={LBL_SM}>Addr No.</span>
+        <WI value={String(addrNo)} style={{ width: 26 }} sm />
+        <span style={LBL_SM}>Drops.</span>
+        <WI value="0" style={{ width: 26 }} sm />
+        <span style={LBL_SM}>Addr Type</span>
+        <WI value={addrType} style={{ width: 46 }} sm />
+        {swap && (
+          <label style={{ ...LBL_SM, display: 'flex', alignItems: 'center', gap: 2, marginLeft: 4 }}>
+            <input type="checkbox" style={{ margin: 0 }} /> Swap
+          </label>
+        )}
+      </div>
+      {fields.map(f => (
+        <FR key={f.label} label={f.label} value={f.value} onChange={f.onChange} lw={88} sm />
+      ))}
+    </div>
+  );
+}
+
+/* ── Module-level helper so TrilogyEditModal & TrilogyTable share the same logic ── */
+function buildFormFields(row: Record<string, unknown>, headers: string[]) {
+  function p(...keys: string[]): string {
+    for (const key of keys) {
+      const k = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const h = headers.find(hh => hh.toLowerCase().replace(/[^a-z0-9]/g, '') === k);
+      if (h) {
+        const v = String(row[h] ?? '').trim();
+        if (v && v.toLowerCase() !== 'not stated') return v;
+      }
+    }
+    return '';
+  }
+  return {
+    jobRef:       p('JOB REF', 'job ref', 'job reference', 'jobref'),
+    jobNo:        p('JOB NO', 'job no', 'docket', 'job number', 'jobno'),
+    custRef:      p('CUSTOMER REFERENCE', 'cust ref', 'customer ref', 'custref', 'reference'),
+    mawb:         p('MAWB'),
+    hawb:         p('HAWB'),
+    agentFwd:     p('AGENT / FORWARDER', 'agent forwarder', 'agent', 'forwarder'),
+    jobType:      p('JOB TYPE', 'job type', 'type'),
+    priority:     p('PRIORITY') || 'High',
+    podAddr:      p('POD ADDR', 'pod address'),
+    pickCo:       p('SHIPPER / COLLECTION NAME', 'shipper', 'collection name', 'shipper collection name'),
+    pickBldg:     '',
+    pickStreet:   p('COLLECTION ADDRESS', 'collection address', 'pickup address', 'collectionaddress'),
+    pickLocality: '',
+    pickTown:     '',
+    pickCounty:   '',
+    pickPostcode: p('COLLECTION POSTCODE', 'collection postcode', 'pickup postcode'),
+    pickCountry:  'Great Britain',
+    pickContact:  '',
+    pickPhone:    '',
+    pickEmail:    '',
+    pickReady:    p('FROM TIME', 'from time', 'ready at', 'ready'),
+    pickNoLater:  p('TO TIME', 'to time', 'no later than'),
+    pickDate:     p('DATE', 'collection date'),
+    pickNotes:    '',
+    dropCo:       '',
+    dropBldg:     '',
+    dropStreet:   p('DELIVERY ADDRESS', 'delivery address', 'drop address'),
+    dropLocality: '',
+    dropTown:     '',
+    dropCounty:   '',
+    dropPostcode: p('DELIVERY POSTCODE', 'delivery postcode', 'drop postcode'),
+    dropCountry:  'Great Britain',
+    dropContact:  '',
+    dropPhone:    '',
+    dropEmail:    '',
+    dropReady:    '',
+    dropNoLater:  '',
+    dropDate:     '',
+    dropNotes:    '',
+  };
+}
+
+function TrilogyEditModal({
+  rows, headers, initialRowIndex = 0, onClose,
+}: {
+  rows: Record<string, unknown>[];
+  headers: string[];
+  initialRowIndex?: number;
+  onClose: () => void;
+}) {
+  const [tab, setTab] = useState(0);
+  const [currentIdx, setCurrentIdx] = useState(initialRowIndex);
+  const total = rows.length;
+
+  const [f, setF] = useState(() => buildFormFields(rows[initialRowIndex] ?? {}, headers));
+
+  /* Reset fields whenever user navigates to a different row */
+  useEffect(() => {
+    setF(buildFormFields(rows[currentIdx] ?? {}, headers));
+  }, [currentIdx]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function upd(key: keyof typeof f) {
+    return (v: string) => setF(prev => ({ ...prev, [key]: v }));
+  }
+
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', h);
+    return () => document.removeEventListener('keydown', h);
+  }, [onClose]);
+
+  const handleSave = () => {
+    console.log(`[Trilogy] Row ${currentIdx + 1} of ${total} saved:`, f);
+  };
+
+  if (typeof document === 'undefined') return null;
+
+  const TABS = ['Overnight', 'International', 'Chauffeur', 'Stock'];
+
+  const customerInfo = [
+    f.jobRef  && `Job Ref: ${f.jobRef}`,
+    f.jobNo   && `Job No: ${f.jobNo}`,
+    f.agentFwd && `Agent: ${f.agentFwd}`,
+  ].filter(Boolean).join('\n');
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[10000] flex items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.6)', padding: '8px' }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          ...WF, background: '#ece9d8', width: '100%', maxWidth: 920,
+          maxHeight: '96vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          border: '2px solid', borderColor: '#ffffff #404040 #404040 #ffffff',
+          boxShadow: '4px 4px 12px rgba(0,0,0,0.6)',
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+
+        {/* ── Title bar ── */}
+        <div style={{
+          background: 'linear-gradient(to right, #0a246a 0%, #3a6ea5 50%, #a6caf0 100%)',
+          minHeight: 28, padding: '3px 4px 3px 6px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          userSelect: 'none' as const, flexShrink: 0,
+        }}>
+          <span style={{ color: '#fff', fontSize: 12, fontWeight: 'bold', textShadow: '1px 1px 1px rgba(0,0,0,0.5)', ...WF }}>
+            Booking Form : Live Dockets.
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {(f.jobNo || total > 1) && (
+              <span style={{ color: '#00ffff', fontSize: 11, fontWeight: 'bold', ...WF }}>
+                {total > 1 && `Row ${currentIdx + 1} / ${total}`}{total > 1 && f.jobNo ? '  ·  ' : ''}{f.jobNo ? `Docket: ${f.jobNo}` : ''}
+              </span>
+            )}
+            <button
+              onClick={onClose}
+              style={{
+                width: 21, height: 21, fontSize: 10, fontWeight: 'bold', cursor: 'pointer',
+                color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'linear-gradient(to bottom, #e8a000, #c06000)',
+                border: '1px solid', borderColor: '#ffcc66 #804000 #804000 #ffcc66',
+                ...WF,
+              }}
+            >✕</button>
+          </div>
+        </div>
+
+        {/* ── Toolbar ── */}
+        <div style={{
+          background: '#ece9d8', borderBottom: '1px solid #808080',
+          padding: '2px 4px', display: 'flex', alignItems: 'center', gap: 4,
+          minHeight: 26, flexShrink: 0,
+        }}>
+          <Win3DButton onClick={() => {}} minW={60}>Actions ▾</Win3DButton>
+          <span style={{ display: 'inline-block', width: 1, height: 18, background: '#808080', margin: '0 2px' }} />
+        </div>
+
+        {/* ── Scrollable body ── */}
+        <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, background: '#ece9d8', padding: '5px 8px' }}>
+
+          {/* ── Top section: 3 columns ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 180px', gap: '3px 8px', marginBottom: 4 }}>
+
+            {/* Col 1 */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                <span style={{ ...LBL, width: 68, minWidth: 68 }}>Acc Code:</span>
+                <WI value="" style={{ width: 58 }} />
+                <Win3DButton onClick={() => {}} minW={58}>Change...</Win3DButton>
+              </div>
+              <FR label="Contact:" value="" lw={68} />
+              <FR label="CUST REF" value={f.custRef} onChange={upd('custRef')} lw={68} required />
+              <FR label="JOB TYPE" value={f.jobType} onChange={upd('jobType')} lw={68} required />
+              <FR label="Owner:" value="" lw={68} />
+            </div>
+
+            {/* Col 2 */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <FR label="Acc Name:" value={f.agentFwd} onChange={upd('agentFwd')} lw={72} />
+              <FR label="MAWB:" value={f.mawb} onChange={upd('mawb')} lw={72} />
+              <FR label="Telephone:" value="" lw={72} />
+              <FR label="Priority:" value={f.priority} onChange={upd('priority')} lw={72} />
+              <FR label="Template:" value="" lw={72} />
+            </div>
+
+            {/* Col 3: Customer info box */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <span style={{ ...LBL, textAlign: 'left', color: '#000080' }}>Customer Information:</span>
+              <textarea
+                value={customerInfo}
+                readOnly
+                style={{
+                  flex: 1, minHeight: 70, ...WF, fontSize: 10,
+                  background: '#ffffff', border: '1px solid',
+                  borderColor: '#808080 #ffffff #ffffff #808080',
+                  boxShadow: 'inset 1px 1px 2px rgba(0,0,0,0.12)',
+                  padding: '2px 3px', resize: 'none', outline: 'none', color: '#000',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* ── Job Status divider ── */}
+          <div style={{ borderBottom: '1px solid #808080', marginBottom: 3, paddingBottom: 1 }}>
+            <span style={{ ...WF, fontSize: 11, fontWeight: 'bold' }}>Job Status:</span>
+          </div>
+
+          {/* ── Tabs ── */}
+          <div style={{ display: 'flex', borderBottom: '1px solid #808080', gap: 0, marginBottom: 0 }}>
+            {TABS.map((t, i) => (
+              <button
+                key={t}
+                onClick={() => setTab(i)}
+                style={{
+                  ...WF, fontSize: 11, padding: '2px 10px', cursor: 'pointer',
+                  color: '#000', fontWeight: tab === i ? 'bold' : 'normal',
+                  background: tab === i ? '#ece9d8' : '#c8c4bc',
+                  border: '1px solid #808080',
+                  borderBottom: tab === i ? '1px solid #ece9d8' : '1px solid #808080',
+                  marginBottom: tab === i ? -1 : 0,
+                  position: 'relative' as const, zIndex: tab === i ? 1 : 0,
+                }}
+              >{t}</button>
+            ))}
+          </div>
+
+          {/* ── Tab content ── */}
+          <div style={{ border: '1px solid #808080', borderTop: 'none', background: '#ece9d8', padding: '5px 8px' }}>
+
+            {/* Row: Tariff / POD */}
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px 8px', marginBottom: 3 }}>
+              <span style={LBL}>Tariff</span>
+              <WI value="DELIVERY" style={{ width: 88 }} />
+              <label style={{ ...LBL, display: 'flex', alignItems: 'center', gap: 3, marginLeft: 6 }}>
+                <input type="checkbox" style={{ margin: 0 }} /> Addressee Only
+              </label>
+              <span style={{ ...LBL, marginLeft: 6 }}>POD Type</span>
+              <WI value="Email" style={{ width: 68 }} />
+              <span style={LBL}>POD Addr</span>
+              <WI value={f.podAddr} onChange={upd('podAddr')} style={{ flex: 1, minWidth: 160 }} />
+              <span style={LBL}>Units</span>
+              <WI value="0" style={{ width: 34 }} />
+            </div>
+
+            {/* Row: HAWB / Job Ref */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px 8px', flexWrap: 'wrap', marginBottom: 3 }}>
+              <span style={LBL}>HAWB</span>
+              <WI value={f.hawb} onChange={upd('hawb')} style={{ width: 180 }} />
+              <span style={{ ...LBL, marginLeft: 10 }}>Job Ref</span>
+              <WI value={f.jobRef} onChange={upd('jobRef')} style={{ flex: 1, minWidth: 140 }} />
+              <span style={{ ...LBL, marginLeft: 10 }}>HAZ</span>
+              <WI value="" style={{ width: 56 }} />
+              <span style={LBL}>SPX</span>
+              <WI value="" style={{ width: 56 }} />
+            </div>
+
+            {/* ── Divider ── */}
+            <div style={{ background: '#808080', height: 1, margin: '5px 0' }} />
+
+            {/* ── Two-column address ── */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 10px' }}>
+
+              <AddrPanel
+                title="Pick"
+                addrNo={0}
+                addrType="Pick"
+                fields={[
+                  { label: 'Company',    value: f.pickCo,       onChange: upd('pickCo') },
+                  { label: 'Building',   value: f.pickBldg,     onChange: upd('pickBldg') },
+                  { label: 'Street',     value: f.pickStreet,   onChange: upd('pickStreet') },
+                  { label: 'Locality',   value: f.pickLocality, onChange: upd('pickLocality') },
+                  { label: 'Town',       value: f.pickTown,     onChange: upd('pickTown') },
+                  { label: 'County',     value: f.pickCounty,   onChange: upd('pickCounty') },
+                  { label: 'PostCode',   value: f.pickPostcode, onChange: upd('pickPostcode') },
+                  { label: 'Country',    value: f.pickCountry,  onChange: upd('pickCountry') },
+                  { label: 'Contact',    value: f.pickContact,  onChange: upd('pickContact') },
+                  { label: 'Telephone',  value: f.pickPhone,    onChange: upd('pickPhone') },
+                  { label: 'Email',      value: f.pickEmail,    onChange: upd('pickEmail') },
+                  { label: 'Ready @',    value: f.pickReady,    onChange: upd('pickReady') },
+                  { label: 'No later',   value: f.pickNoLater,  onChange: upd('pickNoLater') },
+                  { label: 'Date',       value: f.pickDate,     onChange: upd('pickDate') },
+                ]}
+              />
+
+              <AddrPanel
+                title="Drop"
+                addrNo={1}
+                addrType="Drop"
+                swap
+                fields={[
+                  { label: 'Company',    value: f.dropCo,       onChange: upd('dropCo') },
+                  { label: 'Building',   value: f.dropBldg,     onChange: upd('dropBldg') },
+                  { label: 'Street',     value: f.dropStreet,   onChange: upd('dropStreet') },
+                  { label: 'Locality',   value: f.dropLocality, onChange: upd('dropLocality') },
+                  { label: 'Town',       value: f.dropTown,     onChange: upd('dropTown') },
+                  { label: 'County',     value: f.dropCounty,   onChange: upd('dropCounty') },
+                  { label: 'PostCode',   value: f.dropPostcode, onChange: upd('dropPostcode') },
+                  { label: 'Country',    value: f.dropCountry,  onChange: upd('dropCountry') },
+                  { label: 'Contact',    value: f.dropContact,  onChange: upd('dropContact') },
+                  { label: 'Telephone',  value: f.dropPhone,    onChange: upd('dropPhone') },
+                  { label: 'Email',      value: f.dropEmail,    onChange: upd('dropEmail') },
+                  { label: 'Ready @',    value: f.dropReady,    onChange: upd('dropReady') },
+                  { label: 'No later',   value: f.dropNoLater,  onChange: upd('dropNoLater') },
+                  { label: 'Date',       value: f.dropDate,     onChange: upd('dropDate') },
+                ]}
+              />
+            </div>
+
+            {/* Notes row */}
+            <div style={{ background: '#808080', height: 1, margin: '4px 0' }} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 10px' }}>
+              {(['pickNotes', 'dropNotes'] as const).map((key, i) => (
+                <div key={key}>
+                  <span style={LBL_SM}>{i === 0 ? 'Collection Notes:' : 'Delivery Notes:'}</span>
+                  <textarea
+                    value={f[key]}
+                    onChange={e => upd(key)(e.target.value)}
+                    style={{
+                      width: '100%', height: 38, marginTop: 2, ...WF, fontSize: 10,
+                      background: '#fff', border: '1px solid',
+                      borderColor: '#808080 #fff #fff #808080',
+                      padding: '2px 3px', resize: 'none', outline: 'none', color: '#000',
+                    }}
+                    onFocus={focusIn}
+                    onBlur={focusOut}
+                  />
+                </div>
+              ))}
+            </div>
+
+          </div>{/* end tab content */}
+        </div>{/* end body */}
+
+        {/* ── Footer buttons ── */}
+        <div style={{
+          background: '#ece9d8', borderTop: '1px solid #808080',
+          padding: '5px 8px', display: 'flex', alignItems: 'center',
+          justifyContent: 'space-between', gap: 6, flexShrink: 0,
+        }}>
+          {/* Row navigation — only shown when multiple rows */}
+          {total > 1 ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <Win3DButton onClick={() => setCurrentIdx(i => i - 1)} disabled={currentIdx === 0} minW={60}>&#9664; Prev</Win3DButton>
+              <span style={{ ...WF, fontSize: 11, padding: '0 8px', color: '#000080', fontWeight: 'bold' }}>
+                Row {currentIdx + 1} of {total}
+              </span>
+              <Win3DButton onClick={() => setCurrentIdx(i => i + 1)} disabled={currentIdx >= total - 1} minW={60}>Next &#9654;</Win3DButton>
+            </div>
+          ) : <div />}
+          {/* Action buttons */}
+          <div style={{ display: 'flex', gap: 6 }}>
+            <Win3DButton onClick={onClose}>Cancel</Win3DButton>
+            <Win3DButton onClick={handleSave} bold>&#10003;&nbsp;Save Row</Win3DButton>
+          </div>
+        </div>
+
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function TrilogyTable({ headers, rows }: { headers: string[]; rows: Record<string, unknown>[] }) {
+  const [editingRowIdx, setEditingRowIdx] = useState<number | null>(null);
+
+  if (rows.length === 0)
+    return <p className="text-gray-400 text-sm text-center py-10">No rows extracted from this document.</p>;
+
+  return (
+    <>
+      <div className="overflow-auto rounded-xl border border-gray-200 shadow-sm" style={{ maxHeight: 'calc(88vh - 160px)' }}>
+        <table className="border-collapse" style={{ minWidth: '100%' }}>
+          <thead className="sticky top-0 z-10">
+            <tr className="bg-gray-100 border-b border-gray-200">
+              {headers.map(h => (
+                <th
+                  key={h}
+                  className="px-3 py-2 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap bg-gray-100"
+                >
+                  {h}
+                </th>
+              ))}
+              <th className="px-3 py-2 bg-gray-100 sticky right-0 z-20 w-14" />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
+              <tr key={i} onClick={() => setEditingRowIdx(i)} className={`group cursor-pointer ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'} hover:bg-indigo-50/40 transition-colors`}>
+                {headers.map(h => (
+                  <td
+                    key={h}
+                    className="px-3 py-1.5 text-[12px] text-gray-700 border-b border-gray-100 align-middle whitespace-nowrap"
+                    title={String(row[h] ?? '')}
+                  >
+                    {String(row[h] ?? '—')}
+                  </td>
+                ))}
+                {/* Edit action — sticky on right */}
+                <td className={`px-2 py-1.5 border-b border-gray-100 align-middle sticky right-0 z-10 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'} group-hover:bg-indigo-50/30`}>
+                  <button
+                    onClick={e => { e.stopPropagation(); setEditingRowIdx(i); }}
+                    title="Edit row"
+                    className="opacity-0 group-hover:opacity-100 flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 transition-all"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                    Edit
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <AnimatePresence>
+        {editingRowIdx !== null && (
+          <TrilogyEditModal
+            rows={rows}
+            headers={headers}
+            initialRowIndex={editingRowIdx}
+            onClose={() => setEditingRowIdx(null)}
+          />
+        )}
+      </AnimatePresence>
+    </>
+  );
+}
+
+function renderHistoryData(d: unknown): React.ReactNode {
+  if (d === null || d === undefined)
+    return <p className="text-gray-400 text-sm italic text-center py-10">No data available</p>;
+
+  // {headers, rows} — the main extraction result
+  if (isTrilogyDetail(d)) {
+    return <TrilogyTable headers={d.headers ?? []} rows={d.rows ?? []} />;
+  }
+
+  if (Array.isArray(d)) {
+    if (d.length === 0)
+      return <p className="text-gray-400 text-sm text-center py-10">No records found</p>;
+    if (typeof d[0] === 'object' && d[0] !== null) {
+      const keys = [...new Set(d.flatMap(item => Object.keys(item as Record<string, unknown>)))];
+      return (
+        <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
+          <table className="w-full text-[12px] border-collapse">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-200">
+                {keys.map(k => (
+                  <th key={k} className="px-3.5 py-2.5 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                    {k.replace(/_/g, ' ')}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {(d as Record<string, unknown>[]).map((row, i) => (
+                <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50/60'}>
+                  {keys.map(k => (
+                    <td key={k} className="px-3.5 py-2.5 text-gray-700 border-b border-gray-100 align-top whitespace-nowrap">
+                      {typeof row[k] === 'object' ? JSON.stringify(row[k]) : String(row[k] ?? '—')}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+    return (
+      <ul className="space-y-1.5">
+        {(d as unknown[]).map((item, i) => (
+          <li key={i} className="text-sm text-gray-700 px-3 py-2 bg-gray-50 rounded-lg border border-gray-100">{String(item)}</li>
+        ))}
+      </ul>
+    );
+  }
+
+  if (typeof d === 'object' && d !== null) {
+    return (
+      <div className="space-y-2">
+        {Object.entries(d as Record<string, unknown>).map(([key, value]) => (
+          <div key={key} className="flex items-start gap-3 px-4 py-3 bg-gray-50 rounded-xl border border-gray-100">
+            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider min-w-[130px] shrink-0 mt-0.5">{key.replace(/_/g, ' ')}</span>
+            <span className="text-sm text-gray-800 flex-1 font-medium">
+              {typeof value === 'object' && value !== null
+                ? <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">{JSON.stringify(value)}</code>
+                : String(value ?? '—')}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return <p className="text-sm text-gray-700 px-4 py-6">{String(d)}</p>;
+}
+
+function TrilogyPdfModal({
+  filename, loading, data, error, onClose,
+}: {
+  filename: string; loading: boolean; data: unknown; error: string | null; onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 12 }}
+        transition={{ duration: 0.18, ease: 'easeOut' }}
+        className="relative bg-white rounded-2xl shadow-2xl overflow-hidden w-full max-w-[95vw] max-h-[88vh] flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-red-50/60 to-orange-50/40 shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
+            <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-gray-900 truncate">{filename}</p>
+            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider">Document Extraction</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 rounded-xl bg-white border border-gray-200 hover:bg-gray-100 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors shrink-0 shadow-sm"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* Metadata strip — shown when structured detail is available */}
+        {!loading && !error && isTrilogyDetail(data) && (
+          <div className="flex items-center gap-4 px-5 py-2.5 bg-gray-50 border-b border-gray-100 shrink-0 flex-wrap">
+            {data.doc_type && (
+              <span className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-600">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Type</span>
+                <span className="px-2 py-0.5 rounded-md bg-blue-50 border border-blue-100 text-blue-700 capitalize">{data.doc_type}</span>
+              </span>
+            )}
+            {data.uploaded_at && (
+              <span className="flex items-center gap-1.5 text-[11px] text-gray-500">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Uploaded</span>
+                {new Date(data.uploaded_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+            {data.uploaded_by && (
+              <span className="flex items-center gap-1.5 text-[11px] text-gray-500">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">By</span>
+                {data.uploaded_by}
+              </span>
+            )}
+            {data.rows && (
+              <span className="ml-auto text-[11px] font-semibold text-gray-400">
+                {data.rows.length} row{data.rows.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Body */}
+        <div className="flex-1 min-h-0 p-5">
+          {loading ? (
+            <div className="flex flex-col items-center gap-5 py-20">
+              <div className="relative w-16 h-16">
+                <div className="absolute inset-0 rounded-full border-4 border-red-100" />
+                <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-red-500 animate-spin" />
+                <div className="absolute inset-1.5 rounded-full border-4 border-transparent border-t-orange-400 animate-spin [animation-direction:reverse] [animation-duration:700ms]" />
+                <div className="absolute inset-3.5 rounded-full bg-red-50 flex items-center justify-center">
+                  <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                  </svg>
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-bold text-gray-800">Processing PDF…</p>
+                <p className="text-xs text-gray-400 mt-1">Uploading and extracting document data</p>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center gap-4 py-16">
+              <div className="w-14 h-14 rounded-2xl bg-red-50 border border-red-100 flex items-center justify-center">
+                <svg className="w-7 h-7 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </div>
+              <div className="text-center">
+                <p className="text-sm font-bold text-gray-700">Extraction Failed</p>
+                <p className="text-xs text-gray-400 mt-1 max-w-sm leading-relaxed">{error}</p>
+              </div>
+            </div>
+          ) : (
+            renderHistoryData(data)
+          )}
+        </div>
+      </motion.div>
+    </div>,
+    document.body
+  );
+}
+
 function AttachmentChip({ att, token }: { att: EmailAttachment; token: string | null }) {
   const [loading, setLoading] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  const [extractedHeaders, setExtractedHeaders] = useState<string[]>([]);
+  const [extractedRows, setExtractedRows] = useState<Record<string, unknown>[]>([]);
+  const [showEditModal, setShowEditModal] = useState(false);
+
+  const handleViewPdf = async () => {
+    setPdfLoading(true);
+    setPdfError(null);
+    setExtractedRows([]);
+    setExtractedHeaders([]);
+    try {
+      const res = await fetch('/api/pdf-extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          attachmentId: att.id,
+          token,
+          filename: att.filename,
+          contentType: att.content_type,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error((json as { error?: string }).error ?? 'Failed to process PDF');
+      if (isTrilogyDetail(json)) {
+        setExtractedHeaders(json.headers ?? []);
+        setExtractedRows(json.rows ?? []);
+        setShowEditModal(true);
+      }
+    } catch (err) {
+      setPdfError(err instanceof Error ? err.message : 'Something went wrong');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
 
   const handleDownload = async () => {
     setLoading(true);
@@ -412,31 +1207,91 @@ function AttachmentChip({ att, token }: { att: EmailAttachment; token: string | 
   };
 
   const isImage = att.content_type.startsWith('image/');
-  const isPdf   = att.content_type === 'application/pdf';
+  const isPdf   = att.content_type === 'application/pdf' || /\.pdf$/i.test(att.filename);
   const isWord  = att.content_type.includes('word') || att.filename.match(/\.docx?$/i);
   const isExcel = att.content_type.includes('sheet') || att.content_type.includes('excel') || att.filename.match(/\.xlsx?$/i);
 
   const iconBg  = isImage ? 'bg-emerald-50' : isPdf ? 'bg-red-50' : isWord ? 'bg-blue-50' : isExcel ? 'bg-green-50' : 'bg-gray-100';
   const iconClr = isImage ? 'text-emerald-500' : isPdf ? 'text-red-500' : isWord ? 'text-blue-500' : isExcel ? 'text-green-600' : 'text-gray-400';
 
-  const FileIcon = () => {
-    if (loading) return <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>;
-    if (isImage) return (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-      </svg>
-    );
-    if (isPdf) return (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-      </svg>
-    );
+  if (isPdf) {
     return (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-      </svg>
+      <>
+        <div className="flex items-center gap-1.5 w-full sm:w-auto">
+          {/* Main chip — downloads the file */}
+          <button
+            onClick={handleDownload}
+            disabled={loading}
+            className="flex items-center gap-3 px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-red-300 hover:shadow-md transition-all disabled:opacity-60 group flex-1 sm:min-w-[200px] sm:max-w-[260px]"
+          >
+            <div className="w-9 h-9 rounded-lg bg-red-50 text-red-500 flex items-center justify-center shrink-0">
+              {loading ? (
+                <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                </svg>
+              )}
+            </div>
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-[12.5px] font-semibold text-gray-800 truncate leading-tight">{att.filename}</p>
+              {att.size_bytes ? <p className="text-[11px] text-gray-400 mt-0.5">{formatBytes(att.size_bytes)}</p> : null}
+            </div>
+            {/* Download icon */}
+            <svg className="w-4 h-4 text-gray-300 group-hover:text-red-400 shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+          </button>
+
+          {/* Extract button */}
+          <div className="relative group/ext shrink-0">
+            <button
+              onClick={handleViewPdf}
+              disabled={pdfLoading}
+              className="flex items-center justify-center w-9 h-9 rounded-xl border border-gray-200 bg-white hover:border-red-200 hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all disabled:opacity-60 shadow-sm"
+            >
+              {pdfLoading ? (
+                <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                </svg>
+              ) : (
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+              )}
+            </button>
+            {/* Tooltip */}
+            <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover/ext:opacity-100 translate-y-1 group-hover/ext:translate-y-0 transition-all duration-150 z-50">
+              <div className="bg-gray-900 text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap flex items-center gap-1.5">
+                <svg className="w-3 h-3 text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                </svg>
+                Extract data
+              </div>
+              <div className="w-2 h-2 bg-gray-900 rotate-45 rounded-sm mx-auto -mt-1" />
+            </div>
+          </div>
+        </div>
+
+        <AnimatePresence>
+          {showEditModal && extractedRows.length > 0 && (
+            <TrilogyEditModal
+              rows={extractedRows}
+              headers={extractedHeaders}
+              initialRowIndex={0}
+              onClose={() => setShowEditModal(false)}
+            />
+          )}
+        </AnimatePresence>
+      </>
     );
-  };
+  }
 
   return (
     <button
@@ -444,18 +1299,25 @@ function AttachmentChip({ att, token }: { att: EmailAttachment; token: string | 
       disabled={loading}
       className="flex items-center gap-3 px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-indigo-300 hover:shadow-md transition-all disabled:opacity-60 group w-full sm:w-auto sm:min-w-[200px] sm:max-w-[260px]"
     >
-      {/* File type icon */}
       <div className={`w-9 h-9 rounded-lg ${iconBg} ${iconClr} flex items-center justify-center shrink-0`}>
-        <FileIcon />
+        {loading ? (
+          <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+        ) : isImage ? (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+        ) : (
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+        )}
       </div>
 
-      {/* Name + size */}
       <div className="flex-1 min-w-0 text-left">
         <p className="text-[12.5px] font-semibold text-gray-800 truncate leading-tight">{att.filename}</p>
         {att.size_bytes ? <p className="text-[11px] text-gray-400 mt-0.5">{formatBytes(att.size_bytes)}</p> : null}
       </div>
 
-      {/* Download arrow */}
       <svg className="w-4 h-4 text-gray-300 group-hover:text-indigo-500 shrink-0 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
       </svg>
