@@ -1157,6 +1157,13 @@ function AttachmentChip({ att, token }: { att: EmailAttachment; token: string | 
   const [extractedRows, setExtractedRows] = useState<Record<string, unknown>[]>([]);
   const [showEditModal, setShowEditModal] = useState(false);
 
+  /* Auto-dismiss error after 5 s */
+  useEffect(() => {
+    if (!pdfError) return;
+    const t = setTimeout(() => setPdfError(null), 5000);
+    return () => clearTimeout(t);
+  }, [pdfError]);
+
   const handleViewPdf = async () => {
     setPdfLoading(true);
     setPdfError(null);
@@ -1251,13 +1258,18 @@ function AttachmentChip({ att, token }: { att: EmailAttachment; token: string | 
             <button
               onClick={handleViewPdf}
               disabled={pdfLoading}
-              className="flex items-center justify-center w-9 h-9 rounded-xl border border-gray-200 bg-white hover:border-red-200 hover:bg-red-50 text-gray-400 hover:text-red-500 transition-all disabled:opacity-60 shadow-sm"
+              className={`flex items-center justify-center w-9 h-9 rounded-xl border shadow-sm transition-all ${
+                pdfLoading
+                  ? 'border-red-300 bg-red-50 text-red-500 cursor-not-allowed'
+                  : 'border-gray-200 bg-white hover:border-red-200 hover:bg-red-50 text-gray-400 hover:text-red-500'
+              }`}
             >
               {pdfLoading ? (
-                <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                </svg>
+                /* Pulsing rings when loading */
+                <span className="relative flex w-4 h-4 items-center justify-center">
+                  <span className="absolute inline-flex w-full h-full rounded-full bg-red-400 opacity-30 animate-ping" />
+                  <span className="relative inline-flex w-2.5 h-2.5 rounded-full bg-red-500" />
+                </span>
               ) : (
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -1265,19 +1277,80 @@ function AttachmentChip({ att, token }: { att: EmailAttachment; token: string | 
                 </svg>
               )}
             </button>
-            {/* Tooltip */}
-            <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover/ext:opacity-100 translate-y-1 group-hover/ext:translate-y-0 transition-all duration-150 z-50">
-              <div className="bg-gray-900 text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap flex items-center gap-1.5">
-                <svg className="w-3 h-3 text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* Tooltip — hidden while loading */}
+            {!pdfLoading && (
+              <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover/ext:opacity-100 translate-y-1 group-hover/ext:translate-y-0 transition-all duration-150 z-50">
+                <div className="bg-gray-900 text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap flex items-center gap-1.5">
+                  <svg className="w-3 h-3 text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                  </svg>
+                  Extract data
+                </div>
+                <div className="w-2 h-2 bg-gray-900 rotate-45 rounded-sm mx-auto -mt-1" />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Loading card portal ── */}
+        {pdfLoading && typeof document !== 'undefined' && createPortal(
+          <div className="fixed bottom-6 right-6 z-[9999] flex items-center gap-3.5 px-4 py-3.5 bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-xs w-full">
+            {/* Animated rings */}
+            <div className="relative w-10 h-10 shrink-0">
+              <div className="absolute inset-0 rounded-full border-[3px] border-red-100" />
+              <div className="absolute inset-0 rounded-full border-[3px] border-transparent border-t-red-500 animate-spin" />
+              <div className="absolute inset-1.5 rounded-full border-[3px] border-transparent border-t-orange-400 animate-spin [animation-direction:reverse] [animation-duration:700ms]" />
+              <div className="absolute inset-[7px] rounded-full bg-red-50 flex items-center justify-center">
+                <svg className="w-3 h-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                 </svg>
-                Extract data
               </div>
-              <div className="w-2 h-2 bg-gray-900 rotate-45 rounded-sm mx-auto -mt-1" />
             </div>
-          </div>
-        </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-bold text-gray-800 leading-snug">Extracting data…</p>
+              <p className="text-[11px] text-gray-400 truncate mt-0.5">{att.filename}</p>
+              {/* Progress shimmer */}
+              <div className="mt-2 h-1 w-full bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-red-400 to-orange-400 rounded-full animate-pulse" style={{ width: '65%' }} />
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+        {/* ── Error toast portal ── */}
+        <AnimatePresence>
+          {pdfError && typeof document !== 'undefined' && createPortal(
+            <motion.div
+              initial={{ opacity: 0, y: -16, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -16, scale: 0.97 }}
+              transition={{ duration: 0.18 }}
+              className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] flex items-start gap-3 px-4 py-3.5 bg-red-600 text-white rounded-2xl shadow-2xl max-w-sm w-full mx-4"
+            >
+              <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center shrink-0 mt-0.5">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-bold leading-snug">Extraction Failed</p>
+                <p className="text-[11px] text-red-100 mt-0.5 leading-relaxed">{pdfError}</p>
+              </div>
+              <button
+                onClick={() => setPdfError(null)}
+                className="w-6 h-6 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center shrink-0 transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+              </button>
+            </motion.div>,
+            document.body
+          )}
+        </AnimatePresence>
 
         <AnimatePresence>
           {showEditModal && extractedRows.length > 0 && (
