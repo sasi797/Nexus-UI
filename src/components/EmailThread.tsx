@@ -1150,6 +1150,9 @@ function TrilogyPdfModal({
 }
 
 function AttachmentChip({ att, token }: { att: EmailAttachment; token: string | null }) {
+  const userRole = useSelector((s: RootState) => s.auth.user?.role);
+  const isAdmin = userRole === 'admin';
+
   const [loading, setLoading] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
@@ -1253,44 +1256,44 @@ function AttachmentChip({ att, token }: { att: EmailAttachment; token: string | 
             </svg>
           </button>
 
-          {/* Extract button */}
-          <div className="relative group/ext shrink-0">
-            <button
-              onClick={handleViewPdf}
-              disabled={pdfLoading}
-              className={`flex items-center justify-center w-9 h-9 rounded-xl border shadow-sm transition-all ${
-                pdfLoading
-                  ? 'border-red-300 bg-red-50 text-red-500 cursor-not-allowed'
-                  : 'border-gray-200 bg-white hover:border-red-200 hover:bg-red-50 text-gray-400 hover:text-red-500'
-              }`}
-            >
-              {pdfLoading ? (
-                /* Pulsing rings when loading */
-                <span className="relative flex w-4 h-4 items-center justify-center">
-                  <span className="absolute inline-flex w-full h-full rounded-full bg-red-400 opacity-30 animate-ping" />
-                  <span className="relative inline-flex w-2.5 h-2.5 rounded-full bg-red-500" />
-                </span>
-              ) : (
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                </svg>
-              )}
-            </button>
-            {/* Tooltip — hidden while loading */}
-            {!pdfLoading && (
-              <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover/ext:opacity-100 translate-y-1 group-hover/ext:translate-y-0 transition-all duration-150 z-50">
-                <div className="bg-gray-900 text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap flex items-center gap-1.5">
-                  <svg className="w-3 h-3 text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {/* Extract button — admin only */}
+          {isAdmin && (
+            <div className="relative group/ext shrink-0">
+              <button
+                onClick={handleViewPdf}
+                disabled={pdfLoading}
+                className={`flex items-center justify-center w-9 h-9 rounded-xl border shadow-sm transition-all ${
+                  pdfLoading
+                    ? 'border-red-300 bg-red-50 text-red-500 cursor-not-allowed'
+                    : 'border-gray-200 bg-white hover:border-red-200 hover:bg-red-50 text-gray-400 hover:text-red-500'
+                }`}
+              >
+                {pdfLoading ? (
+                  <span className="relative flex w-4 h-4 items-center justify-center">
+                    <span className="absolute inline-flex w-full h-full rounded-full bg-red-400 opacity-30 animate-ping" />
+                    <span className="relative inline-flex w-2.5 h-2.5 rounded-full bg-red-500" />
+                  </span>
+                ) : (
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                   </svg>
-                  Extract data
+                )}
+              </button>
+              {!pdfLoading && (
+                <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover/ext:opacity-100 translate-y-1 group-hover/ext:translate-y-0 transition-all duration-150 z-50">
+                  <div className="bg-gray-900 text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-lg shadow-xl whitespace-nowrap flex items-center gap-1.5">
+                    <svg className="w-3 h-3 text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                    Extract data
+                  </div>
+                  <div className="w-2 h-2 bg-gray-900 rotate-45 rounded-sm mx-auto -mt-1" />
                 </div>
-                <div className="w-2 h-2 bg-gray-900 rotate-45 rounded-sm mx-auto -mt-1" />
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* ── Loading card portal ── */}
