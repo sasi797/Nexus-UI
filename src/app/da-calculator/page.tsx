@@ -18,22 +18,38 @@ function makeRow(): Row {
   return { id: nextId++, l: '', w: '', h: '', qty: '' };
 }
 
-function calcVol(row: Row, divisor: number): number | null {
+type Unit = 'cm' | 'inches' | 'cbm';
+
+function getDivisor(unit: Unit): number {
+  return unit === 'cm' ? 6000 : unit === 'inches' ? 366 : 166.67;
+}
+
+function calcVol(row: Row, unit: Unit): number | null {
+  const qty = row.qty === '' ? 1 : parseFloat(row.qty) || 0;
+  if (unit === 'cbm') {
+    const cbm = parseFloat(row.l) || 0;
+    return cbm > 0 ? cbm * 166.67 * qty : null;
+  }
   const l = parseFloat(row.l) || 0;
   const w = parseFloat(row.w) || 0;
   const h = parseFloat(row.h) || 0;
-  const qty = row.qty === '' ? 1 : parseFloat(row.qty) || 0;
+  const divisor = getDivisor(unit);
   return l > 0 && w > 0 && h > 0 ? (l * w * h * qty) / divisor : null;
 }
 
-const FIELDS = ['l', 'w', 'h', 'qty'] as const;
-const FIELD_LABELS: Record<typeof FIELDS[number], string> = { l: 'Length', w: 'Width', h: 'Height', qty: 'Qty' };
+const ALL_FIELDS = ['l', 'w', 'h', 'qty'] as const;
+const CBM_FIELDS = ['l', 'qty'] as const;
 
 export default function DACalculatorPage() {
-  const [unit, setUnit] = useState<'cm' | 'inches'>('cm');
+  const [unit, setUnit] = useState<Unit>('cm');
   const [rows, setRows] = useState<Row[]>([makeRow()]);
 
-  const divisor = unit === 'cm' ? 6000 : 366;
+  const divisor = getDivisor(unit);
+  const FIELDS = unit === 'cbm' ? CBM_FIELDS : ALL_FIELDS;
+  const FIELD_LABELS: Record<string, string> = {
+    l: unit === 'cbm' ? 'CBM' : 'Length',
+    w: 'Width', h: 'Height', qty: 'Qty',
+  };
 
   const updateRow = useCallback((id: number, field: keyof Omit<Row, 'id'>, value: string) => {
     setRows(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
@@ -52,7 +68,7 @@ export default function DACalculatorPage() {
     setRows([makeRow()]);
   }, []);
 
-  const rowResults = rows.map(r => ({ id: r.id, vol: calcVol(r, divisor) }));
+  const rowResults = rows.map(r => ({ id: r.id, vol: calcVol(r, unit) }));
   const total = rowResults.reduce((sum, r) => sum + (r.vol ?? 0), 0);
   const hasAnyResult = rowResults.some(r => r.vol !== null);
   const filledRows = rowResults.filter(r => r.vol !== null).length;
@@ -79,14 +95,16 @@ export default function DACalculatorPage() {
                 DA Volumetric Calculator
               </h1>
               <p className="text-[10.5px] text-slate-400 mt-0.5 font-medium">
-                L × W × H × Qty ÷ {divisor.toLocaleString()} · max {MAX_ROWS} rows
+                {unit === 'cbm'
+                  ? `CBM × 166.67 × Qty · max ${MAX_ROWS} rows`
+                  : `L × W × H × Qty ÷ ${divisor.toLocaleString()} · max ${MAX_ROWS} rows`}
               </p>
             </div>
           </div>
 
           {/* Unit toggle */}
           <div className="flex rounded-xl p-1 gap-0.5 bg-slate-100 border border-slate-200">
-            {(['cm', 'inches'] as const).map(u => (
+            {([['cm', 'CM'], ['inches', 'IN'], ['cbm', 'CBM']] as [Unit, string][]).map(([u, label]) => (
               <button
                 key={u}
                 onClick={() => setUnit(u)}
@@ -101,7 +119,7 @@ export default function DACalculatorPage() {
                     transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                   />
                 )}
-                <span className="relative">{u === 'cm' ? 'CM' : 'IN'}</span>
+                <span className="relative">{label}</span>
               </button>
             ))}
           </div>
@@ -112,7 +130,7 @@ export default function DACalculatorPage() {
           {[
             { label: 'Rows', value: `${rows.length} / ${MAX_ROWS}`, color: '#6366f1' },
             { label: 'Calculated', value: filledRows, color: '#10b981' },
-            { label: 'Divisor', value: divisor.toLocaleString(), color: '#f59e0b' },
+            { label: unit === 'cbm' ? 'Factor' : 'Divisor', value: unit === 'cbm' ? '166.67' : divisor.toLocaleString(), color: '#f59e0b' },
           ].map(s => (
             <div key={s.label} className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5">
               <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{s.label}</span>
@@ -139,7 +157,7 @@ export default function DACalculatorPage() {
                 <th className="w-10 px-3 py-3 text-[9px] font-bold uppercase tracking-widest text-slate-400 text-center">#</th>
                 {FIELDS.map(f => (
                   <th key={f} className="px-3 py-3 text-[9px] font-bold uppercase tracking-widest text-slate-400 text-left">
-                    {FIELD_LABELS[f]}{f !== 'qty' ? ` (${unit})` : ''}
+                    {FIELD_LABELS[f]}{f !== 'qty' && unit !== 'cbm' ? ` (${unit})` : ''}
                   </th>
                 ))}
                 <th className="px-4 py-3 text-[9px] font-bold uppercase tracking-widest text-slate-400 text-right">Vol Wt (kg)</th>
@@ -149,7 +167,7 @@ export default function DACalculatorPage() {
             <tbody>
               <AnimatePresence initial={false}>
                 {rows.map((row, idx) => {
-                  const vol = calcVol(row, divisor);
+                  const vol = calcVol(row, unit);
                   const done = vol !== null;
                   return (
                     <motion.tr
@@ -261,7 +279,7 @@ export default function DACalculatorPage() {
           <div>
             <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">Total Volumetric Weight</p>
             <p className="text-[10px] text-slate-400 mt-0.5">
-              {rows.length} shipment{rows.length !== 1 ? 's' : ''} · {unit.toUpperCase()} · ÷{divisor.toLocaleString()}
+              {rows.length} shipment{rows.length !== 1 ? 's' : ''} · {unit === 'cbm' ? 'CBM/CBF' : unit.toUpperCase()} · {unit === 'cbm' ? '×166.67' : `÷${divisor.toLocaleString()}`}
             </p>
           </div>
 
