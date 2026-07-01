@@ -1,6 +1,27 @@
 import { api } from './api';
 
 export interface ShiftInfo { id: string; name: string; code: string }
+
+export interface AgentStatsItem {
+  agent_id: string;
+  agent_name: string;
+  agent_email: string;
+  shift: string | null;
+  total: number;
+  pending: number;
+  in_progress: number;
+  completed: number;
+  ignored: number;
+  da_count: number;
+}
+
+export interface AgentStatsParams {
+  date?: string;
+  date_from?: string;
+  date_to?: string;
+  tz?: string;
+}
+
 export interface Agent {
   id: string; name: string; email: string;
   shift_id: string | null; shift: ShiftInfo | null;
@@ -14,6 +35,10 @@ export const agentsApi = api.injectEndpoints({
   endpoints: (build) => ({
     getAgents: build.query<Agent[], void>({
       query: () => '/agents',
+      providesTags: ['Agent'],
+    }),
+    getAgentStats: build.query<AgentStatsItem[], AgentStatsParams>({
+      query: (params) => ({ url: '/agents/stats', params }),
       providesTags: ['Agent'],
     }),
     getAgent: build.query<Agent, string>({
@@ -36,4 +61,4 @@ export const agentsApi = api.injectEndpoints({
   overrideExisting: false,
 });
 
-export const { useGetAgentsQuery, useGetAgentQuery, useCreateAgentMutation, useUpdateAgentMutation, useDeleteAgentMutation } = agentsApi;
+export const { useGetAgentsQuery, useGetAgentQuery, useGetAgentStatsQuery, useCreateAgentMutation, useUpdateAgentMutation, useDeleteAgentMutation } = agentsApi;
