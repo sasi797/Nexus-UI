@@ -344,7 +344,7 @@ export default function DashboardPage() {
                 watermarkColor="text-slate-200" watermark={WM.ban} delay={0.28}
               />
               <StatCard
-                label="DA Count" value={statsDate ? null : (stats?.da_numbers_count ?? 0)}
+                label="DA Count" value={stats?.da_numbers_count ?? 0}
                 gradient="bg-gradient-to-br from-violet-50 to-purple-100"
                 border="border-violet-100" valueColor="text-violet-700"
                 iconBg="bg-violet-100" iconColor="text-violet-600" icon={ICON.hash}
